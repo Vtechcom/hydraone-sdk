@@ -1,3 +1,5 @@
+import type { ITransport } from './ports/transport';
+
 /**
  * Các loại bản tin được hỗ trợ trong giao thức giao tiếp giữa Game và Host Shell
  */
@@ -115,5 +117,72 @@ export interface PostMessageTransportOptions {
   checkIframeSource?: boolean;
   /** Thời gian chờ phản hồi mặc định (ms) cho các yêu cầu request() (mặc định: 15000ms) */
   defaultTimeoutMs?: number;
+}
+
+/**
+ * Hằng số cấu hình thời gian chờ phân tầng (Tiered Timeouts) theo mili-giây
+ */
+export const TIERED_TIMEOUTS = {
+  /** Thời gian chờ tối đa cho quá trình bắt tay handshake CLIENT_READY (3,000ms) */
+  HANDSHAKE: 3000,
+  /** Thời gian chờ mặc định cho các truy vấn trạng thái ví CIP-30 (15,000ms) */
+  QUERY: 15000,
+  /** Thời gian chờ cho các tác vụ tương tác người dùng / ký ví CIP-30 & CIP-8 (120,000ms) */
+  SIGNING: 120000,
+} as const;
+
+/**
+ * Trạng thái kết nối của WalletBridgeClient
+ */
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+/**
+ * Thông tin phân trang cho các truy vấn CIP-30 (UTxOs, Addresses)
+ */
+export interface Paginate {
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Tùy chọn cho các cuộc gọi truy vấn trạng thái (cho phép override timeout per-request)
+ */
+export interface QueryOptions {
+  timeoutMs?: number;
+}
+
+/**
+ * Thông tin metadata của Host Shell nhận được trong phiên bắt tay
+ */
+export interface HostInfo {
+  hostVersion?: string;
+  network?: string;
+  walletName?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Dữ liệu payload của bản tin HOST_ACK
+ */
+export interface HostAckPayload {
+  requestId?: string;
+  hostInfo?: HostInfo;
+  [key: string]: unknown;
+}
+
+/**
+ * Cấu hình khởi tạo cho WalletBridgeClient
+ */
+export interface WalletBridgeClientOptions {
+  /** Adapter triển khai port ITransport để truyền thông */
+  transport: ITransport;
+  /** Thời gian chờ bắt tay handshake (ms), mặc định 3000ms */
+  handshakeTimeoutMs?: number;
+  /** Thời gian chờ mặc định cho các truy vấn trạng thái (ms), mặc định 15000ms */
+  queryTimeoutMs?: number;
+  /** Tự động bắt tay khi khởi tạo (mặc định: false) */
+  autoConnect?: boolean;
+  /** Bật ghi log cảnh báo/debug (mặc định: false) */
+  debug?: boolean;
 }
 

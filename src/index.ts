@@ -17,3 +17,6 @@ export * from './core/errors';
 // Transport & Storage Adapters
 export * from './core/adapters';
 
+// Core Engine Client
+export * from './core/client';
+

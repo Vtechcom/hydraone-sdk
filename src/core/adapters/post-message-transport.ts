@@ -124,7 +124,7 @@ export class PostMessageTransport implements ITransport {
         ? (message.payload as RpcResponsePayload)
         : undefined;
     if (
-      (message.type === 'RPC_RESPONSE' || message.type === 'RPC_ERROR') &&
+      (message.type === 'RPC_RESPONSE' || message.type === 'RPC_ERROR' || message.type === 'HOST_ACK') &&
       rpcPayload &&
       typeof rpcPayload.requestId === 'string'
     ) {
