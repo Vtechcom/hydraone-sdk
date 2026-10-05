@@ -1,0 +1,72 @@
+# generated: 10-05-2026 16:32
+# last_updated: 10-05-2026 16:32
+# project: hydraone-sdk
+# project_key: HYDRAONE
+# tracking_system: file-system
+# story_location: "_bmad-output/implementation-artifacts"
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+generated: 10-05-2026 16:32
+last_updated: 10-05-2026 16:32
+project: hydraone-sdk
+project_key: HYDRAONE
+tracking_system: file-system
+story_location: "_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-1: backlog
+  1-1-project-toolchain-base-errors-abstract-ports-foundation: ready-for-dev
+  1-2-postmessagetransport-zero-trust-origin-validation-correlation-id-multiplexing: backlog
+  1-3-walletbridgeclient-handshake-cip-30-state-queries-tiered-timeouts: backlog
+  1-4-transaction-signing-submission-cip-8-data-signing: backlog
+  1-5-standalone-direct-extension-transport-fallback: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-tiered-storage-adapters-sub-namespace-policy: backlog
+  2-2-host-storage-relay-protocol-adapter: backlog
+  2-3-gameauthmanager-1-click-cip-8-authentication-jwt-lifecycle: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-host-event-bus-sync-audio-theme: backlog
+  3-2-mobile-device-controls-orientation-haptics: backlog
+  3-3-in-game-host-modal-overlay-player-profile-relay: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-cardano-domain-utilities-subpath: backlog
+  4-2-vue-3-nuxt-3-headless-composable-adapter: backlog
+  4-3-react-next-js-headless-hooks-adapter: backlog
+  4-4-phaser-3-event-emitter-game-plugin: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-mockbridgehost-engine: backlog
+  5-2-floating-devtools-ui-widget: backlog
+  5-3-bridge-health-diagnostics-suite: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-game-scaffolding-cli-create-hydraone-game: backlog
+  6-2-interactive-developer-documentation-portal-guides: backlog
+  epic-6-retrospective: optional
+
+action_items: []
