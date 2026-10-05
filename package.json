@@ -1,0 +1,66 @@
+{
+  "name": "@hydraone/sdk",
+  "version": "0.1.0",
+  "description": "Official Game & dApp Developer Toolkit for HydraOne on Cardano",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vtechcom/hydraone-sdk.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "cardano",
+    "hydra",
+    "hydraone",
+    "web3",
+    "sdk",
+    "game-sdk",
+    "cip-30",
+    "cip-8",
+    "wallet-bridge"
+  ],
+  "author": "HydraOne Team",
+  "license": "MIT",
+  "peerDependencies": {
+    "phaser": ">=3.60.0",
+    "react": ">=18.0.0",
+    "vue": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "phaser": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  }
+}
