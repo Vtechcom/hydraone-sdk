@@ -80,6 +80,20 @@ context:
 - Given `HydraTimeoutError` được tạo, when truy cập thuộc tính `code`, then giá trị trả về chính xác là `'ERR_TIMEOUT'` và `error instanceof HydraBridgeError` trả về `true`.
 - Given bất kỳ triển khai nào của `ITransport`, when gọi `send(msg)` và `onMessage(handler)`, then phương thức phải thỏa mãn hợp đồng async và trả về hàm unsubscribe tương ứng.
 
+### Review Findings
+
+- [x] [Review][Patch] Thêm pretest script đảm bảo dist được build tự động trước khi chạy test runner [package.json:28]
+- [x] [Review][Patch] Khai báo tường minh tên lỗi name trong constructor tránh bị bundler minifier làm biến dạng tên lớp [src/core/errors.ts:24]
+- [x] [Review][Patch] Bổ sung fallback kiểm tra chuỗi rỗng cho codeOrDetails trong HydraTransportError constructor [src/core/errors.ts:83]
+
+#### Rejected Findings
+
+- `ITransport` lacks lifecycle teardown / destroy method: [src/core/ports/transport.ts:7] — false: ITransport là abstract port tối giản cho Story 1.1; lifecycle cụ thể (nếu có) thuộc về adapter PostMessageTransport (Story 1.2).
+- `HydraBridgeError.toJSON()` circular details guard: [src/core/errors.ts:42] — low: trường hợp hiếm gặp trong SDK usage, việc thêm deep-clone circular traversal làm tăng độ phức tạp không đáng có.
+- `BridgeMessage` envelope lacks top-level `correlationId`: [src/core/types.ts:32] — false: Kiến trúc RPC đặt requestId trong RpcResponsePayload hoặc dùng chính message.id cho multiplexing correlation.
+- `HydraBridgeError` does not support standard ES2022 `cause`: [src/core/errors.ts:22] — low: Các lỗi SDK được khởi tạo trực tiếp với domain context, việc bọc ErrorOptions cause chưa có consumer yêu cầu trong Story 1.1.
+- `IStorage.clear()` does not accept namespace prefix parameter: [src/core/ports/storage.ts:30] — false: Hợp đồng interface ủy quyền việc lọc tiền tố namespace cho từng storage adapter cụ thể (Story 2.1).
+
 ## Implementation Notes
 
 - Đã thiết lập thành công toolchain pnpm + TypeScript 5.7 strict + tsup 8.3 + vitest 3.0.

@@ -16,12 +16,13 @@ export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES] | (string
  * Lớp lỗi cơ sở của HydraBridge SDK
  */
 export class HydraBridgeError extends Error {
+  public override readonly name: string = 'HydraBridgeError';
   public readonly code: string;
   public readonly details?: unknown;
 
   constructor(message: string, code: string, details?: unknown) {
     super(message);
-    this.name = this.constructor.name;
+    this.name = 'HydraBridgeError';
     this.code = code;
     this.details = details;
 
@@ -54,8 +55,11 @@ export class HydraBridgeError extends Error {
  * Lỗi phát sinh khi một yêu cầu RPC hoặc handshake bị quá thời gian chờ (timeout)
  */
 export class HydraTimeoutError extends HydraBridgeError {
+  public override readonly name: string = 'HydraTimeoutError';
+
   constructor(message = 'Yêu cầu RPC vượt quá thời gian chờ', details?: unknown) {
     super(message, ERROR_CODES.ERR_TIMEOUT, details);
+    this.name = 'HydraTimeoutError';
   }
 }
 
@@ -63,8 +67,11 @@ export class HydraTimeoutError extends HydraBridgeError {
  * Lỗi phát sinh khi người dùng từ chối ký ví hoặc hủy tác vụ
  */
 export class HydraUserRejectedError extends HydraBridgeError {
+  public override readonly name: string = 'HydraUserRejectedError';
+
   constructor(message = 'Người dùng đã từ chối thao tác trên ví', details?: unknown) {
     super(message, ERROR_CODES.ERR_USER_REJECTED, details);
+    this.name = 'HydraUserRejectedError';
   }
 }
 
@@ -72,6 +79,8 @@ export class HydraUserRejectedError extends HydraBridgeError {
  * Lỗi phát sinh từ tầng truyền thông Transport (không tìm thấy Host, mất kết nối, lỗi iframe)
  */
 export class HydraTransportError extends HydraBridgeError {
+  public override readonly name: string = 'HydraTransportError';
+
   constructor(
     message = 'Không tìm thấy môi trường Host Shell hoặc Extension phù hợp',
     codeOrDetails?: string | unknown,
@@ -80,13 +89,14 @@ export class HydraTransportError extends HydraBridgeError {
     let resolvedCode: string = ERROR_CODES.ERR_NOT_IN_IFRAME;
     let resolvedDetails: unknown = details;
 
-    if (typeof codeOrDetails === 'string') {
-      resolvedCode = codeOrDetails;
-    } else if (codeOrDetails !== undefined && details === undefined) {
+    if (typeof codeOrDetails === 'string' && codeOrDetails.trim().length > 0) {
+      resolvedCode = codeOrDetails.trim();
+    } else if (codeOrDetails !== undefined && typeof codeOrDetails !== 'string' && details === undefined) {
       resolvedDetails = codeOrDetails;
     }
 
     super(message, resolvedCode, resolvedDetails);
+    this.name = 'HydraTransportError';
   }
 }
 
@@ -94,8 +104,11 @@ export class HydraTransportError extends HydraBridgeError {
  * Lỗi bảo mật phát sinh khi bản tin không vượt qua kiểm tra Zero-Trust Origin
  */
 export class HydraSecurityError extends HydraBridgeError {
+  public override readonly name: string = 'HydraSecurityError';
+
   constructor(message = 'Bản tin có origin hoặc nguồn gửi không đáng tin cậy', details?: unknown) {
     super(message, ERROR_CODES.ERR_UNTRUSTED_ORIGIN, details);
+    this.name = 'HydraSecurityError';
   }
 }
 
@@ -103,8 +116,11 @@ export class HydraSecurityError extends HydraBridgeError {
  * Lỗi xác thực Web3 hoặc phiên làm việc JWT hết hạn
  */
 export class HydraAuthError extends HydraBridgeError {
+  public override readonly name: string = 'HydraAuthError';
+
   constructor(message = 'Phiên xác thực người dùng đã hết hạn', details?: unknown) {
     super(message, ERROR_CODES.ERR_AUTH_EXPIRED, details);
+    this.name = 'HydraAuthError';
   }
 }
 
@@ -112,7 +128,10 @@ export class HydraAuthError extends HydraBridgeError {
  * Lỗi tầng lưu trữ (Storage bị chặn, không có bộ nhớ khả dụng)
  */
 export class HydraStorageError extends HydraBridgeError {
+  public override readonly name: string = 'HydraStorageError';
+
   constructor(message = 'Bộ nhớ lưu trữ không khả dụng hoặc bị chặn', details?: unknown) {
     super(message, ERROR_CODES.ERR_STORAGE_UNAVAILABLE, details);
+    this.name = 'HydraStorageError';
   }
 }

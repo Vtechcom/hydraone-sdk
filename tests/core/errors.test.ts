@@ -69,6 +69,20 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(customError.code).toBe('ERR_TRANSPORT_DISCONNECTED');
     expect(customError.details).toEqual({ port: 8080 });
     expect(customError).toBeInstanceOf(HydraBridgeError);
+
+    // Pass empty string code -> should fallback to ERR_NOT_IN_IFRAME
+    const emptyCodeError = new HydraTransportError('Empty code', '   ');
+    expect(emptyCodeError.code).toBe(ERROR_CODES.ERR_NOT_IN_IFRAME);
+  });
+
+  it('should preserve explicit name property across all error subclasses', () => {
+    expect(new HydraBridgeError('msg', 'CODE').name).toBe('HydraBridgeError');
+    expect(new HydraTimeoutError().name).toBe('HydraTimeoutError');
+    expect(new HydraUserRejectedError().name).toBe('HydraUserRejectedError');
+    expect(new HydraTransportError().name).toBe('HydraTransportError');
+    expect(new HydraSecurityError().name).toBe('HydraSecurityError');
+    expect(new HydraAuthError().name).toBe('HydraAuthError');
+    expect(new HydraStorageError().name).toBe('HydraStorageError');
   });
 
   it('should create HydraSecurityError with code ERR_UNTRUSTED_ORIGIN', () => {
