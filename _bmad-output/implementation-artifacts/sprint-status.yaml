@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-06-2026 16:16
+last_updated: 10-06-2026 16:29
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -44,7 +44,7 @@ development_status:
   2-1-tiered-storage-adapters-sub-namespace-policy: done
   2-2-host-storage-relay-protocol-adapter: done
   2-3-gameauthmanager-1-click-cip-8-authentication-jwt-lifecycle: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   epic-3: backlog
   3-1-host-event-bus-sync-audio-theme: backlog
@@ -76,7 +76,7 @@ action_items:
     action: "Design composition/sub-managers for WalletBridgeClient before adding
       Auth and Lifecycle modules"
     owner: "Amelia"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-10-06-2026.md"
   - id: "epic-1-retro-item-2-unify-error-mapping-between-generic-itra"
     epic: 1
@@ -92,3 +92,24 @@ action_items:
     owner: "Winston"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-10-06-2026.md"
+  - id: "epic-2-retro-item-4-configure-minified-build-output-and-add"
+    epic: 2
+    action: "Configure minified build output and add automated CI gate for minified
+      gzipped bundle size under 12 KB to enforce NFR-1"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-10-06-2026.md"
+  - id: "epic-2-retro-item-5-consolidate-and-re-export-stringtohex-an"
+    epic: 2
+    action: "Consolidate and re-export stringToHex and hexToString utilities from
+      @hydraone/sdk/cardano subpath in Story 4.1"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-10-06-2026.md"
+  - id: "epic-2-retro-item-6-evaluate-and-optionally-support-browser"
+    epic: 2
+    action: "Evaluate and optionally support browser storage event to synchronize
+      auth state across tabs in standalone mode"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-10-06-2026.md"
