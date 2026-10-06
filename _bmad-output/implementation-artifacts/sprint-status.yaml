@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-05-2026 17:31
+last_updated: 10-06-2026 09:18
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -34,7 +34,7 @@ development_status:
   epic-1: in-progress
   1-1-project-toolchain-base-errors-abstract-ports-foundation: done
   1-2-postmessagetransport-zero-trust-origin-validation-correlation-id-multiplexing: done
-  1-3-walletbridgeclient-handshake-cip-30-state-queries-tiered-timeouts: review
+  1-3-walletbridgeclient-handshake-cip-30-state-queries-tiered-timeouts: done
   1-4-transaction-signing-submission-cip-8-data-signing: backlog
   1-5-standalone-direct-extension-transport-fallback: backlog
   epic-1-retrospective: optional
