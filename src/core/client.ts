@@ -321,6 +321,9 @@ export class WalletBridgeClient {
             this.transportUnsubscribe();
             this.transportUnsubscribe = undefined;
           }
+          if (this.transport && typeof this.transport.destroy === 'function') {
+            this.transport.destroy();
+          }
           this.transport = directTransport;
           this.setupTransportListener();
         } else {

@@ -17,4 +17,9 @@ export interface ITransport {
    * @returns Hàm hủy lắng nghe (unsubscribe)
    */
   onMessage(handler: MessageHandler): UnsubscribeFn;
+
+  /**
+   * Hủy kết nối, gỡ bỏ listeners và dọn dẹp tài nguyên
+   */
+  destroy?(): void;
 }

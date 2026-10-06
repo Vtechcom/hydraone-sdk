@@ -101,6 +101,19 @@ context:
 - Given `DirectExtensionTransport` đã kết nối thành công với extension, when gọi `getUsedAddresses()`, `getUtxos()`, `getBalance()`, `signTx()`, `submitTx()`, `signData()`, then các yêu cầu được chuyển tiếp trực tiếp đến CIP-30 API object và trả kết quả chính xác mà không cần postMessage.
 - Given người dùng bấm từ chối kết nối hoặc từ chối ký trên popup ví extension, when extension ném lỗi từ chối, then SDK ném thể hiện của `HydraUserRejectedError` (`ERR_USER_REJECTED`).
 
+### Review Findings
+
+- [x] [Review][Patch] Dọn dẹp `oldTransport.destroy()` khi client chuyển sang `DirectExtensionTransport` [src/core/client.ts:324]
+- [x] [Review][Patch] Kiểm tra hợp lệ `api` object trả về từ `enable()` trong `DirectExtensionTransport` [src/core/adapters/direct-extension-transport.ts:213]
+- [x] [Review][Patch] Chuẩn hóa kết quả `GET_COLLATERAL` thành `null` khi API extension trả về `undefined` [src/core/adapters/direct-extension-transport.ts:404]
+- [x] [Review][Patch] Bổ sung test case xác thực `oldTransport.destroy()` được gọi khi fallback [tests/core/client.test.ts]
+
+#### Rejected Findings
+
+- `preferredWallet` không tồn tại nên throw error — false: "preferred" mang nghĩa ưu tiên, fallback sang ví khả dụng khác là hành vi mong muốn và thân thiện.
+- `DirectExtensionTransport` thiếu method `disconnect()` — false: port `ITransport` không yêu cầu disconnect, vòng đời do client quản lý.
+
+
 ## Implementation Notes
 
 - Đã định nghĩa các types `CardanoWalletExtension`, `CIP30Api`, `DirectExtensionTransportOptions`, và mở rộng `WalletBridgeClientOptions` hỗ trợ `fallbackToExtension`, `preferredWallet`, `cardanoProvider`, `isIframeFn` (`src/core/types.ts`).

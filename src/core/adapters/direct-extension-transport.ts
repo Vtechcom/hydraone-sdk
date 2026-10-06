@@ -218,7 +218,14 @@ export class DirectExtensionTransport implements ITransport {
 
     this.enablePromise = (async () => {
       try {
-        this.api = await this.extension!.enable();
+        const api = await this.extension!.enable();
+        if (!api || typeof api !== 'object') {
+          throw new HydraBridgeError(
+            `Wallet extension "${this.walletName}" enable() did not return a valid CIP-30 API object`,
+            'ERR_WALLET_ENABLE_FAILED'
+          );
+        }
+        this.api = api;
         return this.api;
       } catch (err: any) {
         if (isUserRejectionError(err)) {
@@ -401,9 +408,10 @@ export class DirectExtensionTransport implements ITransport {
         }
         case 'GET_COLLATERAL': {
           if (typeof api.getCollateral === 'function') {
-            result = await api.getCollateral(
+            const collateralRes = await api.getCollateral(
               payload.amount ? { amount: payload.amount } : undefined
             );
+            result = collateralRes ?? null;
           } else {
             result = null;
           }

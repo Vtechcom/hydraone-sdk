@@ -1271,7 +1271,30 @@ describe('WalletBridgeClient', () => {
         code: 'ERR_INVALID_OPTIONS',
       });
     });
+
+    it('gọi oldTransport.destroy() khi fallback sang DirectExtensionTransport', async () => {
+      const mockDestroy = vi.fn();
+      const initialTransport: ITransport = {
+        send: vi.fn().mockResolvedValue(undefined),
+        onMessage: vi.fn().mockReturnValue(() => {}),
+        destroy: mockDestroy,
+      };
+
+      const client = new WalletBridgeClient({
+        transport: initialTransport,
+        fallbackToExtension: true,
+        isIframeFn: () => false,
+        cardanoProvider: mockProvider,
+      });
+
+      await client.init();
+
+      expect(mockDestroy).toHaveBeenCalledTimes(1);
+      expect(client.isConnected).toBe(true);
+      expect(client.activeWalletName).toBe('eternl');
+    });
   });
 });
+
 
 

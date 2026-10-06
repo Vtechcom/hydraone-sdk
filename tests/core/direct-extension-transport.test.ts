@@ -185,6 +185,32 @@ describe('DirectExtensionTransport', () => {
         })
       ).rejects.toThrowError(HydraUserRejectedError);
     });
+
+    it('ném lỗi HydraBridgeError (ERR_WALLET_ENABLE_FAILED) khi enable() trả về giá trị không hợp lệ', async () => {
+      const invalidExtension = {
+        name: 'bad_wallet',
+        icon: '',
+        version: '1.0.0',
+        enable: vi.fn().mockResolvedValue(null), // null hoặc không phải object
+        isEnabled: vi.fn().mockResolvedValue(false),
+      };
+
+      const transport = new DirectExtensionTransport({
+        walletName: 'bad_wallet',
+        extension: invalidExtension,
+      });
+
+      await expect(
+        transport.request({
+          id: 'msg_ready_invalid',
+          type: 'CLIENT_READY',
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        })
+      ).rejects.toMatchObject({
+        code: 'ERR_WALLET_ENABLE_FAILED',
+      });
+    });
   });
 
   describe('CIP-30 State Queries qua request()', () => {
@@ -244,6 +270,19 @@ describe('DirectExtensionTransport', () => {
 
       expect(mockApi.getCollateral).toHaveBeenCalledWith({ amount: '5000000' });
       expect(res.payload.result).toEqual(['collateral_cbor_1']);
+    });
+
+    it('chuẩn hóa GET_COLLATERAL thành null khi API trả về undefined', async () => {
+      (mockApi.getCollateral as any).mockResolvedValueOnce(undefined);
+      const res = await transport.request<any>({
+        id: 'req_collat_undef',
+        type: 'GET_COLLATERAL',
+        payload: {},
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      expect(res.payload.result).toBeNull();
     });
   });
 
