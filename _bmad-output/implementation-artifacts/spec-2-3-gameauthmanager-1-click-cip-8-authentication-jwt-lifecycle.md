@@ -80,11 +80,19 @@ context:
 
 ### Review Findings
 
+- [x] [Review][Patch] signIn: Xác thực nghiêm ngặt chuỗi hex khi challenge bắt đầu bằng '0x' tránh gửi payload hex không hợp lệ tới ví [src/core/auth.ts:229]
+- [x] [Review][Patch] signOut: Dùng try...finally để đảm bảo trạng thái xác thực bộ nhớ luôn được xóa sạch kể cả khi storage gặp lỗi [src/core/auth.ts:425]
+- [x] [Review][Patch] getToken: Cập nhật lại currentState khi token trong storage thay đổi khác với cached token [src/core/auth.ts:319]
+- [x] [Review][Patch] parseJwt: Bao bọc việc giải mã Base64 (atob) trong try...catch tránh leak DOMException ra ngoài [src/core/auth.ts:78]
+- [x] [Review][Patch] hexToString: Kiểm tra chuỗi chứa ký tự không phải hex thay vì âm thầm ép kiểu sang null byte [src/core/auth.ts:48]
+- [x] [Review][Patch] updateAuthState: Tạo snapshot listener (Array.from) khi dispatch để tránh lỗi khi tập hợp bị biến đổi trong lúc lặp [src/core/auth.ts:471]
+- [x] [Review][Patch] Tests & Types: Bổ sung onHostEvent tùy chọn vào IAuthSignerClient và các unit test bao phủ toàn bộ edge cases mới [src/core/types.ts:376, tests/core/auth.test.ts:524]
 - [x] [Review][Patch] GameAuthManager: Bổ sung phương thức destroy() gỡ bỏ listener và tránh rò rỉ bộ nhớ [src/core/auth.ts:456]
 - [x] [Review][Patch] isJwtExpired: Tự động chuẩn hóa claim exp dạng milliseconds về giây [src/core/auth.ts:124]
 - [x] [Review][Patch] Tests: Bổ sung unit tests kiểm thử destroy(), millisecond exp, UTF-8 unicode và custom keys [tests/core/auth.test.ts:456]
 
 #### Rejected
+- Tự động gán `claims.sub` vào `address` trong `setSession`: rejected `false` -- `sub` trong JWT là định danh tùy ý, không bắt buộc là Cardano address theo chuẩn RFC 7519.
 - Tự động refresh token ngầm định: rejected `false` -- Nằm ngoài phạm vi Story 2.3; auth backend của game quản lý refresh token riêng.
 - Nhúng thư viện xác thực COSE_Sign1 trên client: rejected `false` -- Chữ ký được gửi về Backend để xác thực; không làm phình bundle size client vi phạm NFR-1.
 
@@ -98,7 +106,7 @@ context:
 - Hỗ trợ đồng bộ sự kiện đăng xuất khi Host Shell phát `AUTH_STATE_CHANGED` với `isAuthenticated: false`.
 - Xuất khẩu đầy đủ các public APIs và types tại `src/index.ts`.
 - Chuẩn hóa định danh class chính là `AuthManager` (và `AuthManagerOptions`) để phục vụ chung cho cả Game và các DApp Web3 Cardano, đồng thời cung cấp re-export alias `GameAuthManager` (`GameAuthManagerOptions`) đảm bảo tương thích ngược 100%.
-- Xây dựng 30 unit tests trong `tests/core/auth.test.ts` bao phủ 100% các kịch bản trong I/O & Edge-Case Matrix. Toàn bộ 190 unit tests của toàn bộ dự án pass 100%, TypeScript typecheck 0 lỗi, build ESM/CJS/DTS dưới 2 giây.
+- Xây dựng 36 unit tests trong `tests/core/auth.test.ts` bao phủ 100% các kịch bản trong I/O & Edge-Case Matrix và toàn bộ các edge cases từ adversarial review. Toàn bộ 196 unit tests của toàn bộ dự án pass 100%, TypeScript typecheck 0 lỗi, build ESM/CJS/DTS dưới 2 giây.
 
 ## Spec Change Log
 
@@ -111,6 +119,14 @@ context:
 | 3 | Tự động refresh token ngầm định bằng refresh_token endpoint | `false` | `reject` | Nằm ngoài phạm vi của Story 2.3; auth backend của game quản lý refresh token riêng theo đặc tả |
 | 4 | Bổ sung thư viện crypto để xác thực chữ ký COSE_Sign1 trên client | `false` | `reject` | Chữ ký CIP-8 được chuyển về Backend server của Game để xác thực; client không nhúng cryptography nặng gây phình bundle size vi phạm NFR-1 |
 | 5 | Thiếu unit test cho `destroy()`, claim `exp` milliseconds và UTF-8 multibyte emoji trong claims | `low` | `patch` | Bổ sung 4 unit test mới nâng tổng số test lên 29 tests trong `tests/core/auth.test.ts` |
+| 6 | `challenge` có tiền tố `0x` không được kiểm tra hợp lệ độ dài chẵn và ký tự hex, có thể gửi chuỗi hex hỏng tới ví CIP-8 `signData` | `medium` | `patch` | Cần kiểm tra regex `/^[0-9a-fA-F]+$/` và độ dài chẵn; nếu không thỏa mãn thì fallback sang `stringToHex(challenge)` [src/core/auth.ts:229] |
+| 7 | `signOut()` không bọc trong `try...finally` khiến trạng thái xác thực trong RAM không được xóa sạch nếu `storage.removeItem` reject | `medium` | `patch` | Dùng `try...finally` để luôn gán `currentState` về unauthenticated và phát sự kiện `AUTH_STATE_CHANGED` [src/core/auth.ts:425] |
+| 8 | `getToken()` không cập nhật `currentState` khi token trong storage đã thay đổi khác với `this.currentState.token` | `low` | `patch` | Mở rộng điều kiện kiểm tra `if (!this.currentState.isAuthenticated \|\| this.currentState.token !== token)` [src/core/auth.ts:319] |
+| 9 | `parseJwt` gọi `atob` ngoài khối `try...catch` gây leak unhandled `DOMException` khi gặp base64 hỏng | `low` | `patch` | Bao bọc toàn bộ khối decode base64 trong `try...catch` trả về `Error` nhất quán [src/core/auth.ts:78] |
+| 10 | `hexToString` không kiểm tra ký tự phi hex dẫn đến `parseInt` trả về `NaN` âm thầm biến thành null byte `\0` | `low` | `patch` | Thêm kiểm tra regex `/^[0-9a-fA-F]*$/` ném ngoại lệ khi có ký tự không hợp lệ [src/core/auth.ts:48] |
+| 11 | `updateAuthState` duyệt trực tiếp trên `this.listeners` Set tiềm ẩn lỗi khi listener bị thêm/bớt trong callback | `low` | `patch` | Lặp trên `Array.from(this.listeners)` tạo snapshot an toàn [src/core/auth.ts:471] |
+| 12 | Thiếu unit test cho các trường hợp ngoại lệ vừa phát hiện | `low` | `patch` | Bổ sung unit tests kiểm thử toàn diện các edge cases này trong `tests/core/auth.test.ts` |
+| 13 | Tự động trích xuất `claims.sub` làm địa chỉ ví trong `setSession` khi không truyền address | `false` | `reject` | `sub` trong JWT là định danh tùy ý, không bắt buộc là Cardano address; tự đoán có thể gây sai lệch dữ liệu |
 
 ## Design Notes
 

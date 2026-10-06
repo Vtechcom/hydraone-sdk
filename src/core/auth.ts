@@ -45,6 +45,9 @@ export function hexToString(hex: string): string {
   if (cleanHex.length % 2 !== 0) {
     throw new Error('Invalid hex string length: must have an even number of characters');
   }
+  if (!/^[0-9a-fA-F]*$/.test(cleanHex)) {
+    throw new Error('Invalid hex string: contains non-hex characters');
+  }
   const bytes = new Uint8Array(cleanHex.length / 2);
   for (let i = 0; i < cleanHex.length; i += 2) {
     bytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
@@ -74,21 +77,21 @@ export function parseJwt<T = Record<string, any>>(token: string): T {
     base64 += '=';
   }
 
-  let jsonStr: string;
-  if (typeof atob === 'function') {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    jsonStr = new TextDecoder().decode(bytes);
-  } else if (typeof Buffer !== 'undefined') {
-    jsonStr = Buffer.from(base64, 'base64').toString('utf-8');
-  } else {
-    throw new Error('No base64 decoder available in current runtime environment');
-  }
-
   try {
+    let jsonStr: string;
+    if (typeof atob === 'function') {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      jsonStr = new TextDecoder().decode(bytes);
+    } else if (typeof Buffer !== 'undefined') {
+      jsonStr = Buffer.from(base64, 'base64').toString('utf-8');
+    } else {
+      throw new Error('No base64 decoder available in current runtime environment');
+    }
+
     return JSON.parse(jsonStr) as T;
   } catch (err: any) {
     throw new Error(`Failed to parse JWT payload JSON: ${err?.message || 'SyntaxError'}`);
@@ -174,8 +177,8 @@ export class AuthManager {
     this.defaultExchangeToken = options.exchangeToken;
 
     // Lắng nghe sự kiện từ Host nếu Client hỗ trợ onHostEvent
-    if (typeof (this.client as any).onHostEvent === 'function') {
-      this.hostUnsubscribe = (this.client as any).onHostEvent('AUTH_STATE_CHANGED', (payload: any) => {
+    if (typeof this.client.onHostEvent === 'function') {
+      this.hostUnsubscribe = this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: any) => {
         if (payload && payload.isAuthenticated === false) {
           this.signOut().catch(() => {});
         }
@@ -227,7 +230,12 @@ export class AuthManager {
     let payloadHex: string;
     const challenge = params.challenge;
     if (challenge.startsWith('0x')) {
-      payloadHex = challenge.slice(2);
+      const hexCandidate = challenge.slice(2);
+      if (/^[0-9a-fA-F]+$/.test(hexCandidate) && hexCandidate.length % 2 === 0) {
+        payloadHex = hexCandidate;
+      } else {
+        payloadHex = stringToHex(challenge);
+      }
     } else if (/^[0-9a-fA-F]{32,}$/.test(challenge) && challenge.length % 2 === 0) {
       payloadHex = challenge;
     } else {
@@ -316,7 +324,7 @@ export class AuthManager {
       return null;
     }
 
-    if (!this.currentState.isAuthenticated) {
+    if (!this.currentState.isAuthenticated || this.currentState.token !== token) {
       const address = await this.storage.getItem(this.addressStorageKey);
       let claims: Record<string, any> | null = null;
       try {
@@ -328,7 +336,7 @@ export class AuthManager {
       this.updateAuthState({
         isAuthenticated: true,
         token,
-        address,
+        address: address ?? this.currentState.address,
         claims,
         error: null,
       });
@@ -423,16 +431,20 @@ export class AuthManager {
    * Đăng xuất người chơi: xóa token, xóa địa chỉ khỏi storage và phát sự kiện AUTH_STATE_CHANGED
    */
   public async signOut(): Promise<void> {
-    await this.storage.removeItem(this.tokenStorageKey);
-    await this.storage.removeItem(this.addressStorageKey);
-
-    this.updateAuthState({
-      isAuthenticated: false,
-      token: null,
-      address: null,
-      claims: null,
-      error: null,
-    });
+    try {
+      await Promise.all([
+        this.storage.removeItem(this.tokenStorageKey),
+        this.storage.removeItem(this.addressStorageKey),
+      ]);
+    } finally {
+      this.updateAuthState({
+        isAuthenticated: false,
+        token: null,
+        address: null,
+        claims: null,
+        error: null,
+      });
+    }
   }
 
   /**
@@ -468,7 +480,8 @@ export class AuthManager {
    */
   private updateAuthState(newState: AuthState): void {
     this.currentState = newState;
-    for (const listener of this.listeners) {
+    const listenersSnapshot = Array.from(this.listeners);
+    for (const listener of listenersSnapshot) {
       try {
         listener({ ...this.currentState });
       } catch (e) {

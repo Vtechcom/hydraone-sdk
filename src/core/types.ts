@@ -377,6 +377,7 @@ export interface IAuthSignerClient {
   signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
   getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]>;
   getChangeAddress?(options?: QueryOptions): Promise<string>;
+  onHostEvent?(event: string, handler: (payload: any) => void): UnsubscribeFn;
 }
 
 /**

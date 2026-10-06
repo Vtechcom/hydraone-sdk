@@ -126,6 +126,9 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       getChangeAddress: vi.fn().mockResolvedValue('addr_test1change'),
       onHostEvent: vi.fn((type: string, handler: any) => {
         hostEventListeners.set(type, handler);
+        return () => {
+          hostEventListeners.delete(type);
+        };
       }),
     };
   });
@@ -519,5 +522,117 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(await storage.getItem('hydra:sdk:auth:custom_jwt')).toBe(testJwt);
     expect(await storage.getItem('hydra:sdk:auth:custom_addr')).toBe('addr_custom_test');
     expect(await customAuthManager.getToken()).toBe(testJwt);
+  });
+
+  it('hexToString ném lỗi khi chuỗi hex chứa ký tự phi hex', () => {
+    expect(() => hexToString('0xgg')).toThrow('contains non-hex characters');
+    expect(() => hexToString('12zz')).toThrow('contains non-hex characters');
+  });
+
+  it('parseJwt bắt lỗi an toàn khi base64 chứa ký tự không hợp lệ', () => {
+    expect(() => parseJwt('header.invalid!!base64.sig')).toThrow('Failed to parse JWT payload JSON');
+  });
+
+  it('signIn xử lý challenge bắt đầu bằng 0x: giữ nguyên nếu là hex hợp lệ, fallback stringToHex nếu lẻ hoặc phi hex', async () => {
+    const authManager = new GameAuthManager({
+      client: mockClient,
+      storage,
+    });
+
+    // 1. 0x kèm hex chẵn hợp lệ -> giữ nguyên hex
+    await authManager.signIn({ challenge: '0xabcd' });
+    expect(mockClient.signData).toHaveBeenCalledWith(
+      expect.any(String),
+      'abcd',
+      undefined
+    );
+
+    // 2. 0x lẻ ký tự (ví dụ 0xabc) -> fallback mã hóa chuỗi
+    await authManager.signIn({ challenge: '0xabc' });
+    expect(mockClient.signData).toHaveBeenCalledWith(
+      expect.any(String),
+      stringToHex('0xabc'),
+      undefined
+    );
+
+    // 3. 0x chứa ký tự phi hex (ví dụ 0xhello) -> fallback mã hóa chuỗi
+    await authManager.signIn({ challenge: '0xhello' });
+    expect(mockClient.signData).toHaveBeenCalledWith(
+      expect.any(String),
+      stringToHex('0xhello'),
+      undefined
+    );
+  });
+
+  it('signOut luôn xóa sạch trạng thái xác thực trong RAM kể cả khi storage.removeItem bị lỗi', async () => {
+    const errorStorage = {
+      getItem: vi.fn().mockResolvedValue(null),
+      setItem: vi.fn().mockResolvedValue(undefined),
+      removeItem: vi.fn().mockRejectedValue(new Error('Storage disk I/O failure')),
+      clear: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const authManager = new GameAuthManager({
+      client: mockClient,
+      storage: errorStorage,
+    });
+
+    const testJwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    await authManager.setSession(testJwt, 'addr_test');
+    expect(authManager.state.isAuthenticated).toBe(true);
+
+    const listener = vi.fn();
+    authManager.onAuthStateChanged(listener);
+
+    await expect(authManager.signOut()).rejects.toThrow('Storage disk I/O failure');
+
+    // Mặc dù storage ném lỗi, state RAM vẫn phải đảm bảo isAuthenticated = false
+    expect(authManager.state.isAuthenticated).toBe(false);
+    expect(authManager.state.token).toBeNull();
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({ isAuthenticated: false, token: null })
+    );
+  });
+
+  it('getToken và checkSession cập nhật lại currentState khi token trong storage thay đổi', async () => {
+    const authManager = new GameAuthManager({
+      client: mockClient,
+      storage,
+    });
+
+    const jwt1 = createTestJwt({ sub: 'user_1', exp: Math.floor(Date.now() / 1000) + 3600 });
+    await authManager.setSession(jwt1, 'addr_1');
+    expect(authManager.state.token).toBe(jwt1);
+
+    // Giả lập storage token được refresh / cập nhật từ tab khác
+    const jwt2 = createTestJwt({ sub: 'user_2', exp: Math.floor(Date.now() / 1000) + 7200 });
+    await storage.setItem('hydra:sdk:auth:token', jwt2);
+
+    const retrievedToken = await authManager.getToken();
+    expect(retrievedToken).toBe(jwt2);
+    expect(authManager.state.token).toBe(jwt2);
+    expect(authManager.state.claims?.sub).toBe('user_2');
+  });
+
+  it('updateAuthState an toàn khi listener đăng ký listener mới trong lúc dispatch', async () => {
+    const authManager = new GameAuthManager({
+      client: mockClient,
+      storage,
+    });
+
+    const secondaryListener = vi.fn();
+    let primaryCalled = false;
+
+    authManager.onAuthStateChanged(() => {
+      primaryCalled = true;
+      authManager.onAuthStateChanged(secondaryListener);
+    });
+
+    const jwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    await authManager.setSession(jwt);
+
+    expect(primaryCalled).toBe(true);
+    // secondaryListener được đăng ký trong callback không được gọi ngay trong dispatch hiện tại
+    expect(secondaryListener).not.toHaveBeenCalled();
   });
 });
