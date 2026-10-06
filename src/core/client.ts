@@ -72,7 +72,7 @@ export class WalletBridgeClient {
   constructor(options: WalletBridgeClientOptions) {
     if (!options || !options.transport) {
       throw new HydraBridgeError(
-        'Transport bắt buộc phải được cung cấp cho WalletBridgeClient',
+        'Transport must be provided to WalletBridgeClient',
         'ERR_INVALID_OPTIONS'
       );
     }
@@ -90,7 +90,7 @@ export class WalletBridgeClient {
     if (options.autoConnect) {
       this.init().catch((err) => {
         if (this.debug) {
-          console.warn('[WalletBridgeClient] Tự động kết nối thất bại:', err);
+          console.warn('[WalletBridgeClient] Auto-connect failed:', err);
         }
       });
     }
@@ -155,7 +155,7 @@ export class WalletBridgeClient {
       // Nếu yêu cầu đã bị timeout trước đó, bỏ qua trong im lặng (silent drop)
       if (pending.isExpired) {
         if (this.debug) {
-          console.warn(`[WalletBridgeClient] Phản hồi muộn cho yêu cầu [${correlationId}] đã bị bỏ qua.`);
+          console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
         }
         this.pendingRequests.delete(correlationId);
         return;
@@ -170,7 +170,7 @@ export class WalletBridgeClient {
       if (message.type === 'RPC_ERROR' || (rpcPayload && rpcPayload.error)) {
         const errInfo = rpcPayload?.error;
         const errCode = errInfo?.code || 'ERR_RPC_FAILED';
-        const errMsg = errInfo?.message || 'Yêu cầu RPC thất bại từ Host Shell';
+        const errMsg = errInfo?.message || 'RPC request failed from Host Shell';
 
         let mappedError: HydraBridgeError;
         if (errCode === ERROR_CODES.ERR_USER_REJECTED) {
@@ -211,7 +211,7 @@ export class WalletBridgeClient {
           handler(message.payload);
         } catch (err) {
           if (this.debug) {
-            console.error(`[WalletBridgeClient] Lỗi trong event listener [${message.type}]:`, err);
+            console.error(`[WalletBridgeClient] Error in event listener [${message.type}]:`, err);
           }
         }
       }
@@ -254,7 +254,7 @@ export class WalletBridgeClient {
         this._connectionState = 'disconnected';
         if (err instanceof HydraTimeoutError) {
           throw new HydraTimeoutError(
-            `Bắt tay với Host Shell (CLIENT_READY) vượt quá thời gian chờ (${this.handshakeTimeoutMs}ms)`,
+            `Handshake with Host Shell (CLIENT_READY) timed out (${this.handshakeTimeoutMs}ms)`,
             { timeoutMs: this.handshakeTimeoutMs }
           );
         }
@@ -301,13 +301,13 @@ export class WalletBridgeClient {
       } catch (err: any) {
         if (err?.code === ERROR_CODES.ERR_TIMEOUT) {
           throw new HydraTimeoutError(
-            `Yêu cầu [${message.type}] vượt quá thời gian chờ (${timeoutMs}ms)`,
+            `Request [${message.type}] timed out (${timeoutMs}ms)`,
             { messageType: message.type, timeoutMs }
           );
         }
         if (err?.code === ERROR_CODES.ERR_USER_REJECTED) {
           throw new HydraUserRejectedError(
-            err.message || 'Người dùng đã từ chối thao tác trên ví',
+            err.message || 'User rejected the wallet operation',
             err.details
           );
         }
@@ -332,7 +332,7 @@ export class WalletBridgeClient {
           this.pendingRequests.delete(message.id);
           reject(
             new HydraTimeoutError(
-              `Yêu cầu [${message.type}] vượt quá thời gian chờ (${timeoutMs}ms)`,
+              `Request [${message.type}] timed out (${timeoutMs}ms)`,
               { messageType: message.type, timeoutMs }
             )
           );
@@ -366,7 +366,7 @@ export class WalletBridgeClient {
   private assertConnected(): void {
     if (!this.isConnected) {
       throw new HydraBridgeError(
-        'Client chưa được kết nối với Host Shell. Vui lòng gọi await client.init() trước.',
+        'Client is not connected to Host Shell. Please call await client.init() first.',
         ERROR_CODES.ERR_NOT_CONNECTED
       );
     }
@@ -572,7 +572,7 @@ export class WalletBridgeClient {
   ): Promise<string> {
     this.assertConnected();
     if (!cbor || typeof cbor !== 'string') {
-      throw new HydraBridgeError('CBOR giao dịch không hợp lệ', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
     let partialSign = false;
@@ -591,7 +591,6 @@ export class WalletBridgeClient {
       payload: {
         cbor,
         partialSign,
-        tx: cbor,
       },
       timestamp: Date.now(),
       source: 'hydra-client',
@@ -610,11 +609,11 @@ export class WalletBridgeClient {
    */
   public async submitTx(
     cbor: string,
-    options?: QueryOptions
+    options?: SignOptions
   ): Promise<string> {
     this.assertConnected();
     if (!cbor || typeof cbor !== 'string') {
-      throw new HydraBridgeError('CBOR giao dịch không hợp lệ', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
     const timeout = options?.timeoutMs ?? this.signingTimeoutMs;
@@ -623,7 +622,6 @@ export class WalletBridgeClient {
       type: 'SUBMIT_TX',
       payload: {
         cbor,
-        tx: cbor,
       },
       timestamp: Date.now(),
       source: 'hydra-client',
@@ -649,10 +647,10 @@ export class WalletBridgeClient {
   ): Promise<DataSignature> {
     this.assertConnected();
     if (!address || typeof address !== 'string') {
-      throw new HydraBridgeError('Địa chỉ ví không hợp lệ', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid wallet address', 'ERR_INVALID_PARAMS');
     }
     if (payloadHex === undefined || payloadHex === null || typeof payloadHex !== 'string') {
-      throw new HydraBridgeError('Payload hex không hợp lệ', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid payload hex', 'ERR_INVALID_PARAMS');
     }
 
     const timeout = options?.timeoutMs ?? this.signingTimeoutMs;
@@ -719,7 +717,7 @@ export class WalletBridgeClient {
       }
       pending.isExpired = true;
       pending.reject(
-        new HydraBridgeError('Client đã bị ngắt kết nối', ERROR_CODES.ERR_NOT_CONNECTED)
+        new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED)
       );
     }
     this.pendingRequests.clear();

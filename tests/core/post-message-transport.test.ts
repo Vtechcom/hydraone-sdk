@@ -403,7 +403,7 @@ describe('PostMessageTransport', () => {
             requestId: 'req-sign-tx-err',
             error: {
               code: ERROR_CODES.ERR_USER_REJECTED,
-              message: 'Người dùng hủy ký',
+              message: 'User cancelled signing',
               details: { rejectedAt: 12345 },
             },
           },

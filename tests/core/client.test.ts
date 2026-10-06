@@ -55,7 +55,7 @@ describe('WalletBridgeClient', () => {
     it('ném lỗi nếu không cung cấp transport', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
       expect(() => new WalletBridgeClient({} as any)).toThrow(
-        'Transport bắt buộc phải được cung cấp'
+        'Transport must be provided'
       );
     });
 
@@ -245,7 +245,7 @@ describe('WalletBridgeClient', () => {
       const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
       await expect(disconnectedClient.getUsedAddresses()).rejects.toThrow(
-        'Client chưa được kết nối'
+        'Client is not connected'
       );
       await expect(disconnectedClient.getUsedAddresses()).rejects.toMatchObject({
         code: ERROR_CODES.ERR_NOT_CONNECTED,
@@ -593,7 +593,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(false);
       expect(client.connectionState).toBe('disconnected');
 
-      await expect(queryPromise).rejects.toThrow('Client đã bị ngắt kết nối');
+      await expect(queryPromise).rejects.toThrow('Client has been disconnected');
     });
 
     it('destroy() gọi dọn dẹp và hủy transport', () => {
@@ -700,6 +700,32 @@ describe('WalletBridgeClient', () => {
       expect(client.signingTimeoutMs).toBe(TIERED_TIMEOUTS.SIGNING); // 120,000ms
     });
 
+    it('sử dụng signingTimeoutMs tùy chỉnh từ constructor options', async () => {
+      const customTransport = new SimpleMockTransport();
+      const customClient = new WalletBridgeClient({
+        transport: customTransport,
+        signingTimeoutMs: 40000,
+      });
+
+      const initPromise = customClient.init();
+      customTransport.simulateIncoming({
+        id: 'host-ack-custom',
+        type: 'HOST_ACK',
+        payload: { requestId: customTransport.sentMessages[0].id },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      expect(customClient.signingTimeoutMs).toBe(40000);
+
+      // Kiểm tra timeout thực tế kích hoạt ở 40s thay vì 120s
+      const signPromise = customClient.signTx('84a300818258200101...');
+      vi.advanceTimersByTime(39999);
+      vi.advanceTimersByTime(1);
+      await expect(signPromise).rejects.toThrow(HydraTimeoutError);
+    });
+
     describe('signTx', () => {
       it('gửi yêu cầu SIGN_TX và nhận witness set CBOR hex', async () => {
         const txCbor = '84a300818258200101...';
@@ -711,7 +737,6 @@ describe('WalletBridgeClient', () => {
         expect(signMsg.payload).toEqual({
           cbor: txCbor,
           partialSign: false,
-          tx: txCbor,
         });
 
         // Giả lập Host Shell trả về witness set
@@ -869,7 +894,6 @@ describe('WalletBridgeClient', () => {
         expect(submitMsg.type).toBe('SUBMIT_TX');
         expect(submitMsg.payload).toEqual({
           cbor: txCbor,
-          tx: txCbor,
         });
 
         const txHash = '4b04f32c1c68e3678000787e91d84b5c777a83d47ad9c12b7a97fd0d648fa366';
@@ -888,11 +912,50 @@ describe('WalletBridgeClient', () => {
         expect(res).toBe(txHash);
       });
 
+      it('ném HydraUserRejectedError khi người dùng từ chối nộp giao dịch trên ví', async () => {
+        const txCbor = '84a300818258200101...';
+        const submitPromise = client.submitTx(txCbor);
+
+        const submitMsg = transport.sentMessages[1];
+        transport.simulateIncoming({
+          id: 'host-err-submit-reject',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: submitMsg.id,
+            error: {
+              code: ERROR_CODES.ERR_USER_REJECTED,
+              message: 'User rejected transaction submission',
+              details: { reason: 'User cancelled modal' },
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(submitPromise).rejects.toThrow(HydraUserRejectedError);
+        await expect(submitPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_USER_REJECTED,
+          message: 'User rejected transaction submission',
+        });
+      });
+
       it('hết hạn timeout sau 120,000ms nếu Host không phản hồi submitTx', async () => {
         const txCbor = '84a300818258200101...';
         const submitPromise = client.submitTx(txCbor);
 
         vi.advanceTimersByTime(120000);
+
+        await expect(submitPromise).rejects.toThrow(HydraTimeoutError);
+        await expect(submitPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_TIMEOUT,
+        });
+      });
+
+      it('cho phép ghi đè timeout tùy biến qua options.timeoutMs', async () => {
+        const txCbor = '84a300818258200101...';
+        const submitPromise = client.submitTx(txCbor, { timeoutMs: 35000 });
+
+        vi.advanceTimersByTime(35000);
 
         await expect(submitPromise).rejects.toThrow(HydraTimeoutError);
         await expect(submitPromise).rejects.toMatchObject({

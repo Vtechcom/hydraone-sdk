@@ -58,7 +58,7 @@ export class HydraBridgeError extends Error {
 export class HydraTimeoutError extends HydraBridgeError {
   public override readonly name: string = 'HydraTimeoutError';
 
-  constructor(message = 'Yêu cầu RPC vượt quá thời gian chờ', details?: unknown) {
+  constructor(message = 'RPC request timed out', details?: unknown) {
     super(message, ERROR_CODES.ERR_TIMEOUT, details);
     this.name = 'HydraTimeoutError';
   }
@@ -70,7 +70,7 @@ export class HydraTimeoutError extends HydraBridgeError {
 export class HydraUserRejectedError extends HydraBridgeError {
   public override readonly name: string = 'HydraUserRejectedError';
 
-  constructor(message = 'Người dùng đã từ chối thao tác trên ví', details?: unknown) {
+  constructor(message = 'User rejected the wallet operation', details?: unknown) {
     super(message, ERROR_CODES.ERR_USER_REJECTED, details);
     this.name = 'HydraUserRejectedError';
   }
@@ -83,7 +83,7 @@ export class HydraTransportError extends HydraBridgeError {
   public override readonly name: string = 'HydraTransportError';
 
   constructor(
-    message = 'Không tìm thấy môi trường Host Shell hoặc Extension phù hợp',
+    message = 'No matching Host Shell or Extension environment found',
     codeOrDetails?: string | unknown,
     details?: unknown
   ) {
@@ -107,7 +107,7 @@ export class HydraTransportError extends HydraBridgeError {
 export class HydraSecurityError extends HydraBridgeError {
   public override readonly name: string = 'HydraSecurityError';
 
-  constructor(message = 'Bản tin có origin hoặc nguồn gửi không đáng tin cậy', details?: unknown) {
+  constructor(message = 'Untrusted message origin or source', details?: unknown) {
     super(message, ERROR_CODES.ERR_UNTRUSTED_ORIGIN, details);
     this.name = 'HydraSecurityError';
   }
@@ -119,7 +119,7 @@ export class HydraSecurityError extends HydraBridgeError {
 export class HydraAuthError extends HydraBridgeError {
   public override readonly name: string = 'HydraAuthError';
 
-  constructor(message = 'Phiên xác thực người dùng đã hết hạn', details?: unknown) {
+  constructor(message = 'User authentication session has expired', details?: unknown) {
     super(message, ERROR_CODES.ERR_AUTH_EXPIRED, details);
     this.name = 'HydraAuthError';
   }
@@ -131,7 +131,7 @@ export class HydraAuthError extends HydraBridgeError {
 export class HydraStorageError extends HydraBridgeError {
   public override readonly name: string = 'HydraStorageError';
 
-  constructor(message = 'Bộ nhớ lưu trữ không khả dụng hoặc bị chặn', details?: unknown) {
+  constructor(message = 'Storage is unavailable or blocked', details?: unknown) {
     super(message, ERROR_CODES.ERR_STORAGE_UNAVAILABLE, details);
     this.name = 'HydraStorageError';
   }

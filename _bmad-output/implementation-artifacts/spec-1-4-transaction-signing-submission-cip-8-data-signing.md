@@ -116,6 +116,21 @@ context:
 
 - `signData` cho phép payload rỗng `""` [src/core/client.ts:630] — false: CIP-8 cho phép ký thông điệp rỗng (0-byte payload), việc kiểm tra `typeof payloadHex !== 'string'` là hoàn toàn chính xác theo đặc tả.
 
+### Review Findings (Round 2 — 2026-10-06)
+
+- [x] [Review][Decision] Trường `tx` dư thừa trong `SignTxPayload`/`SubmitTxPayload` — Đã thống nhất xóa `tx` khỏi payload trong `signTx` và `submitTx`, chỉ giữ `cbor` chuẩn hoá. [src/core/client.ts:591, 624]
+- [x] [Review][Decision] `submitTx` nhận `QueryOptions` thay vì `SignOptions` — Đã đổi signature sang `options?: SignOptions` để đồng bộ ngữ nghĩa Tier 3 (120s) và nhất quán với JSDoc. [src/core/client.ts:613]
+- [x] [Review][Patch] `submitTx` thiếu test `HydraUserRejectedError` khi user từ chối — Đã bổ sung test case trong `client.test.ts`. [tests/core/client.test.ts]
+- [x] [Review][Patch] Custom `signingTimeoutMs` constructor option không có test end-to-end — Đã bổ sung unit test xác thực timeout thực tế ở 40s. [tests/core/client.test.ts]
+- [x] [Review][Defer] `executeRpc` ERR_USER_REJECTED double-handle cho non-PostMessage transports [src/core/client.ts:261-266] — deferred: pre-existing defense-in-depth pattern, story 1.5 sẽ thêm transport thứ ba và test coverage tốt hơn (ghi nhận vào `deferred-work.md`).
+
+#### Rejected Findings (Round 2)
+
+- Missing exports in `src/index.ts` — false: `index.ts` đã dùng `export * from './core/types'` cover toàn bộ types mới.
+- `ERR_TIMEOUT` from Host double-wrap — false: client-side timer và Host-reported error frame là hai path độc lập, không có double-wrap.
+- `cbor` whitespace-only validation gap — low/rejected: Host Shell sẽ reject invalid CBOR; fix thêm guard phức tạp không cân bằng với risk.
+- `silent drop` test cho `submitTx`/`signData` — low/rejected: cùng code path với `signTx` đã được test; unlikely để diverge riêng.
+
 ## Spec Change Log
 
 ## Review Triage Log
@@ -125,6 +140,11 @@ context:
 | 1 | `signTx` nhận `partialSign` làm tham số thứ 2 khiến việc truyền nhầm options bị ép kiểu truthy | `low` | `patch` | Đã patch: hỗ trợ `partialSignOrOptions?: boolean \| SignOptions`, tự động nhận diện nếu caller truyền object options. |
 | 2 | `PostMessageTransport.handleMessageEvent` ném `HydraBridgeError` thay vì `HydraUserRejectedError` khi Host trả về `ERR_USER_REJECTED` | `medium` | `patch` | Đã patch: ánh xạ trực tiếp thành `HydraUserRejectedError` cho In-Flight Map. |
 | 3 | `signData` cho phép payload hex rỗng `""` | `false` | `rejected` | CIP-8 chấp nhận 0-byte payload, validation guard chỉ chặn non-string/undefined/null. |
+| 4 | Trường `tx` dư thừa trong payload SIGN_TX/SUBMIT_TX | `medium` | `patch` | Đã xóa `tx: cbor` khỏi payload runtime và cập nhật unit tests. |
+| 5 | `submitTx` nhận `QueryOptions` thay vì `SignOptions` | `low` | `patch` | Đã đổi sang `SignOptions` đồng bộ ngữ nghĩa và tài liệu. |
+| 6 | `submitTx` thiếu test từ chối và override timeout | `low` | `patch` | Đã bổ sung 2 test cases cho `submitTx`. |
+| 7 | Custom `signingTimeoutMs` constructor option | `low` | `patch` | Đã bổ sung test case xác thực timeout kích hoạt thực tế. |
+| 8 | `executeRpc` ERR_USER_REJECTED double-handle | `low` | `defer` | Ghi nhận vào `_bmad-output/implementation-artifacts/deferred-work.md`. |
 
 ## Design Notes
 

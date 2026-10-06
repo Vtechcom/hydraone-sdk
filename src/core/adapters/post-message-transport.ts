@@ -37,7 +37,7 @@ export class PostMessageTransport implements ITransport {
 
   constructor(options: PostMessageTransportOptions) {
     if (!options || typeof options.appCenterOrigin !== 'string' || options.appCenterOrigin.trim() === '') {
-      throw new HydraTransportError('appCenterOrigin bắt buộc phải được cung cấp');
+      throw new HydraTransportError('appCenterOrigin must be provided');
     }
 
     const trimmedOrigin = options.appCenterOrigin.trim();
@@ -49,7 +49,7 @@ export class PostMessageTransport implements ITransport {
     // Chặn wildcard origin trong môi trường production
     if (normalizedOrigin === '*' && env === 'production') {
       throw new HydraSecurityError(
-        'Wildcard origin "*" không được phép sử dụng trong môi trường production',
+        'Wildcard origin "*" is not allowed in production environment',
         { appCenterOrigin: '*' }
       );
     }
@@ -80,7 +80,7 @@ export class PostMessageTransport implements ITransport {
     // 1. Kiểm tra Origin Zero-Trust
     if (this.appCenterOrigin !== '*' && event.origin !== this.appCenterOrigin) {
       throw new HydraSecurityError(
-        `Origin không đáng tin cậy: "${event.origin}". Yêu cầu: "${this.appCenterOrigin}"`,
+        `Untrusted origin: "${event.origin}". Expected: "${this.appCenterOrigin}"`,
         {
           origin: event.origin,
           expectedOrigin: this.appCenterOrigin,
@@ -99,7 +99,7 @@ export class PostMessageTransport implements ITransport {
 
       if (expectedParent && event.source !== expectedParent) {
         throw new HydraSecurityError(
-          'Source window không hợp lệ (bản tin không xuất phát từ window.parent)',
+          'Invalid source window (message did not originate from window.parent)',
           {
             source: event.source,
           }
@@ -144,7 +144,7 @@ export class PostMessageTransport implements ITransport {
           this.inFlightMap.delete(correlationId);
           const errInfo = rpcPayload?.error;
           const errCode = errInfo?.code || 'ERR_RPC_FAILED';
-          const errMsg = errInfo?.message || 'Yêu cầu RPC thất bại từ Host Shell';
+          const errMsg = errInfo?.message || 'RPC request failed from Host Shell';
 
           let error: HydraBridgeError;
           if (errCode === ERROR_CODES.ERR_USER_REJECTED) {
@@ -178,13 +178,13 @@ export class PostMessageTransport implements ITransport {
    */
   public async send(message: BridgeMessage): Promise<void> {
     if (this.isDestroyed) {
-      throw new HydraTransportError('Transport đã bị hủy (destroyed)');
+      throw new HydraTransportError('Transport has been destroyed');
     }
 
     const target = this.resolveTargetWindow();
     if (!target) {
       throw new HydraTransportError(
-        'Không tìm thấy target window để gửi postMessage (không ở trong iframe hoặc thiếu targetWindow)',
+        'Target window not found for sending postMessage (not in iframe or targetWindow missing)',
         ERROR_CODES.ERR_NOT_IN_IFRAME
       );
     }
@@ -204,7 +204,7 @@ export class PostMessageTransport implements ITransport {
       target.postMessage(message, this.appCenterOrigin);
     } catch (err: any) {
       throw new HydraTransportError(
-        `Lỗi khi gửi bản tin postMessage: ${err?.message || 'Không thể serialize bản tin'}`,
+        `Failed to send postMessage: ${err?.message || 'Unable to serialize message'}`,
         'ERR_POSTMESSAGE_FAILED',
         err
       );
@@ -220,7 +220,7 @@ export class PostMessageTransport implements ITransport {
     timeoutMs?: number
   ): Promise<BridgeMessage<T>> {
     if (this.isDestroyed) {
-      throw new HydraTransportError('Transport đã bị hủy (destroyed)');
+      throw new HydraTransportError('Transport has been destroyed');
     }
 
     const id = message.id || this.generateId();
@@ -245,7 +245,7 @@ export class PostMessageTransport implements ITransport {
             this.inFlightMap.delete(id);
             reject(
               new HydraTimeoutError(
-                `Yêu cầu RPC [${id}] vượt quá thời gian chờ (${timeout}ms)`,
+                `RPC request [${id}] timed out (${timeout}ms)`,
                 {
                   requestId: id,
                   timeoutMs: timeout,
@@ -308,7 +308,7 @@ export class PostMessageTransport implements ITransport {
         clearTimeout(entry.timeoutTimer);
       }
       entry.state = 'Cancelled';
-      entry.reject(new HydraTransportError('Transport đã bị hủy (destroyed)'));
+      entry.reject(new HydraTransportError('Transport has been destroyed'));
     }
 
     this.inFlightMap.clear();
