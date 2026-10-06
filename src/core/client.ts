@@ -196,6 +196,44 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Trích xuất và chuẩn hóa giá trị tắt tiếng từ payload
+   */
+  private extractAudioMuted(payload: unknown): boolean | undefined {
+    if (typeof payload === 'boolean') {
+      return payload;
+    }
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      'muted' in payload &&
+      typeof (payload as any).muted === 'boolean'
+    ) {
+      return (payload as any).muted;
+    }
+    return undefined;
+  }
+
+  /**
+   * Trích xuất và chuẩn hóa chủ đề giao diện ('dark' | 'light') từ payload
+   */
+  private extractTheme(payload: unknown): ThemeMode | undefined {
+    const raw =
+      typeof payload === 'string'
+        ? payload.trim().toLowerCase()
+        : payload &&
+            typeof payload === 'object' &&
+            'theme' in payload &&
+            typeof (payload as any).theme === 'string'
+          ? (payload as any).theme.trim().toLowerCase()
+          : undefined;
+
+    if (raw === 'dark' || raw === 'light') {
+      return raw;
+    }
+    return undefined;
+  }
+
+  /**
    * Xử lý bản tin nhận được từ Host Shell
    */
   private handleIncomingMessage(message: BridgeMessage): void {
@@ -267,10 +305,9 @@ export class WalletBridgeClient {
       const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
       this._hostInfo = info;
       if (info && typeof info === 'object') {
-        const rawAckTheme =
-          typeof info.theme === 'string' ? info.theme.trim().toLowerCase() : undefined;
-        if (rawAckTheme === 'dark' || rawAckTheme === 'light') {
-          this._theme = rawAckTheme;
+        const theme = this.extractTheme(info.theme);
+        if (theme) {
+          this._theme = theme;
         }
         if (typeof info.audioMuted === 'boolean') {
           this._isAudioMuted = info.audioMuted;
@@ -281,18 +318,7 @@ export class WalletBridgeClient {
 
     // 3. Xử lý sự kiện đồng bộ âm thanh AUDIO_MUTED_CHANGED
     if (message.type === 'AUDIO_MUTED_CHANGED') {
-      let muted: boolean | undefined;
-      if (typeof message.payload === 'boolean') {
-        muted = message.payload;
-      } else if (
-        message.payload &&
-        typeof message.payload === 'object' &&
-        'muted' in message.payload &&
-        typeof (message.payload as any).muted === 'boolean'
-      ) {
-        muted = (message.payload as any).muted;
-      }
-
+      const muted = this.extractAudioMuted(message.payload);
       if (muted !== undefined) {
         this._isAudioMuted = muted;
       }
@@ -300,21 +326,7 @@ export class WalletBridgeClient {
 
     // 4. Xử lý sự kiện đồng bộ giao diện THEME_CHANGED
     if (message.type === 'THEME_CHANGED') {
-      let theme: ThemeMode | undefined;
-      const rawTheme =
-        typeof message.payload === 'string'
-          ? message.payload.trim().toLowerCase()
-          : message.payload &&
-              typeof message.payload === 'object' &&
-              'theme' in message.payload &&
-              typeof (message.payload as any).theme === 'string'
-            ? (message.payload as any).theme.trim().toLowerCase()
-            : undefined;
-
-      if (rawTheme === 'dark' || rawTheme === 'light') {
-        theme = rawTheme;
-      }
-
+      const theme = this.extractTheme(message.payload);
       if (theme !== undefined) {
         this._theme = theme;
       }
@@ -326,6 +338,10 @@ export class WalletBridgeClient {
       const snapshot = Array.from(handlers);
       for (const handler of snapshot) {
         try {
+          // Bỏ qua nếu handler đã bị gỡ bỏ hoặc client đã bị hủy trong quá trình duyệt
+          if (!handlers.has(handler)) {
+            continue;
+          }
           handler(message.payload);
         } catch (err) {
           if (this.debug) {
@@ -421,10 +437,9 @@ export class WalletBridgeClient {
         const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
         this._hostInfo = result;
         if (result && typeof result === 'object') {
-          const rawResultTheme =
-            typeof result.theme === 'string' ? result.theme.trim().toLowerCase() : undefined;
-          if (rawResultTheme === 'dark' || rawResultTheme === 'light') {
-            this._theme = rawResultTheme;
+          const theme = this.extractTheme(result.theme);
+          if (theme) {
+            this._theme = theme;
           }
           if (typeof result.audioMuted === 'boolean') {
             this._isAudioMuted = result.audioMuted;
@@ -902,17 +917,7 @@ export class WalletBridgeClient {
     }
 
     const wrapper = (payload: unknown) => {
-      let muted: boolean | undefined;
-      if (typeof payload === 'boolean') {
-        muted = payload;
-      } else if (
-        payload &&
-        typeof payload === 'object' &&
-        'muted' in payload &&
-        typeof (payload as any).muted === 'boolean'
-      ) {
-        muted = (payload as any).muted;
-      }
+      const muted = this.extractAudioMuted(payload);
       if (muted !== undefined) {
         handler(muted);
       }
@@ -933,21 +938,7 @@ export class WalletBridgeClient {
     }
 
     const wrapper = (payload: unknown) => {
-      let theme: ThemeMode | undefined;
-      const rawTheme =
-        typeof payload === 'string'
-          ? payload.trim().toLowerCase()
-          : payload &&
-              typeof payload === 'object' &&
-              'theme' in payload &&
-              typeof (payload as any).theme === 'string'
-            ? (payload as any).theme.trim().toLowerCase()
-            : undefined;
-
-      if (rawTheme === 'dark' || rawTheme === 'light') {
-        theme = rawTheme;
-      }
-
+      const theme = this.extractTheme(payload);
       if (theme !== undefined) {
         handler(theme);
       }
@@ -987,6 +978,9 @@ export class WalletBridgeClient {
     if (this.transportUnsubscribe) {
       this.transportUnsubscribe();
       this.transportUnsubscribe = undefined;
+    }
+    for (const set of this.eventListeners.values()) {
+      set.clear();
     }
     this.eventListeners.clear();
 

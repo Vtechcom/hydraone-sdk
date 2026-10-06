@@ -1472,6 +1472,50 @@ describe('WalletBridgeClient', () => {
 
         expect(audioSpy).not.toHaveBeenCalled();
       });
+
+      it('không gọi listener nếu bị unsubscribe hoặc destroy trong lúc listener trước đang chạy', () => {
+        let unsubB: UnsubscribeFn;
+        const listenerA = vi.fn().mockImplementation(() => {
+          // Listener A hủy đăng ký Listener B trong khi sự kiện đang được phân phối
+          unsubB();
+        });
+        const listenerB = vi.fn();
+
+        client.onAudioMutedChanged(listenerA);
+        unsubB = client.onAudioMutedChanged(listenerB);
+
+        messageCallback?.({
+          id: 'evt-reentrant-audio',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).not.toHaveBeenCalled();
+      });
+
+      it('ngăn chặn các listener tiếp theo chạy nếu listener trước gọi client.destroy()', () => {
+        const listenerA = vi.fn().mockImplementation(() => {
+          client.destroy();
+        });
+        const listenerB = vi.fn();
+
+        client.onAudioMutedChanged(listenerA);
+        client.onAudioMutedChanged(listenerB);
+
+        messageCallback?.({
+          id: 'evt-destroy-in-callback',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).not.toHaveBeenCalled();
+      });
     });
 
     describe('THEME_CHANGED', () => {
@@ -1667,6 +1711,55 @@ describe('WalletBridgeClient', () => {
         expect(testClient.theme).toBe('dark');
         expect(testClient.isAudioMuted).toBe(true);
         testClient.destroy();
+      });
+
+      it('chuẩn hóa theme viết hoa và khoảng trắng thừa từ metadata handshake HOST_ACK', async () => {
+        const transport = new SimpleMockTransport();
+        const testClient = new WalletBridgeClient({ transport });
+
+        const initPromise = testClient.init();
+        const readyMsg = transport.sentMessages[0];
+
+        transport.simulateIncoming({
+          id: 'ack-msg-case',
+          type: 'HOST_ACK',
+          payload: {
+            requestId: readyMsg.id,
+            hostInfo: {
+              hostVersion: '1.2.0',
+              theme: '  DARK  ',
+              audioMuted: true,
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await initPromise;
+
+        expect(testClient.isConnected).toBe(true);
+        expect(testClient.theme).toBe('dark');
+        expect(testClient.isAudioMuted).toBe(true);
+        testClient.destroy();
+      });
+
+      it('chuẩn hóa theme viết hoa và khoảng trắng thừa từ unsolicited HOST_ACK', () => {
+        messageCallback?.({
+          id: 'unsolicited-ack-case',
+          type: 'HOST_ACK',
+          payload: {
+            hostInfo: {
+              theme: ' LIGHT ',
+              audioMuted: false,
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(client.isConnected).toBe(true);
+        expect(client.theme).toBe('light');
+        expect(client.isAudioMuted).toBe(false);
       });
 
       it('cập nhật isAudioMuted và theme khi nhận unsolicited HOST_ACK', () => {

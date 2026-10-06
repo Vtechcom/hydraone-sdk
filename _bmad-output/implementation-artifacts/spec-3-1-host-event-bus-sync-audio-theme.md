@@ -5,7 +5,7 @@ created: '2026-10-06'
 status: 'done'
 baseline_commit: '97df765c105061c2b6cb8ad097fd3781b25a78d6'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-3-context.md'
@@ -72,6 +72,21 @@ context:
 - When Host Shell phát bản tin broadcast `THEME_CHANGED` với payload `{ theme: 'dark' | 'light' }` (hoặc string)
 - Then client cập nhật `client.theme` và kích hoạt callback đã đăng ký qua `onThemeChanged((theme) => ...)`
 - And gọi hàm hủy đăng ký trả về (`UnsubscribeFn`) sẽ gỡ bỏ listener thành công.
+
+### Review Findings
+
+- [x] [Review][Patch] Kiểm tra `handlers.has(handler)` trong vòng lặp dispatch sự kiện để tránh gọi callback đã bị hủy hoặc client đã bị destroy [src/core/client.ts:328]
+- [x] [Review][Patch] Tái cấu trúc logic trích xuất payload theme & audio thành helper nội bộ dùng chung để tuân thủ DRY [src/core/client.ts:284-316, 904-955]
+- [x] [Review][Patch] Bổ sung unit test kiểm tra hủy đăng ký / re-entrancy trong chính lúc callback sự kiện đang chạy [tests/core/client.test.ts:624]
+- [x] [Review][Patch] Bổ sung unit test kiểm tra chuẩn hóa theme viết hoa/khoảng trắng trong handshake HOST_ACK [tests/core/client.test.ts:866]
+
+#### Rejected Findings
+- `false` (F5): Handshake HOST_ACK không kích hoạt listener đăng ký trước init — Getters `isAudioMuted` và `theme` cung cấp trạng thái ban đầu đồng bộ, event listeners phục vụ chuyển đổi trạng thái tiếp theo.
+- `false` (F6): Payload lạ bị bỏ qua trong im lặng — Tuân thủ chính xác yêu cầu không throw exception khi Host gửi payload sai định dạng.
+- `false` (F7): hostInfo giữ nguyên dữ liệu thô khi theme không hợp lệ — Giữ nguyên payload gốc cho chẩn đoán trong khi getter theme bảo đảm type union nghiêm ngặt.
+- `low` (F8): Thiếu debug log khi truyền handler không phải hàm — Được bảo vệ bởi TypeScript compiler, rất ít xảy ra ở runtime.
+- `low` (F9): Thiếu JSDoc @example cho helper methods — Đã có JSDoc @param/@returns tiếng Việt đầy đủ.
+- `false` (F10): Thiếu kiểm tra xuất khẩu trong index.ts — Toàn bộ types đã được export qua `export * from './core/types'`.
 
 ## Implementation Notes
 
