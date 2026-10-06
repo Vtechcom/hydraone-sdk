@@ -174,8 +174,8 @@ export interface HostAckPayload {
  * Cấu hình khởi tạo cho WalletBridgeClient
  */
 export interface WalletBridgeClientOptions {
-  /** Adapter triển khai port ITransport để truyền thông */
-  transport: ITransport;
+  /** Adapter triển khai port ITransport để truyền thông (tùy chọn khi bật fallbackToExtension) */
+  transport?: ITransport;
   /** Thời gian chờ bắt tay handshake (ms), mặc định 3000ms */
   handshakeTimeoutMs?: number;
   /** Thời gian chờ mặc định cho các truy vấn trạng thái (ms), mặc định 15000ms */
@@ -184,6 +184,14 @@ export interface WalletBridgeClientOptions {
   signingTimeoutMs?: number;
   /** Tự động bắt tay khi khởi tạo (mặc định: false) */
   autoConnect?: boolean;
+  /** Tự động fallback sang native extension (window.cardano) khi chạy ngoài iframe (mặc định: false) */
+  fallbackToExtension?: boolean;
+  /** Tên ví ưu tiên sử dụng khi fallback (ví dụ: 'eternl', 'lace', 'nami') */
+  preferredWallet?: string;
+  /** Đối tượng window.cardano tùy biến (phục vụ testing hoặc custom injection) */
+  cardanoProvider?: Record<string, any>;
+  /** Hàm kiểm tra môi trường iframe tùy biến (phục vụ testing) */
+  isIframeFn?: () => boolean;
   /** Bật ghi log cảnh báo/debug (mặc định: false) */
   debug?: boolean;
 }
@@ -231,4 +239,50 @@ export interface SignDataPayload {
   payloadHex: string;
   [key: string]: unknown;
 }
+
+/**
+ * Interface đại diện cho đối tượng API CIP-30 do Cardano extension trả về khi enable()
+ */
+export interface CIP30Api {
+  getNetworkId(): Promise<number>;
+  getUtxos(amount?: string, paginate?: Paginate): Promise<string[] | null>;
+  getCollateral?(params?: { amount?: string }): Promise<string[] | null>;
+  getUsedAddresses(paginate?: Paginate): Promise<string[]>;
+  getUnusedAddresses(): Promise<string[]>;
+  getChangeAddress(): Promise<string>;
+  getRewardAddresses(): Promise<string[]>;
+  getBalance(): Promise<string>;
+  signTx(tx: string, partialSign?: boolean): Promise<string>;
+  signData(addr: string, payload: string): Promise<DataSignature>;
+  submitTx(tx: string): Promise<string>;
+  [key: string]: unknown;
+}
+
+/**
+ * Interface đại diện cho extension Cardano cài đặt trên window.cardano[walletName]
+ */
+export interface CardanoWalletExtension {
+  name?: string;
+  icon?: string;
+  apiVersion?: string;
+  enable(): Promise<CIP30Api>;
+  isEnabled(): Promise<boolean>;
+}
+
+/**
+ * Cấu hình khởi tạo cho DirectExtensionTransport
+ */
+export interface DirectExtensionTransportOptions {
+  /** Tên ví extension (ví dụ: 'eternl', 'lace', 'nami') */
+  walletName?: string;
+  /** Đối tượng extension CIP-30 (window.cardano[walletName]) */
+  extension?: CardanoWalletExtension;
+  /** Hoặc trực tiếp truyền CIP30Api instance đã enable */
+  api?: CIP30Api;
+  /** Đối tượng cardano provider (mặc định là window.cardano nếu có) */
+  cardanoProvider?: Record<string, any>;
+  /** Thời gian chờ mặc định (ms) cho các RPC requests (mặc định: 15000ms) */
+  defaultTimeoutMs?: number;
+}
+
 

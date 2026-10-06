@@ -5,6 +5,7 @@ import {
   ERROR_CODES,
   HydraBridgeError,
   HydraTimeoutError,
+  HydraTransportError,
   HydraUserRejectedError,
   TIERED_TIMEOUTS,
 } from '../../src';
@@ -1122,5 +1123,155 @@ describe('WalletBridgeClient', () => {
       });
     });
   });
+
+  describe('Standalone Direct Extension Fallback (Story 1.5)', () => {
+    let mockApi: any;
+    let mockExtension: any;
+    let mockProvider: Record<string, any>;
+
+    beforeEach(() => {
+      mockApi = {
+        getNetworkId: vi.fn().mockResolvedValue(1),
+        getUtxos: vi.fn().mockResolvedValue(['utxo_1']),
+        getCollateral: vi.fn().mockResolvedValue(['collat_1']),
+        getUsedAddresses: vi.fn().mockResolvedValue(['addr_1']),
+        getBalance: vi.fn().mockResolvedValue('50000000'),
+        signTx: vi.fn().mockResolvedValue('signed_witness'),
+        signData: vi.fn().mockResolvedValue({ signature: 'sig', key: 'key' }),
+        submitTx: vi.fn().mockResolvedValue('tx_hash_standalone'),
+      };
+
+      mockExtension = {
+        name: 'eternl',
+        icon: '',
+        apiVersion: '0.1.0',
+        enable: vi.fn().mockResolvedValue(mockApi),
+        isEnabled: vi.fn().mockResolvedValue(true),
+      };
+
+      mockProvider = {
+        eternl: mockExtension,
+        nami: {
+          name: 'nami',
+          icon: '',
+          apiVersion: '0.1.0',
+          enable: vi.fn().mockResolvedValue(mockApi),
+          isEnabled: vi.fn().mockResolvedValue(true),
+        },
+      };
+    });
+
+    it('tự động detect và fallback sang DirectExtensionTransport khi fallbackToExtension: true và chạy ngoài iframe', async () => {
+      const client = new WalletBridgeClient({
+        fallbackToExtension: true,
+        isIframeFn: () => false, // Giả lập chạy ngoài iframe (standalone)
+        cardanoProvider: mockProvider,
+      });
+
+      expect(client.isStandaloneBrowser()).toBe(true);
+      expect(client.isConnected).toBe(false);
+
+      await client.init();
+
+      expect(client.isConnected).toBe(true);
+      expect(client.activeWalletName).toBe('eternl');
+      expect(client.hostInfo).toEqual({
+        hostVersion: 'direct-extension',
+        network: 'mainnet',
+        walletName: 'eternl',
+      });
+
+      // Kiểm tra thực hiện truy vấn CIP-30 qua fallback
+      const addresses = await client.getUsedAddresses();
+      expect(addresses).toEqual(['addr_1']);
+      expect(mockApi.getUsedAddresses).toHaveBeenCalled();
+
+      // Kiểm tra ký giao dịch qua fallback
+      const signed = await client.signTx('tx_cbor');
+      expect(signed).toBe('signed_witness');
+      expect(mockApi.signTx).toHaveBeenCalledWith('tx_cbor', false);
+
+      // Kiểm tra nộp giao dịch qua fallback
+      const txHash = await client.submitTx('signed_tx');
+      expect(txHash).toBe('tx_hash_standalone');
+      expect(mockApi.submitTx).toHaveBeenCalledWith('signed_tx');
+
+      // Kiểm tra ký dữ liệu CIP-8 qua fallback
+      const dataSig = await client.signData('addr_1', 'deadbeef');
+      expect(dataSig).toEqual({ signature: 'sig', key: 'key' });
+      expect(mockApi.signData).toHaveBeenCalledWith('addr_1', 'deadbeef');
+    });
+
+    it('ưu tiên preferredWallet khi provider có nhiều extension', async () => {
+      const client = new WalletBridgeClient({
+        fallbackToExtension: true,
+        preferredWallet: 'nami',
+        isIframeFn: () => false,
+        cardanoProvider: mockProvider,
+      });
+
+      await client.init();
+
+      expect(client.isConnected).toBe(true);
+      expect(client.activeWalletName).toBe('nami');
+      expect(client.hostInfo?.walletName).toBe('nami');
+      expect(mockProvider.nami.enable).toHaveBeenCalledTimes(1);
+      expect(mockExtension.enable).not.toHaveBeenCalled();
+    });
+
+    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi fallbackToExtension: true nhưng không tìm thấy extension nào', async () => {
+      const client = new WalletBridgeClient({
+        fallbackToExtension: true,
+        isIframeFn: () => false,
+        cardanoProvider: {}, // Rỗng
+      });
+
+      await expect(client.init()).rejects.toThrow(HydraTransportError);
+      await expect(client.init()).rejects.toMatchObject({
+        code: ERROR_CODES.ERR_NOT_IN_IFRAME,
+      });
+      expect(client.isConnected).toBe(false);
+    });
+
+    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi chạy ngoài iframe và fallbackToExtension: false', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({
+        transport,
+        fallbackToExtension: false,
+        isIframeFn: () => false,
+      });
+
+      await expect(client.init()).rejects.toThrow(HydraTransportError);
+      await expect(client.init()).rejects.toMatchObject({
+        code: ERROR_CODES.ERR_NOT_IN_IFRAME,
+      });
+      expect(client.isConnected).toBe(false);
+    });
+
+    it('ném lỗi ERR_INVALID_OPTIONS khi không truyền transport và không bật fallbackToExtension', () => {
+      expect(() => {
+        new WalletBridgeClient({} as any);
+      }).toThrow(HydraBridgeError);
+
+      try {
+        new WalletBridgeClient({} as any);
+      } catch (err: any) {
+        expect(err.code).toBe('ERR_INVALID_OPTIONS');
+      }
+    });
+
+    it('ném HydraBridgeError khi chạy trong iframe nhưng không truyền transport', async () => {
+      const client = new WalletBridgeClient({
+        fallbackToExtension: true,
+        isIframeFn: () => true, // Đang chạy trong iframe!
+      });
+
+      await expect(client.init()).rejects.toThrow(HydraBridgeError);
+      await expect(client.init()).rejects.toMatchObject({
+        code: 'ERR_INVALID_OPTIONS',
+      });
+    });
+  });
 });
+
 

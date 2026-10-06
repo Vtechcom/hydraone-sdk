@@ -20,8 +20,13 @@ import {
   ERROR_CODES,
   HydraBridgeError,
   HydraTimeoutError,
+  HydraTransportError,
   HydraUserRejectedError,
 } from './errors';
+import {
+  DirectExtensionTransport,
+  detectCardanoWallets,
+} from './adapters/direct-extension-transport';
 
 /**
  * Sinh ID duy nhất cho mỗi yêu cầu RPC ngẫu nhiên và an toàn
@@ -56,10 +61,14 @@ interface PendingRequest<T = unknown> {
  * và thực hiện các truy vấn trạng thái ví theo chuẩn CIP-30.
  */
 export class WalletBridgeClient {
-  public readonly transport: ITransport;
+  public transport?: ITransport;
   public readonly handshakeTimeoutMs: number;
   public readonly queryTimeoutMs: number;
   public readonly signingTimeoutMs: number;
+  public readonly fallbackToExtension: boolean;
+  public readonly preferredWallet?: string;
+  public readonly cardanoProvider?: Record<string, any>;
+  public readonly isIframeFn?: () => boolean;
   public readonly debug: boolean;
 
   private _connectionState: ConnectionState = 'disconnected';
@@ -70,9 +79,9 @@ export class WalletBridgeClient {
   private readonly eventListeners = new Map<string, Set<(payload: any) => void>>();
 
   constructor(options: WalletBridgeClientOptions) {
-    if (!options || !options.transport) {
+    if (!options || (!options.transport && !options.fallbackToExtension)) {
       throw new HydraBridgeError(
-        'Transport must be provided to WalletBridgeClient',
+        'Transport must be provided to WalletBridgeClient unless fallbackToExtension is enabled',
         'ERR_INVALID_OPTIONS'
       );
     }
@@ -81,10 +90,16 @@ export class WalletBridgeClient {
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
+    this.fallbackToExtension = options.fallbackToExtension ?? false;
+    this.preferredWallet = options.preferredWallet;
+    this.cardanoProvider = options.cardanoProvider;
+    this.isIframeFn = options.isIframeFn;
     this.debug = options.debug ?? false;
 
-    // Lắng nghe bản tin từ transport
-    this.setupTransportListener();
+    // Lắng nghe bản tin từ transport nếu đã có sẵn
+    if (this.transport) {
+      this.setupTransportListener();
+    }
 
     // Tự động kết nối nếu được cấu hình
     if (options.autoConnect) {
@@ -94,6 +109,34 @@ export class WalletBridgeClient {
         }
       });
     }
+  }
+
+  /**
+   * Kiểm tra xem SDK có đang chạy ngoài iframe trong tab trình duyệt độc lập không
+   */
+  public isStandaloneBrowser(): boolean {
+    if (this.isIframeFn) {
+      return !this.isIframeFn();
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        return window.self === window.top;
+      } catch {
+        // Lỗi cross-origin frame access nghĩa là đang nằm trong iframe
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tên ví Cardano đang được sử dụng nếu kết nối qua DirectExtensionTransport
+   */
+  public get activeWalletName(): string | undefined {
+    if (this.transport instanceof DirectExtensionTransport) {
+      return this.transport.walletName;
+    }
+    return undefined;
   }
 
   /**
@@ -123,11 +166,14 @@ export class WalletBridgeClient {
   private setupTransportListener(): void {
     if (this.transportUnsubscribe) {
       this.transportUnsubscribe();
+      this.transportUnsubscribe = undefined;
     }
 
-    this.transportUnsubscribe = this.transport.onMessage((message: BridgeMessage) => {
-      this.handleIncomingMessage(message);
-    });
+    if (this.transport) {
+      this.transportUnsubscribe = this.transport.onMessage((message: BridgeMessage) => {
+        this.handleIncomingMessage(message);
+      });
+    }
   }
 
   /**
@@ -236,6 +282,56 @@ export class WalletBridgeClient {
 
     this.handshakePromise = (async () => {
       try {
+        // Kiểm tra môi trường standalone ngoài iframe
+        if (this.isStandaloneBrowser()) {
+          if (!this.fallbackToExtension) {
+            throw new HydraTransportError(
+              'SDK is running outside an iframe without fallbackToExtension enabled',
+              ERROR_CODES.ERR_NOT_IN_IFRAME
+            );
+          }
+
+          const provider =
+            this.cardanoProvider ??
+            (typeof window !== 'undefined' && (window as any).cardano
+              ? (window as any).cardano
+              : undefined);
+
+          const availableWallets = detectCardanoWallets(provider);
+          if (availableWallets.length === 0) {
+            throw new HydraTransportError(
+              'No Cardano wallet extension found and not running in Host iframe',
+              ERROR_CODES.ERR_NOT_IN_IFRAME
+            );
+          }
+
+          const selectedWallet =
+            this.preferredWallet && availableWallets.includes(this.preferredWallet)
+              ? this.preferredWallet
+              : availableWallets[0];
+
+          const directTransport = new DirectExtensionTransport({
+            walletName: selectedWallet,
+            extension: provider ? provider[selectedWallet] : undefined,
+            cardanoProvider: provider,
+            defaultTimeoutMs: this.queryTimeoutMs,
+          });
+
+          if (this.transportUnsubscribe) {
+            this.transportUnsubscribe();
+            this.transportUnsubscribe = undefined;
+          }
+          this.transport = directTransport;
+          this.setupTransportListener();
+        } else {
+          if (!this.transport) {
+            throw new HydraBridgeError(
+              'Transport must be provided when running inside an iframe',
+              'ERR_INVALID_OPTIONS'
+            );
+          }
+        }
+
         const id = generateId();
         const handshakeMessage: BridgeMessage = {
           id,
@@ -281,6 +377,12 @@ export class WalletBridgeClient {
     message: BridgeMessage,
     timeoutMs: number
   ): Promise<T> {
+    if (!this.transport) {
+      throw new HydraBridgeError(
+        'Transport is not initialized',
+        'ERR_TRANSPORT_UNAVAILABLE'
+      );
+    }
     // Nếu transport có sẵn phương thức request (như PostMessageTransport), ưu tiên sử dụng
     const maybeRequestTransport = this.transport as unknown as {
       request?: <R = unknown>(msg: Partial<BridgeMessage>, tMs?: number) => Promise<BridgeMessage<R>>;
@@ -316,6 +418,7 @@ export class WalletBridgeClient {
     }
 
     // Cơ chế Dispatcher nội bộ cho bất kỳ ITransport nào chỉ có send() và onMessage()
+    const transport = this.transport;
     return new Promise<T>((resolve, reject) => {
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -343,7 +446,7 @@ export class WalletBridgeClient {
       this.pendingRequests.set(message.id, pending);
 
       try {
-        this.transport.send(message).catch((sendErr) => {
+        transport.send(message).catch((sendErr) => {
           if (timeoutTimer) {
             clearTimeout(timeoutTimer);
           }
