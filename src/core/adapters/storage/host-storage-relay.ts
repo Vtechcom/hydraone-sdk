@@ -64,6 +64,7 @@ export class HostStorageRelayAdapter implements IStorage {
   private readonly transport: ITransport;
   private readonly timeoutMs: number;
   private readonly pendingRequests = new Map<string, PendingStorageRequest<BridgeMessage>>();
+  private readonly inFlightCancels = new Set<(err: Error) => void>();
   private unsubscribe?: UnsubscribeFn;
   private _isDestroyed = false;
 
@@ -193,7 +194,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Dọn dẹp listener và hủy các yêu cầu đang chờ xử lý
+   * Dọn dẹp listener và hủy ngay lập tức các yêu cầu đang chờ xử lý
    */
   public destroy(): void {
     this._isDestroyed = true;
@@ -201,6 +202,13 @@ export class HostStorageRelayAdapter implements IStorage {
       this.unsubscribe();
       this.unsubscribe = undefined;
     }
+
+    const destroyError = new HydraStorageError('HostStorageRelayAdapter has been destroyed');
+
+    for (const cancel of this.inFlightCancels) {
+      cancel(destroyError);
+    }
+    this.inFlightCancels.clear();
 
     for (const [id, pending] of this.pendingRequests.entries()) {
       if (pending.timeoutTimer) {
@@ -224,13 +232,23 @@ export class HostStorageRelayAdapter implements IStorage {
     if (typeof payload === 'string') {
       return payload;
     }
-    if (typeof payload === 'number' || typeof payload === 'boolean') {
+    if (
+      typeof payload === 'number' ||
+      typeof payload === 'boolean' ||
+      typeof payload === 'bigint'
+    ) {
       return String(payload);
     }
     if (typeof payload === 'object') {
       const obj = payload as Record<string, any>;
       const val = 'result' in obj ? obj.result : obj.value;
-      return val === null || val === undefined ? null : String(val);
+      if (val === null || val === undefined) {
+        return null;
+      }
+      if (typeof val === 'object') {
+        return JSON.stringify(val);
+      }
+      return String(val);
     }
     return null;
   }
@@ -267,25 +285,60 @@ export class HostStorageRelayAdapter implements IStorage {
     operation: string,
     key?: string
   ): Promise<BridgeMessage> {
-    try {
-      const maybeRequestTransport = this.transport as unknown as {
-        request?: (msg: Partial<BridgeMessage>, tMs?: number) => Promise<BridgeMessage>;
-      };
+    this.assertNotDestroyed(operation, key);
 
-      if (typeof maybeRequestTransport.request === 'function') {
-        const response = await maybeRequestTransport.request(message, this.timeoutMs);
-        this.assertNotDestroyed(operation, key);
-        if (response.type === 'RPC_ERROR') {
-          const rpcPayload = response.payload as RpcResponsePayload | undefined;
-          const errMsg = rpcPayload?.error?.message || 'Host Shell storage operation failed';
-          throw new HydraStorageError(errMsg, rpcPayload?.error?.details);
-        }
-        return response;
+    let cancelCallback: ((err: Error) => void) | undefined;
+    const cancelPromise = new Promise<never>((_, reject) => {
+      cancelCallback = reject;
+      this.inFlightCancels.add(reject);
+    });
+
+    try {
+      const response = await Promise.race([
+        (async () => {
+          const maybeRequestTransport = this.transport as unknown as {
+            request?: (msg: Partial<BridgeMessage>, tMs?: number) => Promise<BridgeMessage>;
+          };
+
+          if (typeof maybeRequestTransport.request === 'function') {
+            const resp = await maybeRequestTransport.request(message, this.timeoutMs);
+            this.assertNotDestroyed(operation, key);
+            if (resp.type === 'RPC_ERROR') {
+              const rpcPayload = resp.payload as any;
+              const errMsg =
+                (typeof rpcPayload?.error === 'object' && rpcPayload?.error !== null
+                  ? rpcPayload.error.message
+                  : undefined) ||
+                rpcPayload?.message ||
+                (typeof rpcPayload?.error === 'string' ? rpcPayload.error : '') ||
+                (typeof rpcPayload === 'string'
+                  ? rpcPayload
+                  : 'Host Shell storage operation failed');
+              const details =
+                typeof rpcPayload?.error === 'object' && rpcPayload?.error !== null
+                  ? rpcPayload.error.details
+                  : rpcPayload?.details;
+              throw new HydraStorageError(errMsg, details);
+            }
+            return resp;
+          }
+
+          // Dispatcher dự phòng cho generic ITransport chỉ có send/onMessage
+          return await this.dispatchWithPendingMap(message);
+        })(),
+        cancelPromise,
+      ]);
+
+      this.assertNotDestroyed(operation, key);
+      return response;
+    } catch (err: any) {
+      if (this._isDestroyed) {
+        throw new HydraStorageError(
+          `HostStorageRelayAdapter has been destroyed (operation: ${operation})`,
+          { operation, key, originalError: err }
+        );
       }
 
-      // Dispatcher dự phòng cho generic ITransport chỉ có send/onMessage
-      return await this.dispatchWithPendingMap(message);
-    } catch (err: any) {
       if (err instanceof HydraStorageError) {
         throw err;
       }
@@ -298,6 +351,10 @@ export class HostStorageRelayAdapter implements IStorage {
           originalError: err,
         }
       );
+    } finally {
+      if (cancelCallback) {
+        this.inFlightCancels.delete(cancelCallback);
+      }
     }
   }
 
@@ -383,8 +440,17 @@ export class HostStorageRelayAdapter implements IStorage {
 
       if (message.type === 'RPC_ERROR' || (rpcPayload && rpcPayload.error)) {
         const errInfo = rpcPayload?.error;
-        const errMsg = errInfo?.message || 'Host Shell storage operation failed';
-        pending.reject(new HydraStorageError(errMsg, errInfo?.details));
+        const anyPayload = rpcPayload as any;
+        const errMsg =
+          (typeof errInfo === 'object' && errInfo !== null ? errInfo.message : undefined) ||
+          anyPayload?.message ||
+          (typeof errInfo === 'string' ? errInfo : '') ||
+          (typeof message.payload === 'string'
+            ? message.payload
+            : 'Host Shell storage operation failed');
+        const details =
+          typeof errInfo === 'object' && errInfo !== null ? errInfo.details : anyPayload?.details;
+        pending.reject(new HydraStorageError(errMsg, details));
       } else {
         pending.resolve(message);
       }

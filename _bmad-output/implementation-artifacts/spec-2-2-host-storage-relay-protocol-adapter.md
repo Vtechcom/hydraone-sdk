@@ -1,11 +1,11 @@
----
+﻿---
 title: 'Story 2.2: Host Storage Relay Protocol Adapter'
 type: 'feature'
 created: '2026-10-06'
 status: 'done'
 baseline_commit: '0b0484de583a3f979024cfbdd42b01a026fdc8f4'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-2-context.md'
@@ -78,13 +78,16 @@ context:
 
 ### Review Findings
 
-- [x] [Review][Patch] HostStorageRelayAdapter: Hỗ trợ chuyển đổi string cho kết quả primitive (number, boolean) trong extractValue [src/core/adapters/storage/host-storage-relay.ts:221]
-- [x] [Review][Patch] HostStorageRelayAdapter: Kiểm tra assertNotDestroyed ngay sau await request() để ngăn trả về kết quả trên adapter đã destroy [src/core/adapters/storage/host-storage-relay.ts:254]
-- [x] [Review][Patch] HostStorageRelayAdapter: Validate key là chuỗi không rỗng trong getItem, setItem, removeItem [src/core/adapters/storage/host-storage-relay.ts:231]
+- [x] [Review][Patch] HostStorageRelayAdapter: Hủy tức thì in-flight requests khi gọi destroy() trên PostMessageTransport [src/core/adapters/storage/host-storage-relay.ts:198]
+- [x] [Review][Patch] HostStorageRelayAdapter: Trích xuất JSON.stringify an toàn cho object/array trong extractValue [src/core/adapters/storage/host-storage-relay.ts:230]
+- [x] [Review][Patch] HostStorageRelayAdapter: Bảo toàn chi tiết thông báo lỗi đa dạng từ Host Shell khi nhận RPC_ERROR [src/core/adapters/storage/host-storage-relay.ts:278]
+- [x] [Review][Patch] Tests: Bổ sung unit test bao phủ removeItem, clear, và immediate abort khi destroy trên PostMessageTransport [tests/core/adapters/host-storage-relay.test.ts:454]
 
 #### Rejected
 - Không hỗ trợ localStorage fallback ngầm định khi Host Storage Relay gặp lỗi: rejected `false` -- Vi phạm trực tiếp quy chuẩn bảo mật AD-3 (cấm tự ý ghi token nhạy cảm vào unpartitioned storage không an toàn khi Host Shell disconnect).
 - Không kiểm tra kiểu dữ liệu của value trong setItem: rejected `false` -- Code đã chủ động ép kiểu an toàn String(value) tuân thủ contract IStorage.
+- Cho phép tùy biến prefix trong clear(): rejected `false` -- Vi phạm ràng buộc bảo toàn dữ liệu game ngoài prefix STORAGE_PREFIX (hydra:sdk:).
+- Bổ sung thư viện UUID bên ngoài cho generateId: rejected `low` -- Vi phạm ràng buộc zero-dependency; crypto.randomUUID có sẵn trên 100% môi trường hiện đại.
 
 ## Implementation Notes
 
@@ -94,7 +97,7 @@ context:
 - Chuẩn hóa toàn bộ lỗi giao tiếp (timeout, ngắt kết nối, lỗi RPC từ Host) thành `HydraStorageError` với mã lỗi `ERR_STORAGE_UNAVAILABLE` tuân thủ nghiêm ngặt chính sách bảo mật AD-3 (không tự ý ghi token nhạy cảm vào unpartitioned storage).
 - Cung cấp phương thức `destroy()` gỡ bỏ listener và reject kịp thời các in-flight requests.
 - Xuất khẩu đầy đủ tại `src/core/adapters/storage/index.ts`, `src/core/adapters/index.ts` và `src/index.ts`.
-- Xây dựng 21 unit tests trong `tests/core/adapters/host-storage-relay.test.ts` bao phủ 100% ma trận I/O và edge cases. Tổng số unit tests dự án đạt 156/156 tests pass 100%. TypeScript compilation không lỗi.
+- Xây dựng 25 unit tests trong `tests/core/adapters/host-storage-relay.test.ts` bao phủ 100% ma trận I/O và edge cases. Tổng số unit tests dự án đạt 160/160 tests pass 100%. TypeScript compilation không lỗi.
 
 ## Spec Change Log
 
@@ -106,7 +109,10 @@ context:
 | 2 | Khi dùng `maybeRequestTransport.request()`, nếu adapter bị `destroy()` trong thời gian chờ, hàm có thể resolve sau khi đã hủy | `low` | `patch` | Đã thêm `assertNotDestroyed(operation, key)` sau `await maybeRequestTransport.request(...)` [src/core/adapters/storage/host-storage-relay.ts:254] |
 | 3 | Thiếu validation kiểm tra key là chuỗi không rỗng trong `getItem`, `setItem`, `removeItem` | `low` | `patch` | Đã thêm hàm helper `assertValidKey` ném `HydraStorageError` khi key rỗng hoặc không phải chuỗi [src/core/adapters/storage/host-storage-relay.ts:231] |
 | 4 | Yêu cầu fallback ngầm sang LocalStorage khi Host mất kết nối | `false` | `reject` | Kiến trúc AD-3 quy định token auth bắt buộc ném lỗi có kiểm soát thay vì fallback sang unpartitioned storage |
-
+| 5 | Request qua `transport.request()` bị treo tới hết timeout khi gọi `destroy()` thay vì reject ngay | `medium` | `patch` | Bổ sung `inFlightCancels` kích hoạt reject ngay lập tức bằng `Promise.race` khi `destroy()` [src/core/adapters/storage/host-storage-relay.ts:198] |
+| 6 | `extractValue` chuyển object/array thành `[object Object]` làm mất cấu trúc JSON | `low` | `patch` | Đã dùng `JSON.stringify(val)` khi `typeof val === 'object'` [src/core/adapters/storage/host-storage-relay.ts:230] |
+| 7 | Host `RPC_ERROR` mất thông báo gốc nếu không có cấu trúc lồng `error.message` | `low` | `patch` | Bổ sung fallback trích xuất message từ `rpcPayload?.message`, string error, string payload [src/core/adapters/storage/host-storage-relay.ts:278] |
+| 8 | Thiếu test kiểm thử `removeItem`, `clear`, và immediate abort khi `destroy` trên `PostMessageTransport` | `medium` | `patch` | Bổ sung 4 unit test mới nâng tổng số test lên 25 tests trong `tests/core/adapters/host-storage-relay.test.ts` |
 
 ## Design Notes
 

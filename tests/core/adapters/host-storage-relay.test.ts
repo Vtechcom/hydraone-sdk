@@ -469,6 +469,115 @@ describe('HostStorageRelayAdapter', () => {
 
       await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
     });
+
+    it('thực hiện removeItem và clear thành công qua PostMessageTransport', async () => {
+      const targetWindow = new MockTargetWindow();
+      const parentWindow = new MockSourceWindow();
+      const sourceWindow = new MockSourceWindow(parentWindow);
+
+      const pmTransport = new PostMessageTransport({
+        appCenterOrigin: 'https://host.hydraone.app',
+        targetWindow,
+        sourceWindow,
+        checkIframeSource: false,
+        defaultTimeoutMs: 1000,
+      });
+
+      const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
+
+      // 1. removeItem
+      const removePromise = adapter.removeItem('hydra:sdk:auth:token');
+      expect(targetWindow.sentMessages.length).toBe(1);
+      const removeSent = targetWindow.sentMessages[0].message as BridgeMessage;
+      expect(removeSent.type).toBe('HOST_STORAGE_REMOVE');
+      expect(removeSent.payload).toEqual({ key: 'hydra:sdk:auth:token' });
+
+      sourceWindow.dispatch('message', {
+        origin: 'https://host.hydraone.app',
+        source: parentWindow,
+        data: {
+          id: 'host-pm-ack-remove',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: removeSent.id,
+            result: true,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        },
+      });
+
+      await expect(removePromise).resolves.toBeUndefined();
+
+      // 2. clear
+      const clearPromise = adapter.clear();
+      expect(targetWindow.sentMessages.length).toBe(2);
+      const clearSent = targetWindow.sentMessages[1].message as BridgeMessage;
+      expect(clearSent.type).toBe('HOST_STORAGE_CLEAR');
+      expect(clearSent.payload).toEqual({ prefix: STORAGE_PREFIX });
+
+      sourceWindow.dispatch('message', {
+        origin: 'https://host.hydraone.app',
+        source: parentWindow,
+        data: {
+          id: 'host-pm-ack-clear',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: clearSent.id,
+            result: true,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        },
+      });
+
+      await expect(clearPromise).resolves.toBeUndefined();
+    });
+
+    it('bọc lỗi RPC_ERROR từ Host Shell qua PostMessageTransport thành HydraStorageError', async () => {
+      const targetWindow = new MockTargetWindow();
+      const parentWindow = new MockSourceWindow();
+      const sourceWindow = new MockSourceWindow(parentWindow);
+
+      const pmTransport = new PostMessageTransport({
+        appCenterOrigin: 'https://host.hydraone.app',
+        targetWindow,
+        sourceWindow,
+        checkIframeSource: false,
+        defaultTimeoutMs: 1000,
+      });
+
+      const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
+
+      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'jwt');
+      const sent = targetWindow.sentMessages[0].message as BridgeMessage;
+
+      sourceWindow.dispatch('message', {
+        origin: 'https://host.hydraone.app',
+        source: parentWindow,
+        data: {
+          id: 'host-pm-err',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: sent.id,
+            error: {
+              code: 'ERR_HOST_STORAGE_FULL',
+              message: 'Host storage is full',
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        },
+      });
+
+      await expect(setPromise).rejects.toThrow(HydraStorageError);
+      try {
+        await setPromise;
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(HydraStorageError);
+        expect(err.message).toContain('Host storage is full');
+      }
+    });
   });
 
   describe('Tương thích với Sub-Namespace Policy', () => {
@@ -544,7 +653,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(await getItemPromise2).toBe('true');
     });
 
-    it('ném HydraStorageError khi adapter bị destroy trong khi đang chờ PostMessageTransport.request', async () => {
+    it('hủy tức thì (immediate abort) in-flight request trên PostMessageTransport khi gọi destroy() mà không cần chờ phản hồi Host', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -554,34 +663,74 @@ describe('HostStorageRelayAdapter', () => {
         targetWindow,
         sourceWindow,
         checkIframeSource: false,
-        defaultTimeoutMs: 5000,
+        defaultTimeoutMs: 15000,
       });
 
-      const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 5000 });
+      const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 15000 });
 
-      const getPromise = adapter.getItem('hydra:sdk:auth:token');
-      const sent = targetWindow.sentMessages[0].message as BridgeMessage;
+      const inFlightPromise = adapter.getItem('hydra:sdk:auth:token');
+      expect(targetWindow.sentMessages.length).toBe(1);
 
-      // Hủy adapter trước khi phản hồi kịp đến
+      // Gọi destroy() ngay lập tức, không dispatch bất kỳ response nào từ Host
       adapter.destroy();
 
-      // Giả lập Host phản hồi sau khi adapter đã destroy
-      sourceWindow.dispatch('message', {
-        origin: 'https://host.hydraone.app',
-        source: parentWindow,
-        data: {
-          id: 'host-late-resp',
-          type: 'RPC_RESPONSE',
-          payload: {
-            requestId: sent.id,
-            result: 'late_token',
-          },
-          timestamp: Date.now(),
-          source: 'hydra-host',
+      await expect(inFlightPromise).rejects.toThrow(HydraStorageError);
+      try {
+        await inFlightPromise;
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(HydraStorageError);
+        expect(err.message).toContain('destroyed');
+      }
+    });
+
+    it('trích xuất an toàn dữ liệu dạng object/array bằng JSON.stringify trong extractValue', async () => {
+      const transport = new MockGenericTransport();
+      const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
+
+      const getItemPromise = adapter.getItem('hydra:sdk:session:state');
+      const sent = transport.sentMessages[0];
+
+      // Host trả về một object phức tạp
+      transport.simulateHostResponse({
+        id: 'resp-obj',
+        type: 'RPC_RESPONSE',
+        payload: {
+          requestId: sent.id,
+          result: { score: 100, level: 3, items: ['sword', 'shield'] },
         },
+        timestamp: Date.now(),
+        source: 'hydra-host',
       });
 
-      await expect(getPromise).rejects.toThrow(HydraStorageError);
+      const extracted = await getItemPromise;
+      expect(extracted).toBe(JSON.stringify({ score: 100, level: 3, items: ['sword', 'shield'] }));
+    });
+
+    it('bảo toàn thông điệp lỗi chuỗi trực tiếp từ Host Shell khi nhận RPC_ERROR', async () => {
+      const transport = new MockGenericTransport();
+      const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
+
+      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'val');
+      const sent = transport.sentMessages[0];
+
+      transport.simulateHostResponse({
+        id: 'resp-str-err',
+        type: 'RPC_ERROR',
+        payload: {
+          requestId: sent.id,
+          message: 'Host database lock timeout',
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+
+      await expect(setPromise).rejects.toThrow(HydraStorageError);
+      try {
+        await setPromise;
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(HydraStorageError);
+        expect(err.message).toContain('Host database lock timeout');
+      }
     });
   });
 });
