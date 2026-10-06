@@ -431,6 +431,71 @@ describe('DirectExtensionTransport', () => {
       unsubscribe();
     });
 
+    it('send() và request() xử lý an toàn bản tin REQUEST_DEPOSIT_MODAL và GET_PLAYER_PROFILE', async () => {
+      const transport = new DirectExtensionTransport({ api: mockApi });
+      const received: BridgeMessage[] = [];
+
+      const unsubscribe = transport.onMessage((msg) => {
+        received.push(msg);
+      });
+
+      await transport.send({
+        id: 'sa_modal_1',
+        type: 'REQUEST_DEPOSIT_MODAL',
+        payload: { token: 'ADA', minAmount: 10 },
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      await transport.send({
+        id: 'sa_profile_1',
+        type: 'GET_PLAYER_PROFILE',
+        payload: {},
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(received.length).toBe(2);
+      expect(received[0].type).toBe('RPC_RESPONSE');
+      expect((received[0].payload as any).result).toEqual({ success: true });
+      expect(received[1].type).toBe('RPC_RESPONSE');
+      expect((received[1].payload as any).result).toEqual({
+        nickname: 'Standalone Player',
+        avatarUrl: '',
+        vipLevel: 0,
+        adaHandle: undefined,
+      });
+
+      // Kiểm tra gọi qua request()
+      const modalRes = await transport.request({
+        id: 'sa_modal_2',
+        type: 'REQUEST_DEPOSIT_MODAL',
+        payload: {},
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+      expect(modalRes.payload).toMatchObject({ result: { success: true } });
+
+      const profileRes = await transport.request({
+        id: 'sa_profile_2',
+        type: 'GET_PLAYER_PROFILE',
+        payload: {},
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+      expect(profileRes.payload).toMatchObject({
+        result: {
+          nickname: 'Standalone Player',
+          avatarUrl: '',
+          vipLevel: 0,
+        },
+      });
+
+      unsubscribe();
+    });
+
     it('destroy() đóng transport và chặn các yêu cầu tiếp theo', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       expect(transport.isClosed()).toBe(false);

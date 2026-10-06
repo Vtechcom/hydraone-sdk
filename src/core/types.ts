@@ -498,5 +498,40 @@ export interface TriggerHapticPayload {
   [key: string]: unknown;
 }
 
+// ==========================================
+// Host Modal Overlay & Player Profile Relay Types (Story 3.3)
+// ==========================================
+
+/**
+ * Tùy chọn cấu hình khi yêu cầu hiển thị modal nạp tiền / swap token trên Host Shell
+ */
+export interface DepositModalOptions {
+  /** Loại token muốn nạp (ví dụ: 'ADA', 'DJED', 'iUSD', ...) */
+  token?: string;
+  /** Số lượng nạp tối thiểu được yêu cầu */
+  minAmount?: number | bigint | string;
+  [key: string]: unknown;
+}
+
+/**
+ * Payload bản tin yêu cầu mở modal nạp tiền REQUEST_DEPOSIT_MODAL
+ */
+export interface DepositModalPayload extends DepositModalOptions {}
+
+/**
+ * Thông tin hồ sơ người chơi được trả về từ Host Shell
+ */
+export interface PlayerProfile {
+  /** Biệt danh / Nickname của người chơi */
+  nickname?: string;
+  /** URL ảnh đại diện */
+  avatarUrl?: string;
+  /** Cấp bậc VIP trong hệ thống App Center */
+  vipLevel?: number;
+  /** Cardano ADA Handle (ví dụ: '$player1') */
+  adaHandle?: string;
+  [key: string]: unknown;
+}
+
 
 

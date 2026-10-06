@@ -430,8 +430,18 @@ export class DirectExtensionTransport implements ITransport {
           break;
         }
         case 'SET_ORIENTATION':
-        case 'TRIGGER_HAPTIC': {
+        case 'TRIGGER_HAPTIC':
+        case 'REQUEST_DEPOSIT_MODAL': {
           result = { success: true };
+          break;
+        }
+        case 'GET_PLAYER_PROFILE': {
+          result = {
+            nickname: 'Standalone Player',
+            avatarUrl: '',
+            vipLevel: 0,
+            adaHandle: undefined,
+          };
           break;
         }
         default: {

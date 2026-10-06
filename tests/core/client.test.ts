@@ -2375,6 +2375,276 @@ describe('WalletBridgeClient', () => {
       });
     });
   });
+
+  describe('In-Game Host Modal Overlay & Player Profile Relay - Story 3.3', () => {
+    let transport: SimpleMockTransport;
+    let client: WalletBridgeClient;
+
+    beforeEach(async () => {
+      transport = new SimpleMockTransport();
+      client = new WalletBridgeClient({ transport });
+
+      // Kết nối handshake để sẵn sàng gọi API
+      const p = client.init();
+      transport.simulateIncoming({
+        id: 'ack-init-s33',
+        type: 'HOST_ACK',
+        payload: { requestId: transport.sentMessages[0].id },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await p;
+    });
+
+    afterEach(() => {
+      client.destroy();
+    });
+
+    describe('requestDepositModal', () => {
+      it('gửi bản tin REQUEST_DEPOSIT_MODAL với payload rỗng khi gọi không tham số', async () => {
+        await client.requestDepositModal();
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('REQUEST_DEPOSIT_MODAL');
+        expect(lastMessage.source).toBe('hydra-client');
+        expect(lastMessage.payload).toEqual({});
+      });
+
+      it('gửi bản tin REQUEST_DEPOSIT_MODAL với options { token: "ADA", minAmount: 10 }', async () => {
+        await client.requestDepositModal({ token: 'ADA', minAmount: 10 });
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('REQUEST_DEPOSIT_MODAL');
+        expect(lastMessage.source).toBe('hydra-client');
+        expect(lastMessage.payload).toEqual({ token: 'ADA', minAmount: 10 });
+      });
+
+      it('hỗ trợ minAmount dạng bigint và string số dương', async () => {
+        await client.requestDepositModal({ token: 'DJED', minAmount: 5000000n });
+        let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({ token: 'DJED', minAmount: 5000000n });
+
+        await client.requestDepositModal({ token: 'iUSD', minAmount: '25.5' });
+        lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({ token: 'iUSD', minAmount: '25.5' });
+      });
+
+      it('ném lỗi ERR_NOT_CONNECTED khi gọi requestDepositModal lúc client chưa kết nối', async () => {
+        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(disconnectedClient.requestDepositModal()).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.requestDepositModal()).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        disconnectedClient.destroy();
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền options không phải object', async () => {
+        await expect(client.requestDepositModal('invalid' as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal(123 as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal([] as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi token rỗng hoặc không phải chuỗi', async () => {
+        await expect(client.requestDepositModal({ token: '' })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ token: '   ' })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ token: 123 as any })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi minAmount âm, 0, NaN hoặc không hợp lệ', async () => {
+        await expect(client.requestDepositModal({ minAmount: -5 })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ minAmount: 0 })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ minAmount: NaN })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ minAmount: -10n })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ minAmount: 'abc' })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.requestDepositModal({ minAmount: '-10' })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_NOT_IN_IFRAME khi gọi requestDepositModal ở chế độ standalone ngoài iframe', async () => {
+        const standaloneClient = new WalletBridgeClient({
+          transport: new SimpleMockTransport(),
+          isIframeFn: () => false,
+        });
+
+        await expect(standaloneClient.requestDepositModal()).rejects.toThrow(HydraBridgeError);
+        await expect(standaloneClient.requestDepositModal()).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_IN_IFRAME,
+        });
+
+        standaloneClient.destroy();
+      });
+    });
+
+    describe('getPlayerProfile', () => {
+      it('gửi RPC GET_PLAYER_PROFILE và trả về đối tượng PlayerProfile từ Host Shell', async () => {
+        const expectedProfile = {
+          nickname: 'CardanoGamer',
+          avatarUrl: 'https://hydraone.app/avatars/gamer1.png',
+          vipLevel: 5,
+          adaHandle: '$cardanogamer',
+        };
+
+        const profilePromise = client.getPlayerProfile();
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('GET_PLAYER_PROFILE');
+        expect(lastMessage.source).toBe('hydra-client');
+
+        // Host phản hồi kết quả RPC
+        transport.simulateIncoming({
+          id: 'rpc-res-profile',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: lastMessage.id,
+            result: expectedProfile,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const profile = await profilePromise;
+        expect(profile).toEqual(expectedProfile);
+      });
+
+      it('trả về đối tượng rỗng nếu Host trả về payload trống hoặc non-object', async () => {
+        const profilePromise = client.getPlayerProfile();
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+
+        transport.simulateIncoming({
+          id: 'rpc-res-profile-empty',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: lastMessage.id,
+            result: null,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const profile = await profilePromise;
+        expect(profile).toEqual({});
+      });
+
+      it('ném lỗi ERR_NOT_CONNECTED khi gọi getPlayerProfile lúc client chưa kết nối', async () => {
+        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(disconnectedClient.getPlayerProfile()).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.getPlayerProfile()).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        disconnectedClient.destroy();
+      });
+
+      it('ném lỗi ERR_NOT_IN_IFRAME khi gọi getPlayerProfile ở chế độ standalone ngoài iframe', async () => {
+        const standaloneClient = new WalletBridgeClient({
+          transport: new SimpleMockTransport(),
+          isIframeFn: () => false,
+        });
+
+        await expect(standaloneClient.getPlayerProfile()).rejects.toThrow(HydraBridgeError);
+        await expect(standaloneClient.getPlayerProfile()).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_IN_IFRAME,
+        });
+
+        standaloneClient.destroy();
+      });
+
+      it('ném lỗi ERR_TIMEOUT khi Host không phản hồi sau thời gian query timeout quy định (15s)', async () => {
+        const profilePromise = client.getPlayerProfile();
+
+        vi.advanceTimersByTime(TIERED_TIMEOUTS.QUERY + 100);
+
+        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
+        await expect(profilePromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_TIMEOUT,
+        });
+      });
+
+      it('hỗ trợ tùy chỉnh timeout per-request thông qua options.timeoutMs', async () => {
+        const profilePromise = client.getPlayerProfile({ timeoutMs: 5000 });
+
+        vi.advanceTimersByTime(4999);
+        // Chưa quá 5000ms thì chưa timeout
+
+        vi.advanceTimersByTime(100);
+        // Quá 5000ms thì timeout
+        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
+      });
+
+      it('bỏ qua trong im lặng (silent drop) phản hồi trễ của GET_PLAYER_PROFILE đến sau khi timeout', async () => {
+        const profilePromise = client.getPlayerProfile({ timeoutMs: 2000 });
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+
+        vi.advanceTimersByTime(2100);
+        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
+
+        // Phản hồi muộn tới sau khi timeout
+        expect(() => {
+          transport.simulateIncoming({
+            id: 'rpc-res-late-profile',
+            type: 'RPC_RESPONSE',
+            payload: {
+              requestId: lastMessage.id,
+              result: { nickname: 'LateUser' },
+            },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+        }).not.toThrow();
+      });
+
+      it('chuyển tiếp lỗi RPC từ Host Shell (RPC_ERROR)', async () => {
+        const profilePromise = client.getPlayerProfile();
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+
+        transport.simulateIncoming({
+          id: 'rpc-err-profile',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: lastMessage.id,
+            error: {
+              code: ERROR_CODES.ERR_USER_REJECTED,
+              message: 'Player declined profile sharing',
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(profilePromise).rejects.toThrow(HydraUserRejectedError);
+        await expect(profilePromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_USER_REJECTED,
+          message: 'Player declined profile sharing',
+        });
+      });
+    });
+  });
 });
 
 

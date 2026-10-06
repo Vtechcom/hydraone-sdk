@@ -21,6 +21,9 @@ import type {
   OrientationLockType,
   SetOrientationPayload,
   TriggerHapticPayload,
+  DepositModalOptions,
+  DepositModalPayload,
+  PlayerProfile,
 } from './types';
 import { TIERED_TIMEOUTS, HAPTIC_PATTERNS } from './types';
 import {
@@ -1159,6 +1162,136 @@ export class WalletBridgeClient {
     };
 
     await this.transport!.send(message);
+  }
+
+  // ==========================================
+  // In-Game Host Modal Overlay & Player Profile Relay (Story 3.3)
+  // ==========================================
+
+  /**
+   * Xác thực và chuẩn hóa tùy chọn mở modal nạp tiền
+   */
+  private validateDepositModalOptions(options?: DepositModalOptions): DepositModalOptions {
+    if (options === undefined) {
+      return {};
+    }
+
+    if (typeof options !== 'object' || options === null || Array.isArray(options)) {
+      throw new HydraBridgeError(
+        'Invalid deposit modal options. Expected an options object.',
+        ERROR_CODES.ERR_INVALID_PARAMS
+      );
+    }
+
+    const validated: DepositModalOptions = { ...options };
+
+    if (options.token !== undefined) {
+      if (typeof options.token !== 'string' || options.token.trim().length === 0) {
+        throw new HydraBridgeError(
+          'Invalid token: must be a non-empty string.',
+          ERROR_CODES.ERR_INVALID_PARAMS
+        );
+      }
+      validated.token = options.token.trim();
+    }
+
+    if (options.minAmount !== undefined) {
+      if (typeof options.minAmount === 'number') {
+        if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) {
+          throw new HydraBridgeError(
+            `Invalid minAmount: ${options.minAmount}. Must be a positive finite number.`,
+            ERROR_CODES.ERR_INVALID_PARAMS
+          );
+        }
+      } else if (typeof options.minAmount === 'bigint') {
+        if (options.minAmount <= 0n) {
+          throw new HydraBridgeError(
+            `Invalid minAmount: ${options.minAmount.toString()}. Must be a positive bigint.`,
+            ERROR_CODES.ERR_INVALID_PARAMS
+          );
+        }
+      } else if (typeof options.minAmount === 'string') {
+        const trimmed = options.minAmount.trim();
+        const parsed = Number(trimmed);
+        if (trimmed.length === 0 || !Number.isFinite(parsed) || parsed <= 0) {
+          throw new HydraBridgeError(
+            `Invalid minAmount: "${options.minAmount}". Must be a valid positive numeric string.`,
+            ERROR_CODES.ERR_INVALID_PARAMS
+          );
+        }
+      } else {
+        throw new HydraBridgeError(
+          'Invalid minAmount type. Expected number, bigint, or string.',
+          ERROR_CODES.ERR_INVALID_PARAMS
+        );
+      }
+    }
+
+    return validated;
+  }
+
+  /**
+   * Yêu cầu Host Shell hiển thị popup modal nạp tiền hoặc swap token phía trên iframe game
+   * 
+   * Gửi bản tin REQUEST_DEPOSIT_MODAL tới Host Shell qua ITransport.
+   * 
+   * @param options Tùy chọn nạp tiền { token, minAmount, ... }
+   */
+  public async requestDepositModal(options?: DepositModalOptions): Promise<void> {
+    const validatedOptions = this.validateDepositModalOptions(options);
+
+    if (this.isStandaloneBrowser()) {
+      throw new HydraBridgeError(
+        'Host deposit modal overlay is not available outside App Center iframe',
+        ERROR_CODES.ERR_NOT_IN_IFRAME
+      );
+    }
+
+    this.assertConnected();
+
+    const message: BridgeMessage<DepositModalPayload> = {
+      id: generateId(),
+      type: 'REQUEST_DEPOSIT_MODAL',
+      payload: validatedOptions,
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    await this.transport!.send(message);
+  }
+
+  /**
+   * Truy vấn thông tin hồ sơ người chơi từ Host Shell (nickname, avatar, VIP level, ADA handle)
+   * 
+   * Thực hiện yêu cầu RPC GET_PLAYER_PROFILE tới Host Shell với cơ chế Tiered Timeout (mặc định 15s).
+   * 
+   * @param options Tùy chọn truy vấn { timeoutMs }
+   * @returns Thông tin hồ sơ người chơi dạng PlayerProfile
+   */
+  public async getPlayerProfile(options?: QueryOptions): Promise<PlayerProfile> {
+    if (this.isStandaloneBrowser()) {
+      throw new HydraBridgeError(
+        'Player profile relay is not available outside App Center iframe',
+        ERROR_CODES.ERR_NOT_IN_IFRAME
+      );
+    }
+
+    this.assertConnected();
+
+    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
+    const message: BridgeMessage = {
+      id: generateId(),
+      type: 'GET_PLAYER_PROFILE',
+      payload: {},
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    const result = await this.executeRpc<PlayerProfile>(message, timeout);
+    if (result && typeof result === 'object') {
+      return result;
+    }
+    return {} as PlayerProfile;
   }
 
   /**
