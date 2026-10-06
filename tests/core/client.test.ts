@@ -673,4 +673,391 @@ describe('WalletBridgeClient', () => {
       expect(addrs).toEqual(['addr_test1xyz']);
     });
   });
+
+  describe('CIP-30 & CIP-8 Signing & Submission (signTx, submitTx, signData)', () => {
+    let transport: SimpleMockTransport;
+    let client: WalletBridgeClient;
+
+    beforeEach(async () => {
+      transport = new SimpleMockTransport();
+      client = new WalletBridgeClient({ transport });
+
+      // Handshake kết nối trước mỗi test
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'host-ack-init',
+        type: 'HOST_ACK',
+        payload: {
+          requestId: readyMsg.id,
+          hostInfo: { walletName: 'Eternl', network: 'mainnet' },
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+      expect(client.isConnected).toBe(true);
+      expect(client.signingTimeoutMs).toBe(TIERED_TIMEOUTS.SIGNING); // 120,000ms
+    });
+
+    describe('signTx', () => {
+      it('gửi yêu cầu SIGN_TX và nhận witness set CBOR hex', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor, false);
+
+        expect(transport.sentMessages.length).toBe(2); // 1 handshake + 1 signTx
+        const signMsg = transport.sentMessages[1];
+        expect(signMsg.type).toBe('SIGN_TX');
+        expect(signMsg.payload).toEqual({
+          cbor: txCbor,
+          partialSign: false,
+          tx: txCbor,
+        });
+
+        // Giả lập Host Shell trả về witness set
+        const witnessCbor = 'a10081825820...';
+        transport.simulateIncoming({
+          id: 'host-res-sign',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: signMsg.id,
+            result: witnessCbor,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const result = await signPromise;
+        expect(result).toBe(witnessCbor);
+      });
+
+      it('hỗ trợ partialSign: true', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor, true);
+
+        const signMsg = transport.sentMessages[1];
+        expect(signMsg.payload).toMatchObject({
+          cbor: txCbor,
+          partialSign: true,
+        });
+
+        transport.simulateIncoming({
+          id: 'host-res-partial',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: signMsg.id,
+            result: 'witness_partial',
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const res = await signPromise;
+        expect(res).toBe('witness_partial');
+      });
+
+      it('ném HydraUserRejectedError khi người dùng từ chối ký ví', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor);
+
+        const signMsg = transport.sentMessages[1];
+        transport.simulateIncoming({
+          id: 'host-err-reject',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: signMsg.id,
+            error: {
+              code: ERROR_CODES.ERR_USER_REJECTED,
+              message: 'User declined to sign the transaction',
+              details: { reason: 'User cancelled modal' },
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(signPromise).rejects.toThrow(HydraUserRejectedError);
+        await expect(signPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_USER_REJECTED,
+          message: 'User declined to sign the transaction',
+        });
+      });
+
+      it('hết hạn timeout sau 120,000ms mặc định', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor);
+
+        // Chưa timeout ở 119s
+        vi.advanceTimersByTime(119000);
+        expect(transport.sentMessages.length).toBe(2);
+
+        // Đạt 120s
+        vi.advanceTimersByTime(1000);
+
+        await expect(signPromise).rejects.toThrow(HydraTimeoutError);
+        await expect(signPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_TIMEOUT,
+        });
+      });
+
+      it('cho phép ghi đè timeout tùy biến qua options.timeoutMs', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor, false, { timeoutMs: 30000 });
+
+        vi.advanceTimersByTime(30000);
+
+        await expect(signPromise).rejects.toThrow(HydraTimeoutError);
+        await expect(signPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_TIMEOUT,
+        });
+      });
+
+      it('cho phép truyền trực tiếp SignOptions ở vị trí tham số thứ 2 khi bỏ qua partialSign', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor, { timeoutMs: 25000 });
+
+        const signMsg = transport.sentMessages[1];
+        expect(signMsg.payload).toMatchObject({
+          cbor: txCbor,
+          partialSign: false,
+        });
+
+        vi.advanceTimersByTime(25000);
+
+        await expect(signPromise).rejects.toThrow(HydraTimeoutError);
+      });
+
+      it('loại bỏ âm thầm phản hồi trễ của Host sau khi signTx đã timeout', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor);
+
+        // Chờ timeout
+        vi.advanceTimersByTime(120000);
+        await expect(signPromise).rejects.toThrow(HydraTimeoutError);
+
+        const signMsg = transport.sentMessages[1];
+
+        // Host gửi phản hồi muộn
+        expect(() => {
+          transport.simulateIncoming({
+            id: 'late-host-reply',
+            type: 'RPC_RESPONSE',
+            payload: {
+              requestId: signMsg.id,
+              result: 'late_witness_hex',
+            },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+        }).not.toThrow();
+      });
+
+      it('ném ERR_INVALID_PARAMS nếu cbor rỗng hoặc không phải string', async () => {
+        await expect(client.signTx('')).rejects.toThrow(HydraBridgeError);
+        await expect(client.signTx(null as any)).rejects.toMatchObject({
+          code: 'ERR_INVALID_PARAMS',
+        });
+      });
+    });
+
+    describe('submitTx', () => {
+      it('gửi yêu cầu SUBMIT_TX và trả về chuỗi hash giao dịch', async () => {
+        const txCbor = '84a300818258200101...';
+        const submitPromise = client.submitTx(txCbor);
+
+        const submitMsg = transport.sentMessages[1];
+        expect(submitMsg.type).toBe('SUBMIT_TX');
+        expect(submitMsg.payload).toEqual({
+          cbor: txCbor,
+          tx: txCbor,
+        });
+
+        const txHash = '4b04f32c1c68e3678000787e91d84b5c777a83d47ad9c12b7a97fd0d648fa366';
+        transport.simulateIncoming({
+          id: 'host-res-submit',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: submitMsg.id,
+            result: txHash,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const res = await submitPromise;
+        expect(res).toBe(txHash);
+      });
+
+      it('hết hạn timeout sau 120,000ms nếu Host không phản hồi submitTx', async () => {
+        const txCbor = '84a300818258200101...';
+        const submitPromise = client.submitTx(txCbor);
+
+        vi.advanceTimersByTime(120000);
+
+        await expect(submitPromise).rejects.toThrow(HydraTimeoutError);
+        await expect(submitPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_TIMEOUT,
+        });
+      });
+
+      it('ném lỗi nếu CBOR giao dịch không hợp lệ', async () => {
+        await expect(client.submitTx('')).rejects.toMatchObject({
+          code: 'ERR_INVALID_PARAMS',
+        });
+      });
+    });
+
+    describe('signData', () => {
+      it('gửi yêu cầu SIGN_DATA và trả về DataSignature ({ signature, key })', async () => {
+        const address = 'addr_test1qp...';
+        const payloadHex = '68656c6c6f20776f726c64'; // 'hello world' hex
+        const signDataPromise = client.signData(address, payloadHex);
+
+        const signDataMsg = transport.sentMessages[1];
+        expect(signDataMsg.type).toBe('SIGN_DATA');
+        expect(signDataMsg.payload).toEqual({
+          address,
+          payloadHex,
+        });
+
+        const expectedSig = {
+          signature: '84582e...sig',
+          key: 'a4010103...key',
+        };
+
+        transport.simulateIncoming({
+          id: 'host-res-signdata',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: signDataMsg.id,
+            result: expectedSig,
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const result = await signDataPromise;
+        expect(result).toEqual(expectedSig);
+      });
+
+      it('ném HydraUserRejectedError khi người dùng từ chối signData', async () => {
+        const address = 'addr_test1qp...';
+        const payloadHex = '68656c6c6f20776f726c64';
+        const signDataPromise = client.signData(address, payloadHex);
+
+        const signDataMsg = transport.sentMessages[1];
+        transport.simulateIncoming({
+          id: 'host-err-signdata',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: signDataMsg.id,
+            error: {
+              code: ERROR_CODES.ERR_USER_REJECTED,
+              message: 'User rejected authentication signature',
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(signDataPromise).rejects.toThrow(HydraUserRejectedError);
+        await expect(signDataPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_USER_REJECTED,
+        });
+      });
+
+      it('ném ERR_INVALID_PARAMS khi address hoặc payloadHex không hợp lệ', async () => {
+        await expect(client.signData('', '1234')).rejects.toMatchObject({
+          code: 'ERR_INVALID_PARAMS',
+        });
+        await expect(client.signData('addr', null as any)).rejects.toMatchObject({
+          code: 'ERR_INVALID_PARAMS',
+        });
+      });
+    });
+
+    describe('Kiểm tra trạng thái chưa kết nối (ERR_NOT_CONNECTED)', () => {
+      it('ném ERR_NOT_CONNECTED khi gọi signTx, submitTx, signData trước khi init', async () => {
+        const uninitClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(uninitClient.signTx('1234')).rejects.toThrow(HydraBridgeError);
+        await expect(uninitClient.signTx('1234')).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        await expect(uninitClient.submitTx('1234')).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        await expect(uninitClient.signData('addr', '1234')).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+      });
+    });
+
+    describe('Tích hợp cùng PostMessageTransport', () => {
+      it('xử lý signTx và ánh xạ HydraUserRejectedError qua PostMessageTransport', async () => {
+        const targetWindow = { postMessage: vi.fn() };
+        const sourceWindow = {
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          parent: targetWindow,
+        };
+
+        const pmTransport = new PostMessageTransport({
+          appCenterOrigin: 'https://alpha.hydraone.app',
+          targetWindow,
+          sourceWindow: sourceWindow as any,
+          env: 'test',
+          checkIframeSource: false,
+        });
+
+        const pmClient = new WalletBridgeClient({ transport: pmTransport });
+        const initPromise = pmClient.init();
+
+        const handshakeEnvelope = targetWindow.postMessage.mock.calls[0][0];
+        pmTransport.handleMessageEvent({
+          origin: 'https://alpha.hydraone.app',
+          data: {
+            id: 'ack-msg',
+            type: 'HOST_ACK',
+            payload: { requestId: handshakeEnvelope.id, hostInfo: { walletName: 'Eternl' } },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          },
+        });
+        await initPromise;
+
+        // Gọi signTx
+        const signPromise = pmClient.signTx('deadbeef');
+        expect(targetWindow.postMessage).toHaveBeenCalledTimes(2);
+        const signEnvelope = targetWindow.postMessage.mock.calls[1][0];
+        expect(signEnvelope.type).toBe('SIGN_TX');
+
+        // Host Shell phản hồi lỗi người dùng từ chối
+        pmTransport.handleMessageEvent({
+          origin: 'https://alpha.hydraone.app',
+          data: {
+            id: 'err-msg',
+            type: 'RPC_ERROR',
+            payload: {
+              requestId: signEnvelope.id,
+              error: {
+                code: ERROR_CODES.ERR_USER_REJECTED,
+                message: 'Modal closed without signing',
+              },
+            },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          },
+        });
+
+        await expect(signPromise).rejects.toThrow(HydraUserRejectedError);
+        await expect(signPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_USER_REJECTED,
+        });
+      });
+    });
+  });
 });
+

@@ -180,9 +180,55 @@ export interface WalletBridgeClientOptions {
   handshakeTimeoutMs?: number;
   /** Thời gian chờ mặc định cho các truy vấn trạng thái (ms), mặc định 15000ms */
   queryTimeoutMs?: number;
+  /** Thời gian chờ mặc định cho các tác vụ ký ví và nộp giao dịch (ms), mặc định 120000ms */
+  signingTimeoutMs?: number;
   /** Tự động bắt tay khi khởi tạo (mặc định: false) */
   autoConnect?: boolean;
   /** Bật ghi log cảnh báo/debug (mặc định: false) */
   debug?: boolean;
+}
+
+/**
+ * Chữ ký dữ liệu theo chuẩn CIP-8 / CIP-30
+ */
+export interface DataSignature {
+  /** Chuỗi hex của COSE_Sign1 chứa chữ ký */
+  signature: string;
+  /** Chuỗi hex của COSE_Key chứa khóa công khai */
+  key: string;
+}
+
+/**
+ * Tùy chọn cho các cuộc gọi ký ví và nộp giao dịch
+ */
+export interface SignOptions {
+  /** Thời gian chờ tối đa (ms) cho yêu cầu ký/nộp, ghi đè mặc định signingTimeoutMs */
+  timeoutMs?: number;
+}
+
+/**
+ * Dữ liệu payload cho yêu cầu ký giao dịch SIGN_TX
+ */
+export interface SignTxPayload {
+  cbor: string;
+  partialSign?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Dữ liệu payload cho yêu cầu nộp giao dịch SUBMIT_TX
+ */
+export interface SubmitTxPayload {
+  cbor: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Dữ liệu payload cho yêu cầu ký dữ liệu xác thực CIP-8 SIGN_DATA
+ */
+export interface SignDataPayload {
+  address: string;
+  payloadHex: string;
+  [key: string]: unknown;
 }
 

@@ -15,6 +15,7 @@ import {
   HydraSecurityError,
   HydraTimeoutError,
   HydraTransportError,
+  HydraUserRejectedError,
 } from '../errors';
 
 /**
@@ -142,11 +143,17 @@ export class PostMessageTransport implements ITransport {
           entry.state = 'Rejected';
           this.inFlightMap.delete(correlationId);
           const errInfo = rpcPayload?.error;
-          const error = new HydraBridgeError(
-            errInfo?.message || 'Yêu cầu RPC thất bại từ Host Shell',
-            errInfo?.code || 'ERR_RPC_FAILED',
-            errInfo?.details
-          );
+          const errCode = errInfo?.code || 'ERR_RPC_FAILED';
+          const errMsg = errInfo?.message || 'Yêu cầu RPC thất bại từ Host Shell';
+
+          let error: HydraBridgeError;
+          if (errCode === ERROR_CODES.ERR_USER_REJECTED) {
+            error = new HydraUserRejectedError(errMsg, errInfo?.details);
+          } else if (errCode === ERROR_CODES.ERR_TIMEOUT) {
+            error = new HydraTimeoutError(errMsg, errInfo?.details);
+          } else {
+            error = new HydraBridgeError(errMsg, errCode, errInfo?.details);
+          }
           entry.reject(error);
         } else {
           entry.state = 'Fulfilled';

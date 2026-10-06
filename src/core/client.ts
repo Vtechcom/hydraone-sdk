@@ -2,11 +2,16 @@ import type { ITransport } from './ports/transport';
 import type {
   BridgeMessage,
   ConnectionState,
+  DataSignature,
   HostAckPayload,
   HostInfo,
   Paginate,
   QueryOptions,
   RpcResponsePayload,
+  SignDataPayload,
+  SignOptions,
+  SignTxPayload,
+  SubmitTxPayload,
   UnsubscribeFn,
   WalletBridgeClientOptions,
 } from './types';
@@ -54,6 +59,7 @@ export class WalletBridgeClient {
   public readonly transport: ITransport;
   public readonly handshakeTimeoutMs: number;
   public readonly queryTimeoutMs: number;
+  public readonly signingTimeoutMs: number;
   public readonly debug: boolean;
 
   private _connectionState: ConnectionState = 'disconnected';
@@ -74,6 +80,7 @@ export class WalletBridgeClient {
     this.transport = options.transport;
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
+    this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
     this.debug = options.debug ?? false;
 
     // Lắng nghe bản tin từ transport
@@ -296,6 +303,12 @@ export class WalletBridgeClient {
           throw new HydraTimeoutError(
             `Yêu cầu [${message.type}] vượt quá thời gian chờ (${timeoutMs}ms)`,
             { messageType: message.type, timeoutMs }
+          );
+        }
+        if (err?.code === ERROR_CODES.ERR_USER_REJECTED) {
+          throw new HydraUserRejectedError(
+            err.message || 'Người dùng đã từ chối thao tác trên ví',
+            err.details
           );
         }
         throw err;
@@ -536,6 +549,125 @@ export class WalletBridgeClient {
     };
 
     return await this.executeRpc<number>(message, timeout);
+  }
+
+  // ==========================================
+  // CIP-30 & CIP-8 Signing & Submission
+  // ==========================================
+
+  /**
+   * Yêu cầu người dùng ký giao dịch Cardano (Transaction Witness Set)
+   * 
+   * @param cbor Chuỗi hex CBOR của Transaction cần ký
+   * @param partialSign Cờ chỉ định ký một phần (mặc định: false)
+   * @param options Tùy chọn ký (timeoutMs, mặc định 120,000ms)
+   * @returns Chuỗi hex CBOR của TransactionWitnessSet
+   * @throws {HydraUserRejectedError} Khi người dùng từ chối ký trên ví
+   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   */
+  public async signTx(
+    cbor: string,
+    partialSignOrOptions?: boolean | SignOptions,
+    options?: SignOptions
+  ): Promise<string> {
+    this.assertConnected();
+    if (!cbor || typeof cbor !== 'string') {
+      throw new HydraBridgeError('CBOR giao dịch không hợp lệ', 'ERR_INVALID_PARAMS');
+    }
+
+    let partialSign = false;
+    let resolvedOptions = options;
+
+    if (typeof partialSignOrOptions === 'boolean') {
+      partialSign = partialSignOrOptions;
+    } else if (typeof partialSignOrOptions === 'object' && partialSignOrOptions !== null) {
+      resolvedOptions = partialSignOrOptions;
+    }
+
+    const timeout = resolvedOptions?.timeoutMs ?? this.signingTimeoutMs;
+    const message: BridgeMessage<SignTxPayload> = {
+      id: generateId(),
+      type: 'SIGN_TX',
+      payload: {
+        cbor,
+        partialSign,
+        tx: cbor,
+      },
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    return await this.executeRpc<string>(message, timeout);
+  }
+
+  /**
+   * Nộp giao dịch đã ký hoàn chỉnh lên mạng lưới Cardano thông qua Host Shell
+   * 
+   * @param cbor Chuỗi hex CBOR của Transaction hoàn chỉnh
+   * @param options Tùy chọn nộp (timeoutMs, mặc định 120,000ms)
+   * @returns Chuỗi Transaction Hash (32 bytes hex)
+   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   */
+  public async submitTx(
+    cbor: string,
+    options?: QueryOptions
+  ): Promise<string> {
+    this.assertConnected();
+    if (!cbor || typeof cbor !== 'string') {
+      throw new HydraBridgeError('CBOR giao dịch không hợp lệ', 'ERR_INVALID_PARAMS');
+    }
+
+    const timeout = options?.timeoutMs ?? this.signingTimeoutMs;
+    const message: BridgeMessage<SubmitTxPayload> = {
+      id: generateId(),
+      type: 'SUBMIT_TX',
+      payload: {
+        cbor,
+        tx: cbor,
+      },
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    return await this.executeRpc<string>(message, timeout);
+  }
+
+  /**
+   * Ký xác thực chuỗi dữ liệu bất kỳ theo chuẩn CIP-8 / CIP-30
+   * 
+   * @param address Địa chỉ ví (Bech32 hoặc CBOR hex) dùng để ký
+   * @param payloadHex Chuỗi hex của dữ liệu cần ký
+   * @param options Tùy chọn ký (timeoutMs, mặc định 120,000ms)
+   * @returns Chữ ký dữ liệu DataSignature { signature, key }
+   * @throws {HydraUserRejectedError} Khi người dùng từ chối ký trên ví
+   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   */
+  public async signData(
+    address: string,
+    payloadHex: string,
+    options?: SignOptions
+  ): Promise<DataSignature> {
+    this.assertConnected();
+    if (!address || typeof address !== 'string') {
+      throw new HydraBridgeError('Địa chỉ ví không hợp lệ', 'ERR_INVALID_PARAMS');
+    }
+    if (payloadHex === undefined || payloadHex === null || typeof payloadHex !== 'string') {
+      throw new HydraBridgeError('Payload hex không hợp lệ', 'ERR_INVALID_PARAMS');
+    }
+
+    const timeout = options?.timeoutMs ?? this.signingTimeoutMs;
+    const message: BridgeMessage<SignDataPayload> = {
+      id: generateId(),
+      type: 'SIGN_DATA',
+      payload: {
+        address,
+        payloadHex,
+      },
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    return await this.executeRpc<DataSignature>(message, timeout);
   }
 
   // ==========================================
