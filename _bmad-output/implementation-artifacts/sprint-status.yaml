@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-06-2026 17:24
+last_updated: 10-06-2026 17:52
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -48,7 +48,7 @@ development_status:
 
   epic-3: in-progress
   3-1-host-event-bus-sync-audio-theme: done
-  3-2-mobile-device-controls-orientation-haptics: review
+  3-2-mobile-device-controls-orientation-haptics: done
   3-3-in-game-host-modal-overlay-player-profile-relay: backlog
   epic-3-retrospective: optional
 

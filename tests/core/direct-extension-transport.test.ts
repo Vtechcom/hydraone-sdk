@@ -396,6 +396,41 @@ describe('DirectExtensionTransport', () => {
       unsubscribe();
     });
 
+    it('send() xử lý an toàn bản tin SET_ORIENTATION và TRIGGER_HAPTIC trả về success', async () => {
+      const transport = new DirectExtensionTransport({ api: mockApi });
+      const received: BridgeMessage[] = [];
+
+      const unsubscribe = transport.onMessage((msg) => {
+        received.push(msg);
+      });
+
+      await transport.send({
+        id: 'sa_orient_1',
+        type: 'SET_ORIENTATION',
+        payload: { orientation: 'landscape' },
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      await transport.send({
+        id: 'sa_haptic_1',
+        type: 'TRIGGER_HAPTIC',
+        payload: { pattern: [40], type: 'medium' },
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(received.length).toBe(2);
+      expect(received[0].type).toBe('RPC_RESPONSE');
+      expect((received[0].payload as any).result).toEqual({ success: true });
+      expect(received[1].type).toBe('RPC_RESPONSE');
+      expect((received[1].payload as any).result).toEqual({ success: true });
+
+      unsubscribe();
+    });
+
     it('destroy() đóng transport và chặn các yêu cầu tiếp theo', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       expect(transport.isClosed()).toBe(false);

@@ -76,13 +76,17 @@ context:
 
 ### Review Findings
 
-- [x] [Review][Patch] Hỗ trợ bản tin `SET_ORIENTATION` và `TRIGGER_HAPTIC` trong `DirectExtensionTransport` để tránh phát sinh lỗi `ERR_UNSUPPORTED_METHOD` khi chạy standalone [src/core/adapters/direct-extension-transport.ts:432]
-- [x] [Review][Patch] Ưu tiên gọi `screen.orientation.unlock()` khi `orientation === 'any'` trong chế độ standalone để tương thích tối đa với W3C Screen Orientation API [src/core/client.ts:1062]
-- [x] [Review][Patch] Bổ sung các unit test kiểm thử toàn diện mã lỗi `ERR_INVALID_PARAMS` cho orientation và haptic params [tests/core/client.test.ts:1925, 2030]
+- [x] [Review][Patch] Allow standalone browser fallback when client is disconnected by moving assertConnected() inside iframe check [src/core/client.ts:1057, 1116]
+- [x] [Review][Patch] Guard resolveHapticParams against prototype property pollution using hasOwnProperty check [src/core/client.ts:1003]
+- [x] [Review][Patch] Return cloned pattern array in resolveHapticParams to protect immutable HAPTIC_PATTERNS constants [src/core/client.ts:998, 1007]
+- [x] [Review][Patch] Guard standalone transport.send() with isConnected check to prevent transmissions on uninitialized transport [src/core/client.ts:1075, 1130]
+- [x] [Review][Patch] Add unit tests for SET_ORIENTATION and TRIGGER_HAPTIC message handling in DirectExtensionTransport [tests/core/direct-extension-transport.test.ts:398]
+- [x] [Review][Patch] Add unit tests for standalone orientation and haptic controls on disconnected client [tests/core/client.test.ts:2265]
+- [x] [Review][Patch] Narrow HAPTIC_PATTERNS array type to readonly number[] in types definition [src/core/types.ts:469]
 
 #### Rejected Findings
-- `false` (F3): Tự can thiệp CSS transform xoay layout trong Core Client — Vi phạm AD-1 Hexagonal Architecture (Core Client là headless engine, việc render giao diện do game engine / framework quản lý).
-- `false` (F4): Bổ sung event listener onOrientationChanged — Nằm ngoài phạm vi Story 3.2 (FR-4.4 quy định lệnh yêu cầu khóa hướng màn hình và kích hoạt rung).
+- `false` (R1): Intervening DOM window/top check can crash in sandboxed iframe without allow-same-origin — Refutation: `isStandaloneBrowser()` safely wraps `window.self === window.top` in try-catch and returns `false` on SecurityError.
+- `false` (R2): Haptic vibration cannot cancel vibrations with 0ms pattern — Refutation: `resolveHapticParams(0)` accepts `0` as non-negative finite number and calls `navigator.vibrate(0)`, which cancels active vibration per W3C specification.
 
 ## Implementation Notes
 
@@ -101,11 +105,15 @@ context:
 
 | # | Finding | Verdict | Route | Evidence / Action |
 |---|---------|---------|-------|-------------------|
-| 1 | `DirectExtensionTransport.handleMessageInternally` ném ngoại lệ `ERR_UNSUPPORTED_METHOD` khi nhận `SET_ORIENTATION` hoặc `TRIGGER_HAPTIC` ở chế độ standalone fallback | `medium` | `patch` | Đã bổ sung case xử lý cho cả 2 loại message trong `DirectExtensionTransport` trả về `{ success: true }` [src/core/adapters/direct-extension-transport.ts:432] |
-| 2 | Khi mở khóa hướng màn hình (`any`), việc gọi trực tiếp `screen.orientation.unlock()` tương thích chuẩn xác hơn gọi `screen.orientation.lock('any')` trên mobile browsers | `low` | `patch` | Đã cập nhật `setOrientation` và `unlockOrientation` ưu tiên gọi `unlock()` khi `orientation === 'any'` [src/core/client.ts:1062] |
-| 3 | Tự can thiệp CSS transform xoay layout trong Core Client khi không hỗ trợ Screen Orientation | `false` | `reject` | Vi phạm AD-1 Hexagonal Architecture (Core Client là headless engine, việc render giao diện do game engine / framework quản lý) |
-| 4 | Bổ sung event listener `onOrientationChanged` | `false` | `reject` | Nằm ngoài phạm vi Story 3.2 (FR-4.4 quy định lệnh yêu cầu khóa hướng màn hình và kích hoạt rung) |
-| 5 | Thiếu test case cho preset rung không hợp lệ và thời lượng số âm | `low` | `patch` | Đã bổ sung đầy đủ unit tests kiểm tra ngoại lệ `ERR_INVALID_PARAMS` cho orientation và haptics [tests/core/client.test.ts:1925, 2030] |
+| 1 | Standalone fallback throws ERR_NOT_CONNECTED on disconnected client because assertConnected() is evaluated before isStandaloneBrowser() | `high` | `patch` | Move assertConnected() inside iframe check to allow hardware fallback outside iframe [src/core/client.ts:1057, 1116] |
+| 2 | Prototype property leak in resolveHapticParams: "normalized in HAPTIC_PATTERNS" evaluates to true for Object.prototype (e.g. constructor) | `medium` | `patch` | Use Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized) [src/core/client.ts:1003] |
+| 3 | Returning direct reference to HAPTIC_PATTERNS preset arrays allows external mutation of global constant definitions | `medium` | `patch` | Return cloned array [...HAPTIC_PATTERNS[normalized]] [src/core/client.ts:998, 1007] |
+| 4 | Standalone mode attempts transport.send() even when transport is not connected | `low` | `patch` | Guard transport send with `if (this.transport && this.isConnected)` [src/core/client.ts:1075, 1130] |
+| 5 | Missing unit test coverage for SET_ORIENTATION and TRIGGER_HAPTIC handling in DirectExtensionTransport | `medium` | `patch` | Add unit tests to tests/core/direct-extension-transport.test.ts |
+| 6 | Missing unit test coverage verifying standalone device controls function when client is not connected | `medium` | `patch` | Add unit tests to tests/core/client.test.ts for disconnected standalone client |
+| 7 | HAPTIC_PATTERNS array elements typed as mutable number[] instead of readonly number[] | `low` | `patch` | Narrow type to Record<HapticFeedbackType, readonly number[]> in src/core/types.ts |
+| 8 | Intervening DOM window/top check can crash in sandboxed iframe without allow-same-origin | `false` | `reject` | isStandaloneBrowser() catches SecurityError safely |
+| 9 | Haptic vibration cannot cancel vibrations with 0ms pattern | `false` | `reject` | resolveHapticParams(0) accepts 0 and navigator.vibrate(0) cancels vibration per W3C |
 
 ## Design Notes
 

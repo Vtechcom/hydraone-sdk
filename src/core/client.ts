@@ -995,16 +995,16 @@ export class WalletBridgeClient {
     if (typeOrPattern === undefined) {
       return {
         type: 'medium',
-        pattern: HAPTIC_PATTERNS.medium,
+        pattern: [...HAPTIC_PATTERNS.medium],
       };
     }
 
     if (typeof typeOrPattern === 'string') {
       const normalized = typeOrPattern.trim().toLowerCase() as HapticFeedbackType;
-      if (normalized in HAPTIC_PATTERNS) {
+      if (Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized)) {
         return {
           type: normalized,
-          pattern: HAPTIC_PATTERNS[normalized],
+          pattern: [...HAPTIC_PATTERNS[normalized]],
         };
       }
       throw new HydraBridgeError(
@@ -1036,7 +1036,7 @@ export class WalletBridgeClient {
         );
       }
       return {
-        pattern: typeOrPattern,
+        pattern: [...typeOrPattern],
       };
     }
 
@@ -1054,7 +1054,6 @@ export class WalletBridgeClient {
    * @param orientation Hướng màn hình cần khóa ('landscape', 'portrait', 'any', ...)
    */
   public async setOrientation(orientation: OrientationLockType): Promise<void> {
-    this.assertConnected();
     const validOrientation = this.validateOrientation(orientation);
 
     if (this.isStandaloneBrowser()) {
@@ -1072,7 +1071,7 @@ export class WalletBridgeClient {
         }
       }
 
-      if (this.transport) {
+      if (this.transport && this.isConnected) {
         const message: BridgeMessage<SetOrientationPayload> = {
           id: generateId(),
           type: 'SET_ORIENTATION',
@@ -1084,6 +1083,8 @@ export class WalletBridgeClient {
       }
       return;
     }
+
+    this.assertConnected();
 
     const message: BridgeMessage<SetOrientationPayload> = {
       id: generateId(),
@@ -1113,7 +1114,6 @@ export class WalletBridgeClient {
   public async triggerHaptic(
     typeOrPattern?: HapticFeedbackType | number | number[]
   ): Promise<void> {
-    this.assertConnected();
     const { type, pattern } = this.resolveHapticParams(typeOrPattern);
 
     if (this.isStandaloneBrowser()) {
@@ -1127,7 +1127,7 @@ export class WalletBridgeClient {
         }
       }
 
-      if (this.transport) {
+      if (this.transport && this.isConnected) {
         const payload: TriggerHapticPayload = {
           pattern,
           ...(type ? { type } : {}),
@@ -1143,6 +1143,8 @@ export class WalletBridgeClient {
       }
       return;
     }
+
+    this.assertConnected();
 
     const payload: TriggerHapticPayload = {
       pattern,

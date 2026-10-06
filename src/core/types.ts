@@ -479,7 +479,7 @@ export type HapticFeedbackType =
 /**
  * Bảng ánh xạ các mẫu rung chuẩn (tính bằng mili-giây) theo preset xúc giác
  */
-export const HAPTIC_PATTERNS: Record<HapticFeedbackType, number[]> = {
+export const HAPTIC_PATTERNS: Record<HapticFeedbackType, readonly number[]> = {
   light: [15],
   medium: [40],
   heavy: [80],

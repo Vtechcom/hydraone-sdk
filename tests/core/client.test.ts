@@ -2062,6 +2062,12 @@ describe('WalletBridgeClient', () => {
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
       });
+
+      it('từ chối thuộc tính prototype như "constructor" với mã lỗi ERR_INVALID_PARAMS', async () => {
+        await expect(client.triggerHaptic('constructor' as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
     });
 
     describe('Standalone Fallback', () => {
@@ -2295,6 +2301,59 @@ describe('WalletBridgeClient', () => {
           delete (globalThis as any).screen;
         }
       });
+
+      it('cho phép gọi setOrientation và triggerHaptic ở chế độ standalone ngay cả khi client chưa kết nối (disconnected)', async () => {
+        const mockVibrate = vi.fn().mockReturnValue(true);
+        const mockLock = vi.fn().mockResolvedValue(undefined);
+        const originalVibrate = (globalThis.navigator as any)?.vibrate;
+        const originalScreen = (globalThis as any).screen;
+
+        Object.defineProperty(globalThis.navigator, 'vibrate', {
+          value: mockVibrate,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(globalThis, 'screen', {
+          value: { orientation: { lock: mockLock } },
+          configurable: true,
+          writable: true,
+        });
+
+        // Client chạy standalone ngoài iframe và KHÔNG gọi init()
+        const standaloneClient = new WalletBridgeClient({
+          transport: new SimpleMockTransport(),
+          isIframeFn: () => false,
+        });
+
+        expect(standaloneClient.isStandaloneBrowser()).toBe(true);
+        expect(standaloneClient.isConnected).toBe(false);
+
+        await expect(standaloneClient.setOrientation('landscape')).resolves.toBeUndefined();
+        expect(mockLock).toHaveBeenCalledWith('landscape');
+
+        await expect(standaloneClient.triggerHaptic('medium')).resolves.toBeUndefined();
+        expect(mockVibrate).toHaveBeenCalledWith([40]);
+
+        standaloneClient.destroy();
+        if (originalVibrate !== undefined) {
+          Object.defineProperty(globalThis.navigator, 'vibrate', {
+            value: originalVibrate,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis.navigator as any).vibrate;
+        }
+        if (originalScreen !== undefined) {
+          Object.defineProperty(globalThis, 'screen', {
+            value: originalScreen,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis as any).screen;
+        }
+      });
     });
 
     describe('Exported Constants & Presets', () => {
@@ -2307,6 +2366,12 @@ describe('WalletBridgeClient', () => {
         expect(HAPTIC_PATTERNS.success).toEqual([30, 50, 60]);
         expect(HAPTIC_PATTERNS.warning).toEqual([40, 60, 40]);
         expect(HAPTIC_PATTERNS.error).toEqual([50, 100, 50, 100, 50]);
+      });
+
+      it('bảo vệ tính bất biến của HAPTIC_PATTERNS khi triggerHaptic được gọi', async () => {
+        const originalMedium = [...HAPTIC_PATTERNS.medium];
+        await client.triggerHaptic('medium');
+        expect(HAPTIC_PATTERNS.medium).toEqual(originalMedium);
       });
     });
   });
