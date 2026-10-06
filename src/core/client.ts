@@ -1219,6 +1219,7 @@ export class WalletBridgeClient {
             ERROR_CODES.ERR_INVALID_PARAMS
           );
         }
+        validated.minAmount = trimmed;
       } else {
         throw new HydraBridgeError(
           'Invalid minAmount type. Expected number, bigint, or string.',
@@ -1288,7 +1289,7 @@ export class WalletBridgeClient {
     };
 
     const result = await this.executeRpc<PlayerProfile>(message, timeout);
-    if (result && typeof result === 'object') {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
       return result;
     }
     return {} as PlayerProfile;

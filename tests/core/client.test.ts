@@ -2419,12 +2419,12 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ token: 'ADA', minAmount: 10 });
       });
 
-      it('hỗ trợ minAmount dạng bigint và string số dương', async () => {
+      it('hỗ trợ minAmount dạng bigint và string số dương (tự động cắt khoảng trắng)', async () => {
         await client.requestDepositModal({ token: 'DJED', minAmount: 5000000n });
         let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
         expect(lastMessage.payload).toEqual({ token: 'DJED', minAmount: 5000000n });
 
-        await client.requestDepositModal({ token: 'iUSD', minAmount: '25.5' });
+        await client.requestDepositModal({ token: 'iUSD', minAmount: '  25.5  ' });
         lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
         expect(lastMessage.payload).toEqual({ token: 'iUSD', minAmount: '25.5' });
       });
@@ -2531,9 +2531,9 @@ describe('WalletBridgeClient', () => {
         expect(profile).toEqual(expectedProfile);
       });
 
-      it('trả về đối tượng rỗng nếu Host trả về payload trống hoặc non-object', async () => {
+      it('trả về đối tượng rỗng nếu Host trả về payload trống, non-object hoặc mảng', async () => {
         const profilePromise = client.getPlayerProfile();
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
 
         transport.simulateIncoming({
           id: 'rpc-res-profile-empty',
@@ -2548,6 +2548,24 @@ describe('WalletBridgeClient', () => {
 
         const profile = await profilePromise;
         expect(profile).toEqual({});
+
+        // Host trả về mảng thay vì đối tượng
+        const profilePromiseArray = client.getPlayerProfile();
+        lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+
+        transport.simulateIncoming({
+          id: 'rpc-res-profile-array',
+          type: 'RPC_RESPONSE',
+          payload: {
+            requestId: lastMessage.id,
+            result: ['invalid', 'array', 'format'],
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        const profileArray = await profilePromiseArray;
+        expect(profileArray).toEqual({});
       });
 
       it('ném lỗi ERR_NOT_CONNECTED khi gọi getPlayerProfile lúc client chưa kết nối', async () => {

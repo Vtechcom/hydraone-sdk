@@ -5,7 +5,7 @@ created: '2026-10-06'
 status: 'done'
 baseline_commit: 'cf2e7b8d6f891bb7ab1582d672f4c9d8759a016c'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-3-context.md'
@@ -69,6 +69,17 @@ context:
 - [x] `src/index.ts` -- Đảm bảo re-export đầy đủ `DepositModalOptions` và `PlayerProfile` -- Cung cấp public typings cho developer
 - [x] `tests/core/client.test.ts` -- Xây dựng unit test bao phủ toàn bộ kịch bản I/O và edge cases của Story 3.3 -- Xác minh độ tin cậy và tuân thủ đặc tả
 - [x] `tests/core/direct-extension-transport.test.ts` -- Bổ sung unit test cho message types mới trong adapter -- Xác minh tính đúng đắn khi chạy qua DirectExtensionTransport
+
+### Review Findings
+
+- [x] [Review][Patch] Guard getPlayerProfile against array responses from Host Shell [src/core/client.ts:1291]
+- [x] [Review][Patch] Normalize string minAmount by assigning trimmed value in validateDepositModalOptions [src/core/client.ts:1220]
+- [x] [Review][Patch] Add regression tests for array responses in getPlayerProfile and trimmed minAmount [tests/core/client.test.ts:564]
+
+#### Rejected Findings
+- [Rejected][False] DirectExtensionTransport mock handler for GET_PLAYER_PROFILE is unreachable via client in standalone mode -- spec-mandated behavior; adapter keeps internal handler for standalone testing.
+- [Rejected][False] minAmount string accepts hex format ('0x10') -- Number('0x10') is positive finite number in JS and valid in Web3 context.
+- [Rejected][Low] options.timeoutMs <= 0 bypasses timeout timer in executeRpc -- consistent with SDK-wide query method convention.
 
 **Acceptance Criteria:**
 - Given `WalletBridgeClient` đã kết nối với Host Shell
