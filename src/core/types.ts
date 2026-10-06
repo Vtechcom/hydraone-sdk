@@ -163,6 +163,8 @@ export interface HostInfo {
   hostVersion?: string;
   network?: string;
   walletName?: string;
+  theme?: ThemeMode;
+  audioMuted?: boolean;
   [key: string]: unknown;
 }
 
@@ -405,5 +407,41 @@ export type GameAuthManagerOptions = AuthManagerOptions;
  * Hàm lắng nghe thay đổi trạng thái xác thực
  */
 export type AuthStateHandler = (state: AuthState) => void;
+
+// ==========================================
+// Game Lifecycle & Host Events Types
+// ==========================================
+
+/**
+ * Chế độ giao diện hiển thị (Theme mode)
+ */
+export type ThemeMode = 'dark' | 'light';
+
+/**
+ * Payload cho sự kiện thay đổi trạng thái tắt tiếng âm thanh AUDIO_MUTED_CHANGED
+ */
+export interface AudioMutedPayload {
+  muted: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Payload cho sự kiện thay đổi chủ đề giao diện THEME_CHANGED
+ */
+export interface ThemeChangedPayload {
+  theme: ThemeMode;
+  [key: string]: unknown;
+}
+
+/**
+ * Hàm lắng nghe sự kiện thay đổi trạng thái tắt tiếng âm thanh
+ */
+export type AudioMutedHandler = (muted: boolean) => void;
+
+/**
+ * Hàm lắng nghe sự kiện thay đổi chủ đề giao diện
+ */
+export type ThemeChangedHandler = (theme: ThemeMode) => void;
+
 
 

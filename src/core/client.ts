@@ -1,5 +1,6 @@
 import type { ITransport } from './ports/transport';
 import type {
+  AudioMutedHandler,
   BridgeMessage,
   ConnectionState,
   DataSignature,
@@ -12,6 +13,8 @@ import type {
   SignOptions,
   SignTxPayload,
   SubmitTxPayload,
+  ThemeChangedHandler,
+  ThemeMode,
   UnsubscribeFn,
   WalletBridgeClientOptions,
 } from './types';
@@ -73,6 +76,8 @@ export class WalletBridgeClient {
 
   private _connectionState: ConnectionState = 'disconnected';
   private _hostInfo?: HostInfo;
+  private _isAudioMuted?: boolean;
+  private _theme?: ThemeMode;
   private handshakePromise: Promise<void> | null = null;
   private readonly pendingRequests = new Map<string, PendingRequest<any>>();
   private transportUnsubscribe?: UnsubscribeFn;
@@ -161,6 +166,20 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Trạng thái tắt tiếng âm thanh hiện tại do Host Shell đồng bộ
+   */
+  public get isAudioMuted(): boolean | undefined {
+    return this._isAudioMuted;
+  }
+
+  /**
+   * Chủ đề giao diện hiện tại do Host Shell đồng bộ ('dark' | 'light')
+   */
+  public get theme(): ThemeMode | undefined {
+    return this._theme;
+  }
+
+  /**
    * Thiết lập listener nhận bản tin từ Transport
    */
   private setupTransportListener(): void {
@@ -245,14 +264,67 @@ export class WalletBridgeClient {
     // 2. Xử lý bản tin HOST_ACK phát độc lập (unsolicited)
     if (message.type === 'HOST_ACK') {
       const ackPayload = message.payload as HostAckPayload | undefined;
-      this._hostInfo = ackPayload?.hostInfo || ackPayload;
+      const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
+      this._hostInfo = info;
+      if (info && typeof info === 'object') {
+        const rawAckTheme =
+          typeof info.theme === 'string' ? info.theme.trim().toLowerCase() : undefined;
+        if (rawAckTheme === 'dark' || rawAckTheme === 'light') {
+          this._theme = rawAckTheme;
+        }
+        if (typeof info.audioMuted === 'boolean') {
+          this._isAudioMuted = info.audioMuted;
+        }
+      }
       this._connectionState = 'connected';
     }
 
-    // 3. Phân phối sự kiện đến các listeners đã đăng ký qua onHostEvent
+    // 3. Xử lý sự kiện đồng bộ âm thanh AUDIO_MUTED_CHANGED
+    if (message.type === 'AUDIO_MUTED_CHANGED') {
+      let muted: boolean | undefined;
+      if (typeof message.payload === 'boolean') {
+        muted = message.payload;
+      } else if (
+        message.payload &&
+        typeof message.payload === 'object' &&
+        'muted' in message.payload &&
+        typeof (message.payload as any).muted === 'boolean'
+      ) {
+        muted = (message.payload as any).muted;
+      }
+
+      if (muted !== undefined) {
+        this._isAudioMuted = muted;
+      }
+    }
+
+    // 4. Xử lý sự kiện đồng bộ giao diện THEME_CHANGED
+    if (message.type === 'THEME_CHANGED') {
+      let theme: ThemeMode | undefined;
+      const rawTheme =
+        typeof message.payload === 'string'
+          ? message.payload.trim().toLowerCase()
+          : message.payload &&
+              typeof message.payload === 'object' &&
+              'theme' in message.payload &&
+              typeof (message.payload as any).theme === 'string'
+            ? (message.payload as any).theme.trim().toLowerCase()
+            : undefined;
+
+      if (rawTheme === 'dark' || rawTheme === 'light') {
+        theme = rawTheme;
+      }
+
+      if (theme !== undefined) {
+        this._theme = theme;
+      }
+    }
+
+    // 5. Phân phối sự kiện đến các listeners đã đăng ký qua onHostEvent
     const handlers = this.eventListeners.get(message.type);
     if (handlers) {
-      for (const handler of handlers) {
+      const snapshot = Array.from(handlers);
+      for (const handler of snapshot) {
         try {
           handler(message.payload);
         } catch (err) {
@@ -348,6 +420,16 @@ export class WalletBridgeClient {
 
         const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
         this._hostInfo = result;
+        if (result && typeof result === 'object') {
+          const rawResultTheme =
+            typeof result.theme === 'string' ? result.theme.trim().toLowerCase() : undefined;
+          if (rawResultTheme === 'dark' || rawResultTheme === 'light') {
+            this._theme = rawResultTheme;
+          }
+          if (typeof result.audioMuted === 'boolean') {
+            this._isAudioMuted = result.audioMuted;
+          }
+        }
         this._connectionState = 'connected';
       } catch (err) {
         this._connectionState = 'disconnected';
@@ -809,11 +891,79 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Đăng ký lắng nghe sự kiện thay đổi trạng thái tắt tiếng âm thanh từ Host Shell
+   * 
+   * @param handler Hàm callback nhận giá trị boolean (true nếu tắt tiếng, false nếu bật tiếng)
+   * @returns Hàm hủy đăng ký lắng nghe (unsubscribe)
+   */
+  public onAudioMutedChanged(handler: AudioMutedHandler): UnsubscribeFn {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+
+    const wrapper = (payload: unknown) => {
+      let muted: boolean | undefined;
+      if (typeof payload === 'boolean') {
+        muted = payload;
+      } else if (
+        payload &&
+        typeof payload === 'object' &&
+        'muted' in payload &&
+        typeof (payload as any).muted === 'boolean'
+      ) {
+        muted = (payload as any).muted;
+      }
+      if (muted !== undefined) {
+        handler(muted);
+      }
+    };
+
+    return this.onHostEvent('AUDIO_MUTED_CHANGED', wrapper);
+  }
+
+  /**
+   * Đăng ký lắng nghe sự kiện thay đổi chủ đề giao diện (Dark/Light) từ Host Shell
+   * 
+   * @param handler Hàm callback nhận giá trị 'dark' | 'light'
+   * @returns Hàm hủy đăng ký lắng nghe (unsubscribe)
+   */
+  public onThemeChanged(handler: ThemeChangedHandler): UnsubscribeFn {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+
+    const wrapper = (payload: unknown) => {
+      let theme: ThemeMode | undefined;
+      const rawTheme =
+        typeof payload === 'string'
+          ? payload.trim().toLowerCase()
+          : payload &&
+              typeof payload === 'object' &&
+              'theme' in payload &&
+              typeof (payload as any).theme === 'string'
+            ? (payload as any).theme.trim().toLowerCase()
+            : undefined;
+
+      if (rawTheme === 'dark' || rawTheme === 'light') {
+        theme = rawTheme;
+      }
+
+      if (theme !== undefined) {
+        handler(theme);
+      }
+    };
+
+    return this.onHostEvent('THEME_CHANGED', wrapper);
+  }
+
+  /**
    * Ngắt kết nối client và dọn dẹp các yêu cầu đang chờ
    */
   public disconnect(): void {
     this._connectionState = 'disconnected';
     this._hostInfo = undefined;
+    this._isAudioMuted = undefined;
+    this._theme = undefined;
     this.handshakePromise = null;
 
     // Hủy và dọn dẹp toàn bộ pending requests

@@ -1294,6 +1294,448 @@ describe('WalletBridgeClient', () => {
       expect(client.activeWalletName).toBe('eternl');
     });
   });
+
+  describe('Host Event Bus Sync (Audio & Theme) (Story 3.1)', () => {
+    let mockTransport: ITransport;
+    let messageCallback: ((msg: any) => void) | undefined;
+    let client: WalletBridgeClient;
+
+    beforeEach(() => {
+      mockTransport = {
+        send: vi.fn().mockImplementation((msg: any) => {
+          if (msg.type === 'CLIENT_READY') {
+            return Promise.resolve();
+          }
+          return Promise.resolve();
+        }),
+        onMessage: vi.fn().mockImplementation((cb: (msg: any) => void) => {
+          messageCallback = cb;
+          return () => {
+            messageCallback = undefined;
+          };
+        }),
+      };
+
+      client = new WalletBridgeClient({
+        transport: mockTransport,
+      });
+    });
+
+    afterEach(() => {
+      client.destroy();
+    });
+
+    describe('AUDIO_MUTED_CHANGED', () => {
+      it('kích hoạt onAudioMutedChanged khi Host Shell broadcast payload { muted: true }', () => {
+        const audioSpy = vi.fn();
+        const unsub = client.onAudioMutedChanged(audioSpy);
+
+        expect(client.isAudioMuted).toBeUndefined();
+
+        messageCallback?.({
+          id: 'evt-audio-1',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(audioSpy).toHaveBeenCalledTimes(1);
+        expect(audioSpy).toHaveBeenCalledWith(true);
+        expect(client.isAudioMuted).toBe(true);
+
+        unsub();
+      });
+
+      it('kích hoạt onAudioMutedChanged khi Host Shell broadcast payload { muted: false }', () => {
+        const audioSpy = vi.fn();
+        client.onAudioMutedChanged(audioSpy);
+
+        messageCallback?.({
+          id: 'evt-audio-2',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: false },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(audioSpy).toHaveBeenCalledWith(false);
+        expect(client.isAudioMuted).toBe(false);
+      });
+
+      it('xử lý an toàn khi Host Shell truyền boolean trực tiếp trong payload', () => {
+        const audioSpy = vi.fn();
+        client.onAudioMutedChanged(audioSpy);
+
+        messageCallback?.({
+          id: 'evt-audio-3',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: true,
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(audioSpy).toHaveBeenCalledWith(true);
+        expect(client.isAudioMuted).toBe(true);
+
+        messageCallback?.({
+          id: 'evt-audio-4',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: false,
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(audioSpy).toHaveBeenCalledWith(false);
+        expect(client.isAudioMuted).toBe(false);
+      });
+
+      it('cho phép đăng ký nhiều listener và gỡ bỏ chính xác qua unsubscribe', () => {
+        const listenerA = vi.fn();
+        const listenerB = vi.fn();
+
+        const unsubA = client.onAudioMutedChanged(listenerA);
+        const unsubB = client.onAudioMutedChanged(listenerB);
+
+        messageCallback?.({
+          id: 'evt-audio-5',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).toHaveBeenCalledTimes(1);
+
+        // Hủy đăng ký listenerA
+        unsubA();
+
+        messageCallback?.({
+          id: 'evt-audio-6',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: false },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1); // Không nhận thêm
+        expect(listenerB).toHaveBeenCalledTimes(2); // Vẫn tiếp tục nhận
+        expect(listenerB).toHaveBeenLastCalledWith(false);
+
+        unsubB();
+      });
+
+      it('bắt lỗi an toàn khi listener ném ngoại lệ mà không làm crash các listener khác', () => {
+        const faultyListener = vi.fn().mockImplementation(() => {
+          throw new Error('Game sound manager exploded');
+        });
+        const healthyListener = vi.fn();
+
+        client.onAudioMutedChanged(faultyListener);
+        client.onAudioMutedChanged(healthyListener);
+
+        expect(() => {
+          messageCallback?.({
+            id: 'evt-audio-7',
+            type: 'AUDIO_MUTED_CHANGED',
+            payload: { muted: true },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+        }).not.toThrow();
+
+        expect(faultyListener).toHaveBeenCalledTimes(1);
+        expect(healthyListener).toHaveBeenCalledTimes(1);
+        expect(healthyListener).toHaveBeenCalledWith(true);
+      });
+
+      it('trả về hàm no-op khi đăng ký handler không phải function', () => {
+        const unsub = client.onAudioMutedChanged(null as any);
+        expect(typeof unsub).toBe('function');
+        expect(() => unsub()).not.toThrow();
+      });
+
+      it('không ném lỗi khi payload rỗng hoặc null', () => {
+        const audioSpy = vi.fn();
+        client.onAudioMutedChanged(audioSpy);
+
+        expect(() => {
+          messageCallback?.({
+            id: 'evt-audio-8',
+            type: 'AUDIO_MUTED_CHANGED',
+            payload: null,
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+        }).not.toThrow();
+
+        expect(audioSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('THEME_CHANGED', () => {
+      it('kích hoạt onThemeChanged khi Host Shell broadcast payload { theme: "dark" }', () => {
+        const themeSpy = vi.fn();
+        const unsub = client.onThemeChanged(themeSpy);
+
+        expect(client.theme).toBeUndefined();
+
+        messageCallback?.({
+          id: 'evt-theme-1',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'dark' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).toHaveBeenCalledTimes(1);
+        expect(themeSpy).toHaveBeenCalledWith('dark');
+        expect(client.theme).toBe('dark');
+
+        unsub();
+      });
+
+      it('kích hoạt onThemeChanged khi Host Shell broadcast payload { theme: "light" }', () => {
+        const themeSpy = vi.fn();
+        client.onThemeChanged(themeSpy);
+
+        messageCallback?.({
+          id: 'evt-theme-2',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'light' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).toHaveBeenCalledWith('light');
+        expect(client.theme).toBe('light');
+      });
+
+      it('xử lý an toàn khi Host Shell truyền string "dark" / "light" trực tiếp', () => {
+        const themeSpy = vi.fn();
+        client.onThemeChanged(themeSpy);
+
+        messageCallback?.({
+          id: 'evt-theme-3',
+          type: 'THEME_CHANGED',
+          payload: 'dark',
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).toHaveBeenCalledWith('dark');
+        expect(client.theme).toBe('dark');
+
+        messageCallback?.({
+          id: 'evt-theme-4',
+          type: 'THEME_CHANGED',
+          payload: 'light',
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).toHaveBeenCalledWith('light');
+        expect(client.theme).toBe('light');
+      });
+
+      it('cho phép đăng ký nhiều listener và gỡ bỏ chính xác qua unsubscribe', () => {
+        const listenerA = vi.fn();
+        const listenerB = vi.fn();
+
+        const unsubA = client.onThemeChanged(listenerA);
+        const unsubB = client.onThemeChanged(listenerB);
+
+        messageCallback?.({
+          id: 'evt-theme-5',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'dark' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).toHaveBeenCalledTimes(1);
+
+        unsubA();
+
+        messageCallback?.({
+          id: 'evt-theme-6',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'light' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).toHaveBeenCalledTimes(2);
+        expect(listenerB).toHaveBeenLastCalledWith('light');
+
+        unsubB();
+      });
+
+      it('bắt lỗi an toàn khi listener theme ném ngoại lệ', () => {
+        const faultyListener = vi.fn().mockImplementation(() => {
+          throw new Error('Theme DOM render error');
+        });
+        const healthyListener = vi.fn();
+
+        client.onThemeChanged(faultyListener);
+        client.onThemeChanged(healthyListener);
+
+        expect(() => {
+          messageCallback?.({
+            id: 'evt-theme-7',
+            type: 'THEME_CHANGED',
+            payload: { theme: 'dark' },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+        }).not.toThrow();
+
+        expect(faultyListener).toHaveBeenCalledTimes(1);
+        expect(healthyListener).toHaveBeenCalledTimes(1);
+        expect(healthyListener).toHaveBeenCalledWith('dark');
+      });
+
+      it('bỏ qua giá trị theme không hợp lệ', () => {
+        const themeSpy = vi.fn();
+        client.onThemeChanged(themeSpy);
+
+        messageCallback?.({
+          id: 'evt-theme-8',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'neon' }, // invalid
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).not.toHaveBeenCalled();
+        expect(client.theme).toBeUndefined();
+      });
+
+      it('chuẩn hóa chữ hoa/thường và khoảng trắng thừa của theme', () => {
+        const themeSpy = vi.fn();
+        client.onThemeChanged(themeSpy);
+
+        messageCallback?.({
+          id: 'evt-theme-case',
+          type: 'THEME_CHANGED',
+          payload: { theme: ' DARK ' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(themeSpy).toHaveBeenCalledWith('dark');
+        expect(client.theme).toBe('dark');
+      });
+
+      it('trả về hàm no-op khi đăng ký handler không phải function', () => {
+        const unsub = client.onThemeChanged(undefined as any);
+        expect(typeof unsub).toBe('function');
+        expect(() => unsub()).not.toThrow();
+      });
+    });
+
+    describe('Đồng bộ trạng thái từ Handshake và Dọn dẹp Lifecycle', () => {
+      it('khởi tạo isAudioMuted và theme từ metadata handshake HOST_ACK', async () => {
+        const transport = new SimpleMockTransport();
+        const testClient = new WalletBridgeClient({ transport });
+
+        const initPromise = testClient.init();
+        expect(transport.sentMessages.length).toBe(1);
+        const readyMsg = transport.sentMessages[0];
+
+        transport.simulateIncoming({
+          id: 'ack-msg',
+          type: 'HOST_ACK',
+          payload: {
+            requestId: readyMsg.id,
+            hostInfo: {
+              hostVersion: '1.2.0',
+              theme: 'dark',
+              audioMuted: true,
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await initPromise;
+
+        expect(testClient.isConnected).toBe(true);
+        expect(testClient.theme).toBe('dark');
+        expect(testClient.isAudioMuted).toBe(true);
+        testClient.destroy();
+      });
+
+      it('cập nhật isAudioMuted và theme khi nhận unsolicited HOST_ACK', () => {
+        messageCallback?.({
+          id: 'unsolicited-ack',
+          type: 'HOST_ACK',
+          payload: {
+            hostInfo: {
+              theme: 'light',
+              audioMuted: false,
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(client.isConnected).toBe(true);
+        expect(client.theme).toBe('light');
+        expect(client.isAudioMuted).toBe(false);
+      });
+
+      it('reset isAudioMuted và theme khi disconnect', () => {
+        messageCallback?.({
+          id: 'evt-audio',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        messageCallback?.({
+          id: 'evt-theme',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'dark' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(client.isAudioMuted).toBe(true);
+        expect(client.theme).toBe('dark');
+
+        client.disconnect();
+
+        expect(client.isAudioMuted).toBeUndefined();
+        expect(client.theme).toBeUndefined();
+      });
+
+      it('destroy gỡ bỏ toàn bộ listeners và giải phóng tài nguyên', () => {
+        const audioSpy = vi.fn();
+        const themeSpy = vi.fn();
+
+        client.onAudioMutedChanged(audioSpy);
+        client.onThemeChanged(themeSpy);
+
+        client.destroy();
+
+        // Giả lập gửi message sau khi destroy
+        messageCallback?.({
+          id: 'evt-audio-late',
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(audioSpy).not.toHaveBeenCalled();
+        expect(themeSpy).not.toHaveBeenCalled();
+      });
+    });
+  });
 });
 
 
