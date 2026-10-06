@@ -8,6 +8,7 @@ import {
   HydraTransportError,
   HydraUserRejectedError,
   TIERED_TIMEOUTS,
+  HAPTIC_PATTERNS,
 } from '../../src';
 import type { ITransport, BridgeMessage, MessageHandler, UnsubscribeFn } from '../../src';
 
@@ -1826,6 +1827,486 @@ describe('WalletBridgeClient', () => {
 
         expect(audioSpy).not.toHaveBeenCalled();
         expect(themeSpy).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Mobile Device Controls (Orientation & Haptics) - Story 3.2', () => {
+    let transport: SimpleMockTransport;
+    let client: WalletBridgeClient;
+
+    beforeEach(async () => {
+      transport = new SimpleMockTransport();
+      client = new WalletBridgeClient({ transport });
+
+      // Kết nối handshake để sẵn sàng gọi API
+      const p = client.init();
+      transport.simulateIncoming({
+        id: 'ack-init',
+        type: 'HOST_ACK',
+        payload: { requestId: transport.sentMessages[0].id },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await p;
+    });
+
+    afterEach(() => {
+      client.destroy();
+    });
+
+    describe('setOrientation & unlockOrientation', () => {
+      it('gửi bản tin SET_ORIENTATION với payload { orientation: "landscape" } khi gọi setOrientation("landscape")', async () => {
+        await client.setOrientation('landscape');
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('SET_ORIENTATION');
+        expect(lastMessage.source).toBe('hydra-client');
+        expect(lastMessage.payload).toEqual({ orientation: 'landscape' });
+      });
+
+      it('gửi bản tin SET_ORIENTATION với payload { orientation: "portrait" } khi gọi setOrientation("portrait")', async () => {
+        await client.setOrientation('portrait');
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('SET_ORIENTATION');
+        expect(lastMessage.payload).toEqual({ orientation: 'portrait' });
+      });
+
+      it('chuẩn hóa chữ hoa và khoảng trắng thừa trong tham số orientation', async () => {
+        await client.setOrientation('  LANDSCAPE  ' as any);
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({ orientation: 'landscape' });
+      });
+
+      it('hỗ trợ đầy đủ các orientation chuẩn: portrait-primary, portrait-secondary, landscape-primary, landscape-secondary, natural, any', async () => {
+        const standardModes = [
+          'portrait-primary',
+          'portrait-secondary',
+          'landscape-primary',
+          'landscape-secondary',
+          'natural',
+          'any',
+        ] as const;
+
+        for (const mode of standardModes) {
+          await client.setOrientation(mode);
+          const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+          expect(lastMessage.payload).toEqual({ orientation: mode });
+        }
+      });
+
+      it('gửi bản tin SET_ORIENTATION với payload { orientation: "any" } khi gọi unlockOrientation()', async () => {
+        await client.unlockOrientation();
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('SET_ORIENTATION');
+        expect(lastMessage.payload).toEqual({ orientation: 'any' });
+      });
+
+      it('ném lỗi ERR_NOT_CONNECTED khi gọi setOrientation lúc client chưa kết nối', async () => {
+        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(disconnectedClient.setOrientation('landscape')).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.setOrientation('landscape')).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        disconnectedClient.destroy();
+      });
+
+      it('ném lỗi ERR_NOT_CONNECTED khi gọi unlockOrientation lúc client chưa kết nối', async () => {
+        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(disconnectedClient.unlockOrientation()).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.unlockOrientation()).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        disconnectedClient.destroy();
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền orientation không hợp lệ', async () => {
+        await expect(client.setOrientation('upside-down' as any)).rejects.toThrow(HydraBridgeError);
+        await expect(client.setOrientation('upside-down' as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền orientation rỗng hoặc không phải chuỗi', async () => {
+        await expect(client.setOrientation('' as any)).rejects.toThrow(HydraBridgeError);
+        await expect(client.setOrientation(null as any)).rejects.toThrow(HydraBridgeError);
+        await expect(client.setOrientation(undefined as any)).rejects.toThrow(HydraBridgeError);
+        await expect(client.setOrientation(123 as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+    });
+
+    describe('triggerHaptic', () => {
+      it('gửi bản tin TRIGGER_HAPTIC với preset mặc định "medium" và pattern [40] khi gọi không tham số', async () => {
+        await client.triggerHaptic();
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('TRIGGER_HAPTIC');
+        expect(lastMessage.source).toBe('hydra-client');
+        expect(lastMessage.payload).toEqual({
+          type: 'medium',
+          pattern: [40],
+        });
+      });
+
+      it('gửi bản tin TRIGGER_HAPTIC với preset "medium" khi truyền "medium"', async () => {
+        await client.triggerHaptic('medium');
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({
+          type: 'medium',
+          pattern: [40],
+        });
+      });
+
+      it('gửi bản tin TRIGGER_HAPTIC cho tất cả các preset chuẩn', async () => {
+        const presets = [
+          { type: 'light', expectedPattern: [15] },
+          { type: 'heavy', expectedPattern: [80] },
+          { type: 'selection', expectedPattern: [10] },
+          { type: 'success', expectedPattern: [30, 50, 60] },
+          { type: 'warning', expectedPattern: [40, 60, 40] },
+          { type: 'error', expectedPattern: [50, 100, 50, 100, 50] },
+        ] as const;
+
+        for (const item of presets) {
+          await client.triggerHaptic(item.type);
+          const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+          expect(lastMessage.payload).toEqual({
+            type: item.type,
+            pattern: item.expectedPattern,
+          });
+        }
+      });
+
+      it('chuẩn hóa chữ hoa và khoảng trắng của preset rung (" LIGHT " -> "light")', async () => {
+        await client.triggerHaptic('  LIGHT  ' as any);
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({
+          type: 'light',
+          pattern: [15],
+        });
+      });
+
+      it('gửi bản tin TRIGGER_HAPTIC với duration ms khi truyền số (ví dụ 100ms)', async () => {
+        await client.triggerHaptic(100);
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({
+          pattern: 100,
+        });
+      });
+
+      it('gửi bản tin TRIGGER_HAPTIC với pattern mảng khi truyền array [50, 100, 50]', async () => {
+        await client.triggerHaptic([50, 100, 50]);
+
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({
+          pattern: [50, 100, 50],
+        });
+      });
+
+      it('ném lỗi ERR_NOT_CONNECTED khi gọi triggerHaptic lúc client chưa kết nối', async () => {
+        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
+
+        await expect(disconnectedClient.triggerHaptic('medium')).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.triggerHaptic('medium')).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+
+        disconnectedClient.destroy();
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền preset rung không hợp lệ', async () => {
+        await expect(client.triggerHaptic('buzz' as any)).rejects.toThrow(HydraBridgeError);
+        await expect(client.triggerHaptic('buzz' as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền thời lượng số âm hoặc vô hạn', async () => {
+        await expect(client.triggerHaptic(-10)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.triggerHaptic(Infinity)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền mảng rỗng hoặc chứa phần tử âm/không hợp lệ', async () => {
+        await expect(client.triggerHaptic([])).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.triggerHaptic([50, -20])).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.triggerHaptic([50, 'bad' as any])).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+
+      it('ném lỗi ERR_INVALID_PARAMS khi truyền kiểu dữ liệu không hợp lệ (object, boolean)', async () => {
+        await expect(client.triggerHaptic({} as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        await expect(client.triggerHaptic(true as any)).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+      });
+    });
+
+    describe('Standalone Fallback', () => {
+      it('khi chạy độc lập ngoài iframe, triggerHaptic gọi navigator.vibrate trực tiếp', async () => {
+        const mockVibrate = vi.fn().mockReturnValue(true);
+        const originalVibrate = (globalThis.navigator as any)?.vibrate;
+        Object.defineProperty(globalThis.navigator, 'vibrate', {
+          value: mockVibrate,
+          configurable: true,
+          writable: true,
+        });
+
+        let isIframe = true;
+        const standaloneClient = new WalletBridgeClient({
+          transport,
+          isIframeFn: () => isIframe,
+        });
+        const p = standaloneClient.init();
+        transport.simulateIncoming({
+          id: 'ack-standalone',
+          type: 'HOST_ACK',
+          payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        await p;
+
+        // Chuyển sang môi trường standalone ngoài iframe
+        isIframe = false;
+
+        await standaloneClient.triggerHaptic('medium');
+
+        expect(mockVibrate).toHaveBeenCalledWith([40]);
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.type).toBe('TRIGGER_HAPTIC');
+
+        standaloneClient.destroy();
+        if (originalVibrate !== undefined) {
+          Object.defineProperty(globalThis.navigator, 'vibrate', {
+            value: originalVibrate,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis.navigator as any).vibrate;
+        }
+      });
+
+      it('khi chạy độc lập ngoài iframe, triggerHaptic bắt lỗi an toàn nếu navigator.vibrate ném lỗi', async () => {
+        const mockVibrate = vi.fn().mockImplementation(() => {
+          throw new Error('Vibration permission denied');
+        });
+        const originalVibrate = (globalThis.navigator as any)?.vibrate;
+        Object.defineProperty(globalThis.navigator, 'vibrate', {
+          value: mockVibrate,
+          configurable: true,
+          writable: true,
+        });
+
+        let isIframe = true;
+        const standaloneClient = new WalletBridgeClient({
+          transport,
+          isIframeFn: () => isIframe,
+          debug: true,
+        });
+        const p = standaloneClient.init();
+        transport.simulateIncoming({
+          id: 'ack-sa-err',
+          type: 'HOST_ACK',
+          payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        await p;
+
+        isIframe = false;
+
+        await expect(standaloneClient.triggerHaptic('light')).resolves.toBeUndefined();
+        expect(mockVibrate).toHaveBeenCalledWith([15]);
+
+        standaloneClient.destroy();
+        if (originalVibrate !== undefined) {
+          Object.defineProperty(globalThis.navigator, 'vibrate', {
+            value: originalVibrate,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis.navigator as any).vibrate;
+        }
+      });
+
+      it('khi chạy độc lập ngoài iframe, setOrientation gọi screen.orientation.lock trực tiếp', async () => {
+        const mockLock = vi.fn().mockResolvedValue(undefined);
+        const originalScreen = (globalThis as any).screen;
+        Object.defineProperty(globalThis, 'screen', {
+          value: {
+            orientation: {
+              lock: mockLock,
+            },
+          },
+          configurable: true,
+          writable: true,
+        });
+
+        let isIframe = true;
+        const standaloneClient = new WalletBridgeClient({
+          transport,
+          isIframeFn: () => isIframe,
+        });
+        const p = standaloneClient.init();
+        transport.simulateIncoming({
+          id: 'ack-sa-orient',
+          type: 'HOST_ACK',
+          payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        await p;
+
+        isIframe = false;
+
+        await standaloneClient.setOrientation('landscape');
+
+        expect(mockLock).toHaveBeenCalledWith('landscape');
+
+        standaloneClient.destroy();
+        if (originalScreen !== undefined) {
+          Object.defineProperty(globalThis, 'screen', {
+            value: originalScreen,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis as any).screen;
+        }
+      });
+
+      it('khi chạy độc lập ngoài iframe, unlockOrientation gọi screen.orientation.unlock trực tiếp', async () => {
+        const mockLock = vi.fn().mockResolvedValue(undefined);
+        const mockUnlock = vi.fn();
+        const originalScreen = (globalThis as any).screen;
+        Object.defineProperty(globalThis, 'screen', {
+          value: {
+            orientation: {
+              lock: mockLock,
+              unlock: mockUnlock,
+            },
+          },
+          configurable: true,
+          writable: true,
+        });
+
+        let isIframe = true;
+        const standaloneClient = new WalletBridgeClient({
+          transport,
+          isIframeFn: () => isIframe,
+        });
+        const p = standaloneClient.init();
+        transport.simulateIncoming({
+          id: 'ack-sa-unlock',
+          type: 'HOST_ACK',
+          payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        await p;
+
+        isIframe = false;
+
+        await standaloneClient.unlockOrientation();
+
+        expect(mockUnlock).toHaveBeenCalled();
+        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
+        expect(lastMessage.payload).toEqual({ orientation: 'any' });
+
+        standaloneClient.destroy();
+        if (originalScreen !== undefined) {
+          Object.defineProperty(globalThis, 'screen', {
+            value: originalScreen,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis as any).screen;
+        }
+      });
+
+      it('khi chạy độc lập ngoài iframe, bắt lỗi an toàn nếu screen.orientation ném lỗi', async () => {
+        const mockLock = vi.fn().mockRejectedValue(new Error('NotSupportedError'));
+        const originalScreen = (globalThis as any).screen;
+        Object.defineProperty(globalThis, 'screen', {
+          value: {
+            orientation: {
+              lock: mockLock,
+            },
+          },
+          configurable: true,
+          writable: true,
+        });
+
+        let isIframe = true;
+        const standaloneClient = new WalletBridgeClient({
+          transport,
+          isIframeFn: () => isIframe,
+          debug: true,
+        });
+        const p = standaloneClient.init();
+        transport.simulateIncoming({
+          id: 'ack-sa-orient-err',
+          type: 'HOST_ACK',
+          payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        await p;
+
+        isIframe = false;
+
+        await expect(standaloneClient.setOrientation('portrait')).resolves.toBeUndefined();
+        expect(mockLock).toHaveBeenCalledWith('portrait');
+
+        standaloneClient.destroy();
+        if (originalScreen !== undefined) {
+          Object.defineProperty(globalThis, 'screen', {
+            value: originalScreen,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis as any).screen;
+        }
+      });
+    });
+
+    describe('Exported Constants & Presets', () => {
+      it('HAPTIC_PATTERNS chứa đầy đủ các preset xúc giác chuẩn và giá trị mẫu rung', () => {
+        expect(HAPTIC_PATTERNS).toBeDefined();
+        expect(HAPTIC_PATTERNS.light).toEqual([15]);
+        expect(HAPTIC_PATTERNS.medium).toEqual([40]);
+        expect(HAPTIC_PATTERNS.heavy).toEqual([80]);
+        expect(HAPTIC_PATTERNS.selection).toEqual([10]);
+        expect(HAPTIC_PATTERNS.success).toEqual([30, 50, 60]);
+        expect(HAPTIC_PATTERNS.warning).toEqual([40, 60, 40]);
+        expect(HAPTIC_PATTERNS.error).toEqual([50, 100, 50, 100, 50]);
       });
     });
   });

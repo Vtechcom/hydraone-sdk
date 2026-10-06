@@ -443,5 +443,60 @@ export type AudioMutedHandler = (muted: boolean) => void;
  */
 export type ThemeChangedHandler = (theme: ThemeMode) => void;
 
+/**
+ * Kiểu hướng màn hình khóa (Screen Orientation Lock)
+ */
+export type OrientationLockType =
+  | 'any'
+  | 'natural'
+  | 'landscape'
+  | 'portrait'
+  | 'portrait-primary'
+  | 'portrait-secondary'
+  | 'landscape-primary'
+  | 'landscape-secondary';
+
+/**
+ * Dữ liệu payload cho yêu cầu khóa hướng màn hình SET_ORIENTATION
+ */
+export interface SetOrientationPayload {
+  orientation: OrientationLockType;
+  [key: string]: unknown;
+}
+
+/**
+ * Các loại preset phản hồi xúc giác (Haptic Feedback)
+ */
+export type HapticFeedbackType =
+  | 'light'
+  | 'medium'
+  | 'heavy'
+  | 'selection'
+  | 'success'
+  | 'warning'
+  | 'error';
+
+/**
+ * Bảng ánh xạ các mẫu rung chuẩn (tính bằng mili-giây) theo preset xúc giác
+ */
+export const HAPTIC_PATTERNS: Record<HapticFeedbackType, number[]> = {
+  light: [15],
+  medium: [40],
+  heavy: [80],
+  selection: [10],
+  success: [30, 50, 60],
+  warning: [40, 60, 40],
+  error: [50, 100, 50, 100, 50],
+} as const;
+
+/**
+ * Dữ liệu payload cho yêu cầu rung phản hồi xúc giác TRIGGER_HAPTIC
+ */
+export interface TriggerHapticPayload {
+  type?: HapticFeedbackType;
+  pattern: number | number[];
+  [key: string]: unknown;
+}
+
 
 

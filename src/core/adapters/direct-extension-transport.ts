@@ -429,6 +429,11 @@ export class DirectExtensionTransport implements ITransport {
           result = await api.signData(payload.address, payload.payloadHex);
           break;
         }
+        case 'SET_ORIENTATION':
+        case 'TRIGGER_HAPTIC': {
+          result = { success: true };
+          break;
+        }
         default: {
           throw new HydraBridgeError(
             `Unsupported message type [${message.type}] in DirectExtensionTransport`,

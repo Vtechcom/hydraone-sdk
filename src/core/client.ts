@@ -17,8 +17,12 @@ import type {
   ThemeMode,
   UnsubscribeFn,
   WalletBridgeClientOptions,
+  HapticFeedbackType,
+  OrientationLockType,
+  SetOrientationPayload,
+  TriggerHapticPayload,
 } from './types';
-import { TIERED_TIMEOUTS } from './types';
+import { TIERED_TIMEOUTS, HAPTIC_PATTERNS } from './types';
 import {
   ERROR_CODES,
   HydraBridgeError,
@@ -945,6 +949,214 @@ export class WalletBridgeClient {
     };
 
     return this.onHostEvent('THEME_CHANGED', wrapper);
+  }
+
+  // ==========================================
+  // Mobile Device Controls (Orientation & Haptics)
+  // ==========================================
+
+  private static readonly VALID_ORIENTATIONS = new Set<string>([
+    'any',
+    'natural',
+    'landscape',
+    'portrait',
+    'portrait-primary',
+    'portrait-secondary',
+    'landscape-primary',
+    'landscape-secondary',
+  ]);
+
+  /**
+   * Xác thực và chuẩn hóa giá trị hướng màn hình
+   */
+  private validateOrientation(orientation: OrientationLockType): OrientationLockType {
+    if (!orientation || typeof orientation !== 'string') {
+      throw new HydraBridgeError(
+        `Invalid orientation: "${orientation}". Expected a valid OrientationLockType string.`,
+        ERROR_CODES.ERR_INVALID_PARAMS
+      );
+    }
+    const normalized = orientation.trim().toLowerCase();
+    if (!WalletBridgeClient.VALID_ORIENTATIONS.has(normalized)) {
+      throw new HydraBridgeError(
+        `Invalid orientation: "${orientation}". Allowed values: any, natural, landscape, portrait, portrait-primary, portrait-secondary, landscape-primary, landscape-secondary.`,
+        ERROR_CODES.ERR_INVALID_PARAMS
+      );
+    }
+    return normalized as OrientationLockType;
+  }
+
+  /**
+   * Xử lý và chuẩn hóa tham số rung xúc giác
+   */
+  private resolveHapticParams(
+    typeOrPattern?: HapticFeedbackType | number | number[]
+  ): { type?: HapticFeedbackType; pattern: number | number[] } {
+    if (typeOrPattern === undefined) {
+      return {
+        type: 'medium',
+        pattern: HAPTIC_PATTERNS.medium,
+      };
+    }
+
+    if (typeof typeOrPattern === 'string') {
+      const normalized = typeOrPattern.trim().toLowerCase() as HapticFeedbackType;
+      if (normalized in HAPTIC_PATTERNS) {
+        return {
+          type: normalized,
+          pattern: HAPTIC_PATTERNS[normalized],
+        };
+      }
+      throw new HydraBridgeError(
+        `Invalid haptic feedback preset: "${typeOrPattern}". Allowed values: light, medium, heavy, selection, success, warning, error.`,
+        ERROR_CODES.ERR_INVALID_PARAMS
+      );
+    }
+
+    if (typeof typeOrPattern === 'number') {
+      if (!Number.isFinite(typeOrPattern) || typeOrPattern < 0) {
+        throw new HydraBridgeError(
+          `Invalid vibration duration: ${typeOrPattern}. Must be a non-negative finite number.`,
+          ERROR_CODES.ERR_INVALID_PARAMS
+        );
+      }
+      return {
+        pattern: typeOrPattern,
+      };
+    }
+
+    if (Array.isArray(typeOrPattern)) {
+      if (
+        typeOrPattern.length === 0 ||
+        typeOrPattern.some((val) => typeof val !== 'number' || !Number.isFinite(val) || val < 0)
+      ) {
+        throw new HydraBridgeError(
+          `Invalid vibration pattern: must be a non-empty array of non-negative finite numbers.`,
+          ERROR_CODES.ERR_INVALID_PARAMS
+        );
+      }
+      return {
+        pattern: typeOrPattern,
+      };
+    }
+
+    throw new HydraBridgeError(
+      `Invalid haptic parameter type. Expected a string preset, number, or array of numbers.`,
+      ERROR_CODES.ERR_INVALID_PARAMS
+    );
+  }
+
+  /**
+   * Yêu cầu khóa hướng màn hình thiết bị di động
+   * 
+   * Gửi bản tin SET_ORIENTATION tới Host Shell hoặc fallback ScreenOrientation API ở chế độ standalone.
+   * 
+   * @param orientation Hướng màn hình cần khóa ('landscape', 'portrait', 'any', ...)
+   */
+  public async setOrientation(orientation: OrientationLockType): Promise<void> {
+    this.assertConnected();
+    const validOrientation = this.validateOrientation(orientation);
+
+    if (this.isStandaloneBrowser()) {
+      try {
+        if (typeof screen !== 'undefined' && screen.orientation) {
+          if (validOrientation === 'any' && typeof (screen.orientation as any).unlock === 'function') {
+            (screen.orientation as any).unlock();
+          } else if (typeof (screen.orientation as any).lock === 'function') {
+            await (screen.orientation as any).lock(validOrientation);
+          }
+        }
+      } catch (err) {
+        if (this.debug) {
+          console.warn('[WalletBridgeClient] ScreenOrientation lock/unlock failed in standalone mode:', err);
+        }
+      }
+
+      if (this.transport) {
+        const message: BridgeMessage<SetOrientationPayload> = {
+          id: generateId(),
+          type: 'SET_ORIENTATION',
+          payload: { orientation: validOrientation },
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        };
+        await this.transport.send(message);
+      }
+      return;
+    }
+
+    const message: BridgeMessage<SetOrientationPayload> = {
+      id: generateId(),
+      type: 'SET_ORIENTATION',
+      payload: { orientation: validOrientation },
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    await this.transport!.send(message);
+  }
+
+  /**
+   * Mở khóa hướng màn hình (cho phép tự do xoay hướng thiết bị)
+   */
+  public async unlockOrientation(): Promise<void> {
+    return this.setOrientation('any');
+  }
+
+  /**
+   * Kích hoạt rung phản hồi xúc giác (Haptic Vibration) trên thiết bị di động
+   * 
+   * Gửi bản tin TRIGGER_HAPTIC tới Host Shell kèm pattern rung, hoặc gọi trực tiếp navigator.vibrate khi chạy độc lập.
+   * 
+   * @param typeOrPattern Tùy chọn preset ('light', 'medium', 'heavy', 'selection', 'success', 'warning', 'error') hoặc thời lượng rung (ms) hoặc mảng pattern [rung, nghỉ, rung]
+   */
+  public async triggerHaptic(
+    typeOrPattern?: HapticFeedbackType | number | number[]
+  ): Promise<void> {
+    this.assertConnected();
+    const { type, pattern } = this.resolveHapticParams(typeOrPattern);
+
+    if (this.isStandaloneBrowser()) {
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          navigator.vibrate(pattern);
+        }
+      } catch (err) {
+        if (this.debug) {
+          console.warn('[WalletBridgeClient] navigator.vibrate failed in standalone mode:', err);
+        }
+      }
+
+      if (this.transport) {
+        const payload: TriggerHapticPayload = {
+          pattern,
+          ...(type ? { type } : {}),
+        };
+        const message: BridgeMessage<TriggerHapticPayload> = {
+          id: generateId(),
+          type: 'TRIGGER_HAPTIC',
+          payload,
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        };
+        await this.transport.send(message);
+      }
+      return;
+    }
+
+    const payload: TriggerHapticPayload = {
+      pattern,
+      ...(type ? { type } : {}),
+    };
+    const message: BridgeMessage<TriggerHapticPayload> = {
+      id: generateId(),
+      type: 'TRIGGER_HAPTIC',
+      payload,
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    await this.transport!.send(message);
   }
 
   /**
