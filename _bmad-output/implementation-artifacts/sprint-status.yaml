@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-06-2026 18:24
+last_updated: 10-06-2026 18:33
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -50,7 +50,7 @@ development_status:
   3-1-host-event-bus-sync-audio-theme: done
   3-2-mobile-device-controls-orientation-haptics: done
   3-3-in-game-host-modal-overlay-player-profile-relay: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   epic-4: backlog
   4-1-cardano-domain-utilities-subpath: backlog
@@ -113,3 +113,25 @@ action_items:
     owner: "Amelia"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-10-06-2026.md"
+  - id: "epic-3-retro-item-1-enforce-subpath-bundle-isolation-in-epic-4"
+    epic: 3
+    action: "Enforce strict subpath bundle isolation (ARCH-6) for @hydraone/sdk/cardano,
+      vue, react, phaser to protect core bundle under 12 KB"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-10-06-2026.md"
+  - id: "epic-3-retro-item-2-add-automated-ci-bundle-size-guard-under-12kb"
+    epic: 3
+    action: "Add automated CI check script in package.json to fail build if minified
+      gzipped bundle exceeds 12 KB"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-10-06-2026.md"
+  - id: "epic-3-retro-item-3-evaluate-facade-delegation-refactoring-for-walletbridgeclient"
+    epic: 3
+    action: "Evaluate extracting device and lifecycle logic into dedicated internal
+      sub-controllers (DeviceController, LifecycleController) while retaining facade
+      methods on WalletBridgeClient to prevent further god-class growth"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-10-06-2026.md"
