@@ -20,6 +20,10 @@ export type BridgeMessageType =
   | 'REQUEST_DEPOSIT_MODAL'
   | 'GET_PLAYER_PROFILE'
   | 'AUTH_STATE_CHANGED'
+  | 'HOST_STORAGE_GET'
+  | 'HOST_STORAGE_SET'
+  | 'HOST_STORAGE_REMOVE'
+  | 'HOST_STORAGE_CLEAR'
   | 'RPC_RESPONSE'
   | 'RPC_ERROR';
 
@@ -283,6 +287,35 @@ export interface DirectExtensionTransportOptions {
   cardanoProvider?: Record<string, any>;
   /** Thời gian chờ mặc định (ms) cho các RPC requests (mặc định: 15000ms) */
   defaultTimeoutMs?: number;
+}
+
+/**
+ * Payload cho yêu cầu đọc dữ liệu lưu trữ từ Host Shell
+ */
+export interface HostStorageGetPayload {
+  key: string;
+}
+
+/**
+ * Payload cho yêu cầu ghi dữ liệu lưu trữ lên Host Shell
+ */
+export interface HostStorageSetPayload {
+  key: string;
+  value: string;
+}
+
+/**
+ * Payload cho yêu cầu xóa một khóa lưu trữ khỏi Host Shell
+ */
+export interface HostStorageRemovePayload {
+  key: string;
+}
+
+/**
+ * Payload cho yêu cầu dọn dẹp các khóa lưu trữ khỏi Host Shell
+ */
+export interface HostStorageClearPayload {
+  prefix?: string;
 }
 
 
