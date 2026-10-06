@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-06-2026 15:16
+last_updated: 10-06-2026 15:54
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -40,10 +40,10 @@ development_status:
   1-5-standalone-direct-extension-transport-fallback: done
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done
   2-1-tiered-storage-adapters-sub-namespace-policy: done
   2-2-host-storage-relay-protocol-adapter: done
-  2-3-gameauthmanager-1-click-cip-8-authentication-jwt-lifecycle: backlog
+  2-3-gameauthmanager-1-click-cip-8-authentication-jwt-lifecycle: done
   epic-2-retrospective: optional
 
   epic-3: backlog

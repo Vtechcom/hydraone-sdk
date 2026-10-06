@@ -1,4 +1,5 @@
 import type { ITransport } from './ports/transport';
+import type { IStorage } from './ports/storage';
 
 /**
  * Các loại bản tin được hỗ trợ trong giao thức giao tiếp giữa Game và Host Shell
@@ -317,5 +318,88 @@ export interface HostStorageRemovePayload {
 export interface HostStorageClearPayload {
   prefix?: string;
 }
+
+/**
+ * Payload chứa thông tin chữ ký xác thực CIP-8 đã được đóng gói
+ */
+export interface AuthSignaturePayload {
+  address: string;
+  signature: string;
+  key: string;
+  challenge: string;
+  payloadHex: string;
+}
+
+/**
+ * Trạng thái phiên xác thực của người chơi
+ */
+export interface AuthState {
+  isAuthenticated: boolean;
+  token: string | null;
+  address: string | null;
+  claims?: Record<string, any> | null;
+  error?: Error | null;
+}
+
+/**
+ * Kết quả trả về của phiên đăng nhập thành công
+ */
+export interface AuthSession {
+  address: string;
+  signature: string;
+  key: string;
+  challenge: string;
+  payloadHex: string;
+  token?: string;
+  claims?: Record<string, any> | null;
+}
+
+/**
+ * Tham số đầu vào cho phương thức signIn() của GameAuthManager
+ */
+export interface SignInParams {
+  /** Chuỗi challenge / nonce từ backend xác thực */
+  challenge: string;
+  /** Địa chỉ ví dùng để ký (tùy chọn: nếu không truyền sẽ tự động lấy từ client) */
+  address?: string;
+  /** JWT token nếu đã có sẵn hoặc được cấp phát trước (tùy chọn) */
+  token?: string;
+  /** Hàm callback để gửi chữ ký lên auth backend và nhận JWT token (tùy chọn) */
+  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
+  /** Tùy chọn ký ví CIP-8 (ghi đè timeout...) */
+  signOptions?: SignOptions;
+}
+
+/**
+ * Interface tối thiểu của Wallet Client phục vụ GameAuthManager
+ */
+export interface IAuthSignerClient {
+  signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
+  getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]>;
+  getChangeAddress?(options?: QueryOptions): Promise<string>;
+}
+
+/**
+ * Cấu hình khởi tạo cho GameAuthManager
+ */
+export interface GameAuthManagerOptions {
+  /** WalletBridgeClient instance hoặc đối tượng triển khai IAuthSignerClient */
+  client: IAuthSignerClient;
+  /** IStorage adapter để lưu trữ token an toàn (ví dụ HostStorageRelayAdapter) */
+  storage: IStorage;
+  /** Khóa lưu trữ JWT token trong IStorage (mặc định: 'hydra:sdk:auth:token') */
+  tokenStorageKey?: string;
+  /** Khóa lưu trữ địa chỉ ví người chơi (mặc định: 'hydra:sdk:auth:address') */
+  addressStorageKey?: string;
+  /** Dung sai thời gian hết hạn JWT tính bằng giây (clock tolerance, mặc định: 0) */
+  clockToleranceSeconds?: number;
+  /** Hàm callback mặc định để trao đổi chữ ký lấy JWT token khi signIn không truyền (tùy chọn) */
+  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
+}
+
+/**
+ * Hàm lắng nghe thay đổi trạng thái xác thực
+ */
+export type AuthStateHandler = (state: AuthState) => void;
 
 
