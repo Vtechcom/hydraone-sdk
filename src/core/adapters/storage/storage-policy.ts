@@ -42,6 +42,10 @@ export function isSessionStorageKey(key: string): boolean {
  * @returns Khóa hoàn chỉnh có tiền tố chuẩn hóa, ví dụ: 'hydra:sdk:auth:token'
  */
 export function buildStorageKey(subNamespace: StorageSubNamespace, subKey: string): string {
+  if (subNamespace !== 'auth' && subNamespace !== 'session') {
+    throw new Error("Storage subNamespace must be 'auth' or 'session'");
+  }
+
   if (!subKey || typeof subKey !== 'string') {
     throw new Error('Storage subKey must be a non-empty string');
   }

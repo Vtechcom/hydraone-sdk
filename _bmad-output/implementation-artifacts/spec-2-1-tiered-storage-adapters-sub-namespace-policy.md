@@ -74,6 +74,17 @@ context:
 - And all keys stored by the SDK are prefixed with sub-namespaces: `hydra:sdk:auth:*` or `hydra:sdk:session:*`
 - And executing `storage.clear()` deletes only keys starting with `hydra:sdk:*`, leaving all game-specific storage keys untouched.
 
+### Review Findings
+
+- [x] [Review][Patch] SafeLocalStorageAdapter: Đảm bảo removeItem và clear luôn đồng bộ dọn dẹp underlyingStorage trong fallback mode để tránh zombie keys [src/core/adapters/storage/safe-local-storage.ts:165]
+- [x] [Review][Patch] Storage Policy: Validate subNamespace ('auth' | 'session') trong buildStorageKey và chuẩn hóa probe key với STORAGE_PREFIX [src/core/adapters/storage/storage-policy.ts:44]
+- [x] [Review][Patch] Storage Tests: Bổ sung test coverage cho fallback mode removeItem/clear, subNamespace validation, onFallback resilience, và Map init [tests/core/adapters/storage.test.ts:356]
+
+#### Rejected
+- SafeLocalStorageAdapter không kiểm tra empty string key: rejected `false` -- localStorage trình duyệt cho phép chuỗi rỗng làm key hợp lệ, tuân thủ contract IStorage.
+- SafeLocalStorageAdapter.clear index shifting: rejected `false` -- code gom keysToRemove vào mảng độc lập trước khi xóa nên không bị lệch index.
+- buildStorageKey trailing colons: rejected `low` -- không ảnh hưởng trong thực tế và không đáng tăng độ phức tạp xử lý chuỗi.
+
 ## Implementation Notes
 
 - Đã hiện thực `storage-policy.ts` với các hằng số tiền tố chuẩn `hydra:sdk:`, `hydra:sdk:auth:`, `hydra:sdk:session:` và các hàm xác thực, sinh key `buildStorageKey()`.
@@ -88,10 +99,10 @@ context:
 
 | # | Finding | Verdict | Route | Evidence / Action |
 |---|---------|---------|-------|-------------------|
-| 1 | `buildStorageKey` cho phép subKey rỗng khi chỉ chứa ký tự phân tách dấu hai chấm hoặc khoảng trắng | `low` | `patch` | Đã patch: bổ sung trim và loại bỏ colon rỗng, ném Error khi subKey không hợp lệ [src/core/adapters/storage/storage-policy.ts:48] |
-| 2 | `SafeLocalStorageAdapter` mất khả năng đọc key cũ nếu chỉ bị chặn ghi (`QuotaExceededError`) | `medium` | `patch` | Đã patch: `getItem()` trong fallback mode ưu tiên kiểm tra RAM, nếu null và underlying storage tồn tại thì thử đọc an toàn với try-catch [src/core/adapters/storage/safe-local-storage.ts:114] |
-| 3 | Thiếu getter truy cập `underlyingStorage` phục vụ Bridge Health Diagnostics (FR-6.2) | `low` | `patch` | Đã patch: bổ sung getter `underlyingStorage` trên SafeLocalStorageAdapter [src/core/adapters/storage/safe-local-storage.ts:74] |
-| 4 | Bổ sung unit tests cho edge cases và getters mới | `low` | `patch` | Đã patch: thêm 2 test cases mới trong tests/core/adapters/storage.test.ts, nâng tổng số test lên 18 tests cho suite storage |
+| 1 | `SafeLocalStorageAdapter.removeItem` và `clear` không dọn dẹp `underlyingStorage` trong fallback mode dẫn đến zombie key khi `getItem` | `high` | `patch` | `getItem` ưu tiên RAM rồi đọc tiếp từ `storage`; nếu không xóa trong `storage`, key đã xóa sẽ bị hồi sinh [src/core/adapters/storage/safe-local-storage.ts:165] |
+| 2 | `buildStorageKey` không xác thực `subNamespace` ('auth' \| 'session') | `medium` | `patch` | Vi phạm ma trận I/O của spec; namespace không hợp lệ lọt vào làm sai prefix [src/core/adapters/storage/storage-policy.ts:44] |
+| 3 | `probeStorage` sử dụng probe key không có prefix `hydra:sdk:` | `low` | `patch` | Nếu probe key bị kẹt lại trong storage, hàm `clear()` có chọn lọc sẽ không dọn dẹp được [src/core/adapters/storage/safe-local-storage.ts:107] |
+| 4 | Thiếu test coverage cho `removeItem`/`clear` trong fallback mode, validation `subNamespace`, `onFallback` error resilience | `medium` | `patch` | Cần bổ sung các test cases bảo vệ các edge cases trên trong `tests/core/adapters/storage.test.ts` |
 
 ## Verification
 

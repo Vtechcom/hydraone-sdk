@@ -1,6 +1,6 @@
 import type { IStorage } from '../../ports/storage';
 import { InMemoryStorageAdapter } from './in-memory-storage';
-import { isSdkStorageKey } from './storage-policy';
+import { isSdkStorageKey, STORAGE_PREFIX } from './storage-policy';
 
 export interface SafeLocalStorageAdapterOptions {
   /**
@@ -104,7 +104,7 @@ export class SafeLocalStorageAdapter implements IStorage {
     }
 
     try {
-      const probeKey = `__hydra_probe_${Date.now()}__`;
+      const probeKey = `${STORAGE_PREFIX}__probe_${Date.now()}__`;
       this.storage.setItem(probeKey, '1');
       this.storage.removeItem(probeKey);
     } catch (err) {
@@ -161,54 +161,47 @@ export class SafeLocalStorageAdapter implements IStorage {
 
   /**
    * Xóa một key cụ thể khỏi bộ nhớ lưu trữ
+   * Đảm bảo xóa cả ở underlying storage (nếu có) và fallback storage để tránh zombie keys
    */
   async removeItem(key: string): Promise<void> {
-    if (this._isUsingFallback || !this.storage) {
-      await this.fallbackStorage.removeItem(key);
-      return;
+    if (this.storage) {
+      try {
+        this.storage.removeItem(key);
+      } catch (err) {
+        this.activateFallback(err);
+      }
     }
-
-    try {
-      this.storage.removeItem(key);
-      // Đồng thời dọn dẹp trong fallbackStorage nếu key từng tồn tại trong RAM
-      await this.fallbackStorage.removeItem(key);
-    } catch (err) {
-      this.activateFallback(err);
-      await this.fallbackStorage.removeItem(key);
-    }
+    await this.fallbackStorage.removeItem(key);
   }
 
   /**
    * Dọn dẹp có chọn lọc: chỉ xóa các khóa thuộc quyền quản lý của SDK (bắt đầu bằng `hydra:sdk:*`).
    * Tuyệt đối không xóa bất kỳ khóa nào của Game.
+   * Đồng thời xóa sạch trên cả underlying storage và fallback storage.
    */
   async clear(): Promise<void> {
-    if (this._isUsingFallback || !this.storage) {
-      await this.fallbackStorage.clear();
-      return;
-    }
+    if (this.storage) {
+      try {
+        // Quét danh sách các khóa và chỉ xóa khóa khớp tiền tố `hydra:sdk:*`
+        const keysToRemove: string[] = [];
+        const length = this.storage.length;
 
-    try {
-      // Quét danh sách các khóa và chỉ xóa khóa khớp tiền tố `hydra:sdk:*`
-      const keysToRemove: string[] = [];
-      const length = this.storage.length;
-
-      for (let i = 0; i < length; i++) {
-        const k = this.storage.key(i);
-        if (k && isSdkStorageKey(k)) {
-          keysToRemove.push(k);
+        for (let i = 0; i < length; i++) {
+          const k = this.storage.key(i);
+          if (k && isSdkStorageKey(k)) {
+            keysToRemove.push(k);
+          }
         }
-      }
 
-      for (const k of keysToRemove) {
-        this.storage.removeItem(k);
+        for (const k of keysToRemove) {
+          this.storage.removeItem(k);
+        }
+      } catch (err) {
+        this.activateFallback(err);
       }
-
-      // Luôn đồng bộ dọn dẹp cả fallbackStorage
-      await this.fallbackStorage.clear();
-    } catch (err) {
-      this.activateFallback(err);
-      await this.fallbackStorage.clear();
     }
+
+    // Luôn đồng bộ dọn dẹp cả fallbackStorage
+    await this.fallbackStorage.clear();
   }
 }

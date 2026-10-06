@@ -49,7 +49,7 @@ class MockBrowserStorage implements Storage {
   }
 
   setItem(key: string, value: string): void {
-    if (key.startsWith('__hydra_probe_') && this.throwOnProbe) {
+    if ((key.includes('__probe_') || key.startsWith('__hydra_probe_')) && this.throwOnProbe) {
       throw this.throwOnProbe;
     }
     if (this.throwOnSetItem) {
@@ -105,6 +105,15 @@ describe('Storage Module & Sub-Namespace Policy (Story 2.1)', () => {
       expect(() => buildStorageKey('auth', '   ')).toThrow();
       expect(() => buildStorageKey('session', undefined as unknown as string)).toThrow();
     });
+
+    it('should throw an error if subNamespace is not auth or session', () => {
+      expect(() => buildStorageKey('invalid' as any, 'token')).toThrow(
+        "Storage subNamespace must be 'auth' or 'session'"
+      );
+      expect(() => buildStorageKey('' as any, 'token')).toThrow(
+        "Storage subNamespace must be 'auth' or 'session'"
+      );
+    });
   });
 
   describe('InMemoryStorageAdapter', () => {
@@ -130,6 +139,17 @@ describe('Storage Module & Sub-Namespace Policy (Story 2.1)', () => {
 
       expect(await storage.getItem('hydra:sdk:auth:token')).toBe('init_token');
       expect(await storage.getItem('game_score')).toBe('999');
+      expect(storage.size).toBe(2);
+    });
+
+    it('should initialize from Map and coerce non-string values to string', async () => {
+      const map = new Map<string, any>([
+        ['hydra:sdk:auth:token', 'map_token'],
+        ['count', 42],
+      ]);
+      const storage = new InMemoryStorageAdapter(map);
+      expect(await storage.getItem('hydra:sdk:auth:token')).toBe('map_token');
+      expect(await storage.getItem('count')).toBe('42');
       expect(storage.size).toBe(2);
     });
 
@@ -352,6 +372,85 @@ describe('Storage Module & Sub-Namespace Policy (Story 2.1)', () => {
       expect(await adapter.getItem('hydra:sdk:session:state')).toBe('new_state');
       // Đọc key cũ từ localStorage gốc
       expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('pre_saved_token');
+    });
+
+    it('should not crash if onFallback callback throws an error', () => {
+      const mockStorage = new MockBrowserStorage();
+      mockStorage.throwOnProbe = new Error('Probe failed');
+      const throwingOnFallback = vi.fn().mockImplementation(() => {
+        throw new Error('Callback error');
+      });
+
+      expect(() => {
+        new SafeLocalStorageAdapter({
+          storage: mockStorage,
+          onFallback: throwingOnFallback,
+        });
+      }).not.toThrow();
+    });
+
+    it('should use STORAGE_PREFIX for probe key during initialization', () => {
+      const setItemSpy = vi.fn();
+      const removeItemSpy = vi.fn();
+      const mockStorage = {
+        setItem: setItemSpy,
+        removeItem: removeItemSpy,
+      } as unknown as Storage;
+
+      new SafeLocalStorageAdapter({ storage: mockStorage });
+      expect(setItemSpy).toHaveBeenCalledWith(
+        expect.stringMatching(new RegExp(`^${STORAGE_PREFIX}__probe_`)),
+        '1'
+      );
+      expect(removeItemSpy).toHaveBeenCalledWith(
+        expect.stringMatching(new RegExp(`^${STORAGE_PREFIX}__probe_`))
+      );
+    });
+
+    it('should remove key from underlyingStorage in fallback mode to prevent resurrecting deleted values', async () => {
+      const mockStorage = new MockBrowserStorage();
+      const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
+
+      // Lưu key vào storage trước
+      await adapter.setItem('hydra:sdk:auth:token', 'pre_saved_token');
+      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBe('pre_saved_token');
+
+      // Giả lập lỗi ghi để chuyển sang fallback mode
+      mockStorage.throwOnSetItem = new Error('QuotaExceededError');
+      await adapter.setItem('hydra:sdk:session:state', 'state_val');
+      expect(adapter.isUsingFallback).toBe(true);
+
+      // Xóa key đã lưu từ trước khi fallback
+      await adapter.removeItem('hydra:sdk:auth:token');
+
+      // getItem phải trả về null, không được hồi sinh giá trị từ underlyingStorage
+      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+    });
+
+    it('should clear underlyingStorage SDK keys even in fallback mode while keeping game keys untouched', async () => {
+      const mockStorage = new MockBrowserStorage();
+      const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
+
+      // Lưu key SDK và key game trước khi bị lỗi
+      await adapter.setItem('hydra:sdk:auth:token', 'pre_saved_token');
+      mockStorage.setItem('game_gold', '500');
+
+      // Giả lập lỗi ghi để chuyển sang fallback mode
+      mockStorage.throwOnSetItem = new Error('QuotaExceededError');
+      await adapter.setItem('hydra:sdk:session:active', 'session_val');
+      expect(adapter.isUsingFallback).toBe(true);
+
+      // Gọi clear() khi đang ở fallback mode
+      await adapter.clear();
+
+      // Các SDK keys trong cả RAM và underlyingStorage phải bị xóa sạch
+      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:active')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+
+      // Dữ liệu riêng của game trong storage phải còn nguyên vẹn
+      expect(mockStorage.getItem('game_gold')).toBe('500');
     });
   });
 });

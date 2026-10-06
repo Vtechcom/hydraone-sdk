@@ -10,12 +10,15 @@ export class InMemoryStorageAdapter implements IStorage {
   private readonly store: Map<string, string>;
 
   constructor(initialEntries?: Record<string, string> | Map<string, string>) {
+    this.store = new Map();
     if (initialEntries instanceof Map) {
-      this.store = new Map(initialEntries);
+      for (const [k, v] of initialEntries.entries()) {
+        this.store.set(k, String(v));
+      }
     } else if (initialEntries && typeof initialEntries === 'object') {
-      this.store = new Map(Object.entries(initialEntries));
-    } else {
-      this.store = new Map();
+      for (const [k, v] of Object.entries(initialEntries)) {
+        this.store.set(k, String(v));
+      }
     }
   }
 
