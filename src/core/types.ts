@@ -371,7 +371,7 @@ export interface SignInParams {
 }
 
 /**
- * Interface tối thiểu của Wallet Client phục vụ GameAuthManager
+ * Interface tối thiểu của Wallet Client phục vụ AuthManager
  */
 export interface IAuthSignerClient {
   signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
@@ -380,22 +380,25 @@ export interface IAuthSignerClient {
 }
 
 /**
- * Cấu hình khởi tạo cho GameAuthManager
+ * Cấu hình khởi tạo cho AuthManager
  */
-export interface GameAuthManagerOptions {
+export interface AuthManagerOptions {
   /** WalletBridgeClient instance hoặc đối tượng triển khai IAuthSignerClient */
   client: IAuthSignerClient;
   /** IStorage adapter để lưu trữ token an toàn (ví dụ HostStorageRelayAdapter) */
   storage: IStorage;
   /** Khóa lưu trữ JWT token trong IStorage (mặc định: 'hydra:sdk:auth:token') */
   tokenStorageKey?: string;
-  /** Khóa lưu trữ địa chỉ ví người chơi (mặc định: 'hydra:sdk:auth:address') */
+  /** Khóa lưu trữ địa chỉ ví người chơi / người dùng (mặc định: 'hydra:sdk:auth:address') */
   addressStorageKey?: string;
   /** Dung sai thời gian hết hạn JWT tính bằng giây (clock tolerance, mặc định: 0) */
   clockToleranceSeconds?: number;
   /** Hàm callback mặc định để trao đổi chữ ký lấy JWT token khi signIn không truyền (tùy chọn) */
   exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
 }
+
+/** Alias tương thích ngược với tài liệu Game */
+export type GameAuthManagerOptions = AuthManagerOptions;
 
 /**
  * Hàm lắng nghe thay đổi trạng thái xác thực

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  AuthManager,
   GameAuthManager,
   hexToString,
   isJwtExpired,
@@ -105,7 +106,7 @@ describe('Tiện ích mã hóa & JWT (Pure Utilities)', () => {
   });
 });
 
-describe('GameAuthManager', () => {
+describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
   let mockClient: IAuthSignerClient & { onHostEvent?: (type: string, handler: any) => void };
   let storage: InMemoryStorageAdapter;
   let hostEventListeners: Map<string, (payload: any) => void>;
@@ -129,8 +130,12 @@ describe('GameAuthManager', () => {
     };
   });
 
-  it('khởi tạo GameAuthManager thành công với các tùy chọn mặc định', () => {
-    const authManager = new GameAuthManager({
+  it('GameAuthManager là alias tương thích ngược trỏ đến AuthManager', () => {
+    expect(GameAuthManager).toBe(AuthManager);
+  });
+
+  it('khởi tạo AuthManager thành công với các tùy chọn mặc định', () => {
+    const authManager = new AuthManager({
       client: mockClient,
       storage,
     });
@@ -140,10 +145,10 @@ describe('GameAuthManager', () => {
     expect(authManager.state.token).toBeNull();
   });
 
-  it('ném lỗi khi khởi tạo GameAuthManager thiếu client hoặc storage', () => {
-    expect(() => new GameAuthManager(null as any)).toThrow();
-    expect(() => new GameAuthManager({ client: null as any, storage })).toThrow('requires a client instance');
-    expect(() => new GameAuthManager({ client: mockClient, storage: null as any })).toThrow('requires an IStorage instance');
+  it('ném lỗi khi khởi tạo AuthManager thiếu client hoặc storage', () => {
+    expect(() => new AuthManager(null as any)).toThrow();
+    expect(() => new AuthManager({ client: null as any, storage })).toThrow('requires a client instance');
+    expect(() => new AuthManager({ client: mockClient, storage: null as any })).toThrow('requires an IStorage instance');
   });
 
   it('thực hiện 1-click signIn thành công kèm callback exchangeToken', async () => {

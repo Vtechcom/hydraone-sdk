@@ -1,4 +1,5 @@
 import type {
+  AuthManagerOptions,
   AuthSession,
   AuthSignaturePayload,
   AuthState,
@@ -134,9 +135,9 @@ export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean 
 }
 
 /**
- * GameAuthManager - Quản lý quy trình đăng nhập 1-click Web3 CIP-8 và vòng đời JWT token
+ * AuthManager - Quản lý quy trình đăng nhập 1-click Web3 CIP-8 và vòng đời JWT token cho Game & dApp
  */
-export class GameAuthManager {
+export class AuthManager {
   private readonly client: IAuthSignerClient;
   private readonly storage: IStorage;
   private readonly tokenStorageKey: string;
@@ -154,15 +155,15 @@ export class GameAuthManager {
     error: null,
   };
 
-  constructor(options: GameAuthManagerOptions) {
+  constructor(options: AuthManagerOptions) {
     if (!options || typeof options !== 'object') {
-      throw new Error('GameAuthManager options must be provided');
+      throw new Error('AuthManager options must be provided');
     }
     if (!options.client) {
-      throw new Error('GameAuthManager requires a client instance');
+      throw new Error('AuthManager requires a client instance');
     }
     if (!options.storage) {
-      throw new Error('GameAuthManager requires an IStorage instance');
+      throw new Error('AuthManager requires an IStorage instance');
     }
 
     this.client = options.client;
@@ -476,3 +477,9 @@ export class GameAuthManager {
     }
   }
 }
+
+/**
+ * Alias tương thích ngược cho các tài liệu hoặc dự án Game
+ */
+export { AuthManager as GameAuthManager };
+export type { GameAuthManagerOptions };

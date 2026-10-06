@@ -97,7 +97,8 @@ context:
 - Quản lý vòng đời token: `getToken()` và `checkSession()` tự động phát hiện token hết hạn, dọn dẹp storage và phát sự kiện `AUTH_STATE_CHANGED` với `HydraAuthError` (`ERR_AUTH_EXPIRED`).
 - Hỗ trợ đồng bộ sự kiện đăng xuất khi Host Shell phát `AUTH_STATE_CHANGED` với `isAuthenticated: false`.
 - Xuất khẩu đầy đủ các public APIs và types tại `src/index.ts`.
-- Xây dựng 29 unit tests trong `tests/core/auth.test.ts` bao phủ 100% các kịch bản trong I/O & Edge-Case Matrix. Toàn bộ 189 unit tests của toàn bộ dự án pass 100%, TypeScript typecheck 0 lỗi, build ESM/CJS/DTS dưới 2 giây.
+- Chuẩn hóa định danh class chính là `AuthManager` (và `AuthManagerOptions`) để phục vụ chung cho cả Game và các DApp Web3 Cardano, đồng thời cung cấp re-export alias `GameAuthManager` (`GameAuthManagerOptions`) đảm bảo tương thích ngược 100%.
+- Xây dựng 30 unit tests trong `tests/core/auth.test.ts` bao phủ 100% các kịch bản trong I/O & Edge-Case Matrix. Toàn bộ 190 unit tests của toàn bộ dự án pass 100%, TypeScript typecheck 0 lỗi, build ESM/CJS/DTS dưới 2 giây.
 
 ## Spec Change Log
 
