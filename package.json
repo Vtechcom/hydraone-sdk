@@ -27,6 +27,11 @@
       "import": "./dist/react/index.js",
       "require": "./dist/react/index.cjs"
     },
+    "./simulator": {
+      "types": "./dist/simulator/index.d.ts",
+      "import": "./dist/simulator/index.js",
+      "require": "./dist/simulator/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

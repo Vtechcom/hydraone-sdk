@@ -6,6 +6,7 @@ export default defineConfig({
     'cardano/index': 'src/cardano/index.ts',
     'vue/index': 'src/vue/index.ts',
     'react/index': 'src/react/index.ts',
+    'simulator/index': 'src/simulator/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

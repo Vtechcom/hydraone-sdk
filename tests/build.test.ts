@@ -69,5 +69,18 @@ describe('Build Output Verification', () => {
     expect(reactEsmContent).toContain('formatShortAddress');
     // Đảm bảo react là external peer dependency, không bị đóng gói trực tiếp vào dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);
+
+    const simulatorEsm = path.join(distPath, 'simulator/index.js');
+    const simulatorCjs = path.join(distPath, 'simulator/index.cjs');
+    const simulatorDts = path.join(distPath, 'simulator/index.d.ts');
+
+    expect(fs.existsSync(simulatorEsm)).toBe(true);
+    expect(fs.existsSync(simulatorCjs)).toBe(true);
+    expect(fs.existsSync(simulatorDts)).toBe(true);
+
+    const simulatorEsmContent = fs.readFileSync(simulatorEsm, 'utf-8');
+    expect(simulatorEsmContent).toContain('MockBridgeHost');
+    expect(simulatorEsmContent).toContain('MockClientTransport');
+    expect(simulatorEsmContent).toContain('encodeLovelaceToCbor');
   });
 });

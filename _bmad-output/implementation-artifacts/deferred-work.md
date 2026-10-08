@@ -6,3 +6,10 @@
 - **Type**: `defer`
 - **Severity**: `low`
 - **Rationale**: Pre-existing defense-in-depth pattern. Khi các transport thứ ba hoặc MockTransport được mở rộng trong story 1.5/5.1, pattern này sẽ được audit và bổ sung test coverage đầy đủ hơn.
+
+## Deferred by User Request (2026-10-08)
+
+- **Item**: Story 4.4: Phaser 3 Event Emitter Game Plugin (`@hydraone/sdk/phaser`)
+- **Type**: `defer`
+- **Rationale**: Tạm hoãn triển khai plugin Phaser 3 theo yêu cầu người dùng để ưu tiên chuyển sang triển khai Epic 5 (Local Dev Sandbox, Simulator DevTools & Health Diagnostics). Story 4.4 được chuyển về trạng thái backlog.
+
