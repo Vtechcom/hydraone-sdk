@@ -8,6 +8,7 @@ export default defineConfig({
     'react/index': 'src/react/index.ts',
     'simulator/index': 'src/simulator/index.ts',
     'diagnostics/index': 'src/diagnostics/index.ts',
+    'cli/index': 'src/cli/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

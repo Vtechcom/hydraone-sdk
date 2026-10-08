@@ -40,7 +40,9 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin",
+    "templates"
   ],
   "sideEffects": false,
   "repository": {
@@ -83,12 +85,17 @@
       "optional": true
     }
   },
+  "bin": {
+    "create-hydraone-game": "./bin/create-hydraone-game.js"
+  },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "happy-dom": "^20.14.5",
+    "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3",
