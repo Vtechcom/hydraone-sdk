@@ -78,6 +78,16 @@ context:
 - [x] `tests/simulator/devtools-ui.test.ts` -- Viết bộ unit tests cho DevTools widget bao phủ mount/unmount, tương tác nút, Shadow DOM, Safari ITP block và state sync -- Đảm bảo chất lượng kiểm thử nghiêm ngặt
 - [x] `tests/build.test.ts` -- Xác thực build bundle simulator với DevTools widget -- Đảm bảo tính toàn vẹn của artifacts
 
+### Review Findings
+
+- [x] [Review][Patch] Add missing `isWalletConnected?: boolean` to `MockBridgeHostOptions` [src/simulator/types.ts:43]
+- [x] [Review][Patch] Replace `any` types for `host` and `client` in `DevToolsWidgetOptions` with typed interfaces [src/simulator/types.ts:118]
+- [x] [Review][Patch] Remove existing container before appending to prevent duplicate `#hydra-devtools-host` on re-mount [src/simulator/devtools-ui.ts:273]
+- [x] [Review][Patch] Synchronize `SafariItpStorageSimulator` when `MockBridgeHost.storageBlock` is toggled externally [src/simulator/devtools-ui.ts:289]
+- [x] [Review][Patch] Guard non-empty fallback reason in `checkRejection` against empty string `""` [src/simulator/mock-host.ts:456]
+- [x] [Review][Patch] Restore prototype inheritance cleanly in `SafariItpStorageSimulator.disable()` [src/simulator/devtools-ui.ts:94]
+- [x] [Review][Patch] Add unit tests for `isWalletConnected` option, HMR duplicate mount cleanup, and storage block sync [tests/simulator/devtools-ui.test.ts:510]
+
 **Acceptance Criteria:**
 - Given `DevToolsWidget` được khởi tạo trong môi trường trình duyệt với `MockBridgeHost`, when gọi `widget.mount()`, then phần tử DOM được chèn vào trang chứa Shadow DOM với giao diện nổi (floating panel/badge).
 - Given widget đang hiển thị, when người dùng click thu gọn/mở rộng, then widget chuyển đổi mượt mà giữa floating badge nhỏ gọn và panel đầy đủ chức năng.
@@ -95,7 +105,7 @@ context:
 - Mở rộng `MockBridgeHost` với thuộc tính `isWalletConnected`, các hàm điều khiển `connectWallet()`, `disconnectWallet()`, `onStateChange()`, `notifyStateChange()`, và tự động trả về `ERR_NOT_CONNECTED` cho các truy vấn CIP-30 khi ví ngắt kết nối.
 - Hiện thực lớp `SafariItpStorageSimulator` can thiệp an toàn vào `globalThis.localStorage` bằng `Object.defineProperty` để mô phỏng chính xác `SecurityError` khi bật Safari ITP, đồng thời khôi phục trọn vẹn khi tắt hoặc hủy widget.
 - An toàn tuyệt đối trong môi trường SSR/Node.js khi không có `document`.
-- Toàn bộ 27 tests trong `tests/simulator/devtools-ui.test.ts` pass 100%, nâng tổng số test của SDK lên 427 tests (19 test suites) pass 100%. TypeScript strict 100%, build tsup sinh đầy đủ ESM, CJS và DTS.
+- Toàn bộ 32 tests trong `tests/simulator/devtools-ui.test.ts` pass 100%, nâng tổng số test của SDK lên 432 tests (19 test suites) pass 100%. TypeScript strict 100%, build tsup sinh đầy đủ ESM, CJS và DTS.
 
 ## Spec Change Log
 
@@ -107,6 +117,11 @@ context:
 | RV-5-2-02 | blind-hunter | Khi `DevToolsWidget` tự tạo instance `MockBridgeHost` mặc định (`isInternalHost`), gọi `destroy()` không giải phóng internal host. | low | patch | Thêm cờ `isInternalHost` và tự động gọi `this.host.destroy()` khi `widget.destroy()`. |
 | RV-5-2-03 | edge-case-hunter | Các method `setBalance()` và `setLatency()` không kiểm tra `NaN` hoặc số âm trước khi gán dẫn đến nguy cơ lỗi `RangeError: Cannot convert NaN to a BigInt`. | low | patch | Thêm validation `Number.isFinite(...)` và `Math.max(0, ...)` đảm bảo dữ liệu hợp lệ. |
 | RV-5-2-04 | verification-gap | Cần bổ sung test case xác thực subpath bundle exports cho `DevToolsWidget`, `mountDevTools`, `SafariItpStorageSimulator` trong build suite. | low | patch | Bổ sung assertions trong `tests/build.test.ts` kiểm tra đầy đủ các exports mới từ dist bundle. |
+| RV-5-2-05 | blind-hunter | Cấu hình `DevToolsWidgetOptions` sử dụng kiểu `any` cho `host` và `client` làm giảm độ an toàn type. | low | patch | Định kiểu an toàn `host?: MockBridgeHost` và `client?: WalletBridgeClient \| any`. |
+| RV-5-2-06 | edge-case-hunter | Gọi `mountDevTools()` hoặc `widget.mount()` nhiều lần trong SPA/HMR gây nhân bản `#hydra-devtools-host`. | medium | patch | Kiểm tra và xóa phần tử `#hydra-devtools-host` cũ trong parent trước khi gắn container mới. |
+| RV-5-2-07 | edge-case-hunter | Khi `MockBridgeHost.storageBlock` bị thay đổi từ bên ngoài qua code, `SafariItpStorageSimulator` không tự động đồng bộ. | medium | patch | Bổ sung logic đồng bộ `storageSimulator` trong callback `onStateChange` khi `interceptLocalStorage` bật. |
+| RV-5-2-08 | edge-case-hunter | Khi gọi `rejectNext('')` với chuỗi rỗng, `checkRejection` gán message lỗi rỗng. | low | patch | Bổ sung fallback về `'User rejected the wallet operation'` khi lý do là chuỗi rỗng/chỉ chứa khoảng trắng. |
+| RV-5-2-09 | verification-gap | Bổ sung test cases bao phủ `isWalletConnected: false`, HMR mount duplicate cleanup, external storageBlock sync, và empty rejectNext reason. | low | patch | Đã bổ sung 5 unit tests mới trong `tests/simulator/devtools-ui.test.ts` pass 100%. |
 
 ## Design Notes
 

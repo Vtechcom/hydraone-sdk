@@ -559,7 +559,8 @@ export class MockBridgeHost {
       const reason = this.rejectNextReason;
       this.rejectNextReason = undefined;
       this.notifyStateChange();
-      return { shouldReject: true, reason: reason ?? 'User rejected the wallet operation' };
+      const validReason = reason && reason.trim().length > 0 ? reason : 'User rejected the wallet operation';
+      return { shouldReject: true, reason: validReason };
     }
     if (this.rejectionMode) {
       return { shouldReject: true, reason: 'User rejected the wallet operation' };

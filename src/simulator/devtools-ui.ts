@@ -18,11 +18,14 @@ import type {
  */
 export class SafariItpStorageSimulator {
   private originalMethods = new Map<Storage, {
-    getItem?: (key: string) => string | null;
-    setItem?: (key: string, value: string) => void;
-    removeItem?: (key: string) => void;
-    clear?: () => void;
-    key?: (index: number) => string | null;
+    hadOwnProperty: Set<string>;
+    methods: {
+      getItem?: (key: string) => string | null;
+      setItem?: (key: string, value: string) => void;
+      removeItem?: (key: string) => void;
+      clear?: () => void;
+      key?: (index: number) => string | null;
+    };
   }>();
 
   private _isActive = false;
@@ -40,36 +43,70 @@ export class SafariItpStorageSimulator {
     try {
       const storages: Storage[] = [];
       if (typeof window !== 'undefined') {
-        if (window.localStorage) storages.push(window.localStorage);
-        if (window.sessionStorage) storages.push(window.sessionStorage);
-      } else if (typeof globalThis !== 'undefined') {
-        if ('localStorage' in globalThis && (globalThis as any).localStorage) {
-          storages.push((globalThis as any).localStorage);
+        try {
+          if (window.localStorage) storages.push(window.localStorage);
+        } catch {
+          // Bỏ qua lỗi truy cập ban đầu
         }
-        if ('sessionStorage' in globalThis && (globalThis as any).sessionStorage) {
-          storages.push((globalThis as any).sessionStorage);
+        try {
+          if (window.sessionStorage) storages.push(window.sessionStorage);
+        } catch {
+          // Bỏ qua lỗi truy cập ban đầu
+        }
+      } else if (typeof globalThis !== 'undefined') {
+        try {
+          if ('localStorage' in globalThis && (globalThis as any).localStorage) {
+            storages.push((globalThis as any).localStorage);
+          }
+        } catch {
+          // Ignored
+        }
+        try {
+          if ('sessionStorage' in globalThis && (globalThis as any).sessionStorage) {
+            storages.push((globalThis as any).sessionStorage);
+          }
+        } catch {
+          // Ignored
         }
       }
 
       if (storages.length === 0) return;
 
       const throwSecurityError = () => {
-        throw new DOMException(
-          'The operation is insecure (Safari ITP / Private Browsing blocked storage access).',
-          'SecurityError'
+        if (typeof DOMException !== 'undefined') {
+          throw new DOMException(
+            'The operation is insecure (Safari ITP / Private Browsing blocked storage access).',
+            'SecurityError'
+          );
+        }
+        const err = new Error(
+          'The operation is insecure (Safari ITP / Private Browsing blocked storage access).'
         );
+        err.name = 'SecurityError';
+        throw err;
       };
 
       for (const storage of storages) {
+        const hadOwnProperty = new Set<string>();
+        const props = ['getItem', 'setItem', 'removeItem', 'clear', 'key'] as const;
+        for (const prop of props) {
+          if (Object.prototype.hasOwnProperty.call(storage, prop)) {
+            hadOwnProperty.add(prop);
+          }
+        }
+
         this.originalMethods.set(storage, {
-          getItem: storage.getItem ? storage.getItem.bind(storage) : undefined,
-          setItem: storage.setItem ? storage.setItem.bind(storage) : undefined,
-          removeItem: storage.removeItem ? storage.removeItem.bind(storage) : undefined,
-          clear: storage.clear ? storage.clear.bind(storage) : undefined,
-          key: storage.key ? storage.key.bind(storage) : undefined,
+          hadOwnProperty,
+          methods: {
+            getItem: storage.getItem ? storage.getItem.bind(storage) : undefined,
+            setItem: storage.setItem ? storage.setItem.bind(storage) : undefined,
+            removeItem: storage.removeItem ? storage.removeItem.bind(storage) : undefined,
+            clear: storage.clear ? storage.clear.bind(storage) : undefined,
+            key: storage.key ? storage.key.bind(storage) : undefined,
+          },
         });
 
-        for (const prop of ['getItem', 'setItem', 'removeItem', 'clear', 'key'] as const) {
+        for (const prop of props) {
           try {
             Object.defineProperty(storage, prop, {
               configurable: true,
@@ -95,60 +132,20 @@ export class SafariItpStorageSimulator {
     if (!this._isActive) return;
 
     try {
-      for (const [storage, originals] of this.originalMethods.entries()) {
-        if (originals.getItem) {
-          try {
-            Object.defineProperty(storage, 'getItem', {
-              configurable: true,
-              writable: true,
-              value: originals.getItem,
-            });
-          } catch {
-            (storage as any).getItem = originals.getItem;
-          }
-        }
-        if (originals.setItem) {
-          try {
-            Object.defineProperty(storage, 'setItem', {
-              configurable: true,
-              writable: true,
-              value: originals.setItem,
-            });
-          } catch {
-            (storage as any).setItem = originals.setItem;
-          }
-        }
-        if (originals.removeItem) {
-          try {
-            Object.defineProperty(storage, 'removeItem', {
-              configurable: true,
-              writable: true,
-              value: originals.removeItem,
-            });
-          } catch {
-            (storage as any).removeItem = originals.removeItem;
-          }
-        }
-        if (originals.clear) {
-          try {
-            Object.defineProperty(storage, 'clear', {
-              configurable: true,
-              writable: true,
-              value: originals.clear,
-            });
-          } catch {
-            (storage as any).clear = originals.clear;
-          }
-        }
-        if (originals.key) {
-          try {
-            Object.defineProperty(storage, 'key', {
-              configurable: true,
-              writable: true,
-              value: originals.key,
-            });
-          } catch {
-            (storage as any).key = originals.key;
+      const props = ['getItem', 'setItem', 'removeItem', 'clear', 'key'] as const;
+      for (const [storage, data] of this.originalMethods.entries()) {
+        for (const prop of props) {
+          const originalFn = data.methods[prop];
+          if (originalFn) {
+            try {
+              Object.defineProperty(storage, prop, {
+                configurable: true,
+                writable: true,
+                value: originalFn,
+              });
+            } catch {
+              (storage as any)[prop] = originalFn;
+            }
           }
         }
       }
@@ -269,6 +266,12 @@ export class DevToolsWidget {
       return this;
     }
 
+    // Gỡ bỏ container cũ nếu đã tồn tại trong parent để tránh nhân bản #hydra-devtools-host khi re-mount
+    const existing = parent.querySelector('#hydra-devtools-host');
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+
     // Tạo host container element
     this.containerEl = document.createElement('div');
     this.containerEl.id = 'hydra-devtools-host';
@@ -278,6 +281,11 @@ export class DevToolsWidget {
     // Đính kèm Shadow DOM để cách ly 100% CSS
     this.shadow = this.containerEl.attachShadow({ mode: 'open' });
 
+    // Đồng bộ ban đầu với storageBlock nếu host đã bật từ trước
+    if (this.interceptLocalStorage && this.host.isStorageBlock()) {
+      this.storageSimulator.enable();
+    }
+
     // Render nội dung ban đầu
     this.render();
 
@@ -285,9 +293,16 @@ export class DevToolsWidget {
     parent.appendChild(this.containerEl);
     this._isMounted = true;
 
-    // Lắng nghe thay đổi trạng thái từ MockBridgeHost để tự động cập nhật UI
-    this.unsubscribeHostState = this.host.onStateChange(() => {
+    // Lắng nghe thay đổi trạng thái từ MockBridgeHost để tự động cập nhật UI và đồng bộ storage simulation
+    this.unsubscribeHostState = this.host.onStateChange((state) => {
       if (this._isMounted) {
+        if (this.interceptLocalStorage) {
+          if (state.storageBlock && !this.storageSimulator.isActive) {
+            this.storageSimulator.enable();
+          } else if (!state.storageBlock && this.storageSimulator.isActive) {
+            this.storageSimulator.disable();
+          }
+        }
         this.render();
       }
     });

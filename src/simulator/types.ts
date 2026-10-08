@@ -1,7 +1,5 @@
-/**
- * Các định nghĩa kiểu dữ liệu cho subpath @hydraone/sdk/simulator
- */
-
+import type { MockBridgeHost } from './mock-host';
+import type { WalletBridgeClient } from '../core/client';
 
 /**
  * Trạng thái ví giả lập trong MockBridgeHost
@@ -115,9 +113,9 @@ export type DevToolsTheme = 'dark' | 'light' | 'auto';
  */
 export interface DevToolsWidgetOptions {
   /** Tham chiếu MockBridgeHost cần điều khiển */
-  host?: any;
+  host?: MockBridgeHost;
   /** Tham chiếu WalletBridgeClient cần tương tác */
-  client?: any;
+  client?: WalletBridgeClient | any;
   /** Phần tử HTML container để gắn widget (mặc định document.body) */
   container?: HTMLElement;
   /** Trạng thái ban đầu thu gọn hay mở rộng (mặc định false) */

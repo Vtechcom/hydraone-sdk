@@ -509,4 +509,74 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       }
     });
   });
+
+  describe('11. Code Review Patches Verification', () => {
+    it('MockBridgeHost khởi tạo với isWalletConnected: false', () => {
+      const disconnectedHost = new MockBridgeHost({ isWalletConnected: false });
+      expect(disconnectedHost.isWalletConnected()).toBe(false);
+      expect(disconnectedHost.isConnected()).toBe(false);
+      disconnectedHost.destroy();
+    });
+
+    it('gọi mountDevTools() nhiều lần tự động gỡ bỏ container cũ, chỉ giữ duy nhất 1 #hydra-devtools-host', () => {
+      const w1 = mountDevTools({ host });
+      expect(document.querySelectorAll('#hydra-devtools-host').length).toBe(1);
+
+      const w2 = mountDevTools({ host });
+      expect(document.querySelectorAll('#hydra-devtools-host').length).toBe(1);
+
+      w1.destroy();
+      w2.destroy();
+    });
+
+    it('đồng bộ SafariItpStorageSimulator khi host.setStorageBlock() được kích hoạt từ bên ngoài', () => {
+      widget = mountDevTools({ host, defaultCollapsed: false, interceptLocalStorage: true });
+      expect(widget.isSafariItpActive).toBe(false);
+
+      // Kích hoạt từ ngoài
+      host.setStorageBlock(true);
+      expect(widget.isSafariItpActive).toBe(true);
+      expect(() => {
+        localStorage.setItem('k_ext', 'v');
+      }).toThrowError(/Safari ITP/);
+
+      // Tắt từ ngoài
+      host.setStorageBlock(false);
+      expect(widget.isSafariItpActive).toBe(false);
+      expect(() => {
+        localStorage.setItem('k_ext', 'v');
+      }).not.toThrow();
+    });
+
+    it('rejectNext(\"\") với lý do rỗng tự động fallback về thông điệp mặc định', async () => {
+      host.rejectNext('');
+      const transport = host.createClientTransport();
+      let rpcResponse: any;
+      transport.onMessage((msg) => {
+        rpcResponse = msg;
+      });
+
+      await transport.send({
+        id: 'req-empty-reason',
+        type: 'SIGN_TX',
+        payload: { tx: '83a4' },
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      expect(rpcResponse?.payload?.error?.message).toBe('User rejected the wallet operation');
+    });
+
+    it('SafariItpStorageSimulator.disable() khôi phục hoạt động lưu trữ của localStorage', () => {
+      const sim = new SafariItpStorageSimulator();
+      sim.enable();
+      expect(sim.isActive).toBe(true);
+      expect(() => localStorage.setItem('patch_key', 'val')).toThrowError(/Safari ITP/);
+
+      sim.disable();
+      expect(sim.isActive).toBe(false);
+      expect(() => localStorage.setItem('patch_key', 'val')).not.toThrow();
+      expect(localStorage.getItem('patch_key')).toBe('val');
+    });
+  });
 });
