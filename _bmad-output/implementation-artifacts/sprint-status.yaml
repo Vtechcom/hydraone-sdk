@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 23:38
+last_updated: 10-08-2026 23:44
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -68,7 +68,7 @@ development_status:
   epic-6: done
   6-1-game-scaffolding-cli-create-hydraone-game: done
   6-2-interactive-developer-documentation-portal-guides: done
-  epic-6-retrospective: optional
+  epic-6-retrospective: done
 
 action_items:
   - id: "epic-1-retro-item-1-design-composition-sub-managers-for-wall"
@@ -160,3 +160,17 @@ action_items:
     owner: "Amelia"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-10-08-2026.md"
+  - id: "epic-6-retro-item-13-bổ-sung-test-e2e-thực-thi-tạo-project-th"
+    epic: 6
+    action: "Bổ sung test E2E thực thi tạo project thật qua CLI create-hydraone-game
+      và build test từng template (Nuxt 3, Next.js, Phaser 3) trong CI pipeline"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-10-08-2026.md"
+  - id: "epic-6-retro-item-14-thêm-github-actions-workflow-tự-động-dep"
+    epic: 6
+    action: "Thêm GitHub Actions workflow tự động deploy thư mục docs/ lên GitHub
+      Pages khi merge vào nhánh main"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-6-retro-10-08-2026.md"
