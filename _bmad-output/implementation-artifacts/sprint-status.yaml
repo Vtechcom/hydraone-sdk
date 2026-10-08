@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 16:56
+last_updated: 10-08-2026 17:08
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -63,7 +63,7 @@ development_status:
   5-1-mockbridgehost-engine: done
   5-2-floating-devtools-ui-widget: done
   5-3-bridge-health-diagnostics-suite: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   epic-6: backlog
   6-1-game-scaffolding-cli-create-hydraone-game: backlog
@@ -83,7 +83,7 @@ action_items:
     action: "Unify error mapping between generic ITransport and request-capable transport
       when implementing MockBridgeHost"
     owner: "Amelia"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-10-06-2026.md"
   - id: "epic-1-retro-item-3-add-automated-ci-check-for-gzipped-bundl"
     epic: 1
@@ -118,7 +118,7 @@ action_items:
     action: "Enforce strict subpath bundle isolation (ARCH-6) for @hydraone/sdk/cardano,
       vue, react, phaser to protect core bundle under 12 KB"
     owner: "Winston"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-3-retro-10-06-2026.md"
   - id: "epic-3-retro-item-2-add-automated-ci-bundle-size-guard-under-12kb"
     epic: 3
@@ -135,3 +135,28 @@ action_items:
     owner: "Amelia"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-3-retro-10-06-2026.md"
+  - id: "epic-5-retro-item-1-decouple-diagnostics-from-core-bundle-under-12kb"
+    epic: 5
+    action: "Tái cấu trúc tách biệt module diagnostics khỏi bundle core gốc: xóa export
+      * from './diagnostics' trong src/index.ts, chuyển client.checkHealth() sang
+      dynamic import hoặc subpath helper để đưa dist/index.js minified gzipped trở
+      lại dưới ngưỡng 12 KB của NFR-1"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-10-08-2026.md"
+  - id: "epic-5-retro-item-2-add-automated-ci-bundle-size-gate-script"
+    epic: 5
+    action: "Thêm script pnpm run check:size vào package.json kiểm tra tự động kích
+      thước minified gzipped của dist/index.js và fail build nếu vượt quá 12,288 bytes
+      (12 KB) để bảo vệ NFR-1 vĩnh viễn"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-10-08-2026.md"
+  - id: "epic-5-retro-item-3-decompose-devtools-ui-into-modular-components"
+    epic: 5
+    action: "Phân rã src/simulator/devtools-ui.ts (1,230 dòng) thành các file mô-đun
+      nhỏ hơn (safari-itp-simulator.ts, devtools-panel.ts, devtools-styles.ts) nhằm
+      nâng cao khả năng bảo trì nội bộ"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-10-08-2026.md"
