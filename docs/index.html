@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HydraOne SDK — Developer Documentation Portal & Guides</title>
+  <meta name="description" content="Tài liệu phát triển chính thức cho HydraOne SDK — Bộ công cụ kết nối game Web3 Cardano với ví CIP-30, Safari ITP Relay và DevTools Simulator.">
+  <meta name="theme-color" content="#0a0e17">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav" id="top-nav">
+    <div class="nav-left">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Navigation Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="brand-logo">
+        <div class="logo-icon">H1</div>
+        <span class="logo-title">HydraOne <span class="logo-badge">SDK v0.1.0</span></span>
+      </div>
+    </div>
+    
+    <div class="nav-center">
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="doc-search" placeholder="Tìm kiếm API, hàm, guides (nhấn '/' để tìm)..." autocomplete="off" />
+        <span class="search-kbd-hint">/</span>
+        <div class="search-results-dropdown" id="search-results"></div>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <a href="#playground" class="nav-btn playground-btn">⚡ Live Playground</a>
+      <a href="https://github.com/Vtechcom/hydraone-sdk" target="_blank" rel="noopener noreferrer" class="nav-btn github-btn">
+        <span>GitHub</span> ↗
+      </a>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="sidebar-nav">
+        <div class="nav-group">
+          <div class="group-title">BẮT ĐẦU</div>
+          <a href="#overview" class="nav-link active" data-section="overview">Tổng quan SDK</a>
+          <a href="#quickstart" class="nav-link" data-section="quickstart">Quickstart 15 phút</a>
+          <a href="#scaffolding-cli" class="nav-link" data-section="scaffolding-cli">CLI create-hydraone-game</a>
+        </div>
+
+        <div class="nav-group">
+          <div class="group-title">KIẾN TRÚC & BẢO MẬT</div>
+          <a href="#architecture" class="nav-link" data-section="architecture">Kiến trúc PostMessage Bridge</a>
+          <a href="#safari-itp" class="nav-link" data-section="safari-itp">Safari ITP & Storage Relay</a>
+          <a href="#error-codes" class="nav-link" data-section="error-codes">Hệ thống Mã Lỗi</a>
+        </div>
+
+        <div class="nav-group">
+          <div class="group-title">API REFERENCE</div>
+          <a href="#api-core" class="nav-link" data-section="api-core">@hydraone/sdk (Core)</a>
+          <a href="#api-cardano" class="nav-link" data-section="api-cardano">/cardano (BigInt & CBOR)</a>
+          <a href="#api-react" class="nav-link" data-section="api-react">/react (Next.js Hooks)</a>
+          <a href="#api-vue" class="nav-link" data-section="api-vue">/vue (Nuxt 3 Composables)</a>
+          <a href="#api-phaser" class="nav-link" data-section="api-phaser">Tích hợp Phaser 3</a>
+          <a href="#api-simulator" class="nav-link" data-section="api-simulator">/simulator (Sandbox & UI)</a>
+          <a href="#api-diagnostics" class="nav-link" data-section="api-diagnostics">/diagnostics (Health Check)</a>
+        </div>
+
+        <div class="nav-group">
+          <div class="group-title">TRẢI NGHIỆM THỰC TẾ</div>
+          <a href="#playground" class="nav-link" data-section="playground">Interactive Playground</a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="main-content">
+
+      <!-- SECTION: Overview -->
+      <section id="overview" class="doc-section">
+        <div class="hero-banner">
+          <div class="hero-tag">Official Developer Toolkit</div>
+          <h1>HydraOne SDK Documentation</h1>
+          <p class="hero-desc">
+            Bộ công cụ chính thức phát triển Game Web3 và dApp trên Cardano. Kết nối mượt mà giữa Game chạy trong Iframe và Host Shell, tương thích 100% tiêu chuẩn CIP-30 & CIP-8, vượt qua rào cản Safari ITP và hỗ trợ đầy đủ các framework hiện đại.
+          </p>
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <span class="metric-val">&lt; 12 KB</span>
+              <span class="metric-label">Core Bundle (gzipped)</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-val">0</span>
+              <span class="metric-label">Runtime Dependencies</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-val">&lt; 15 min</span>
+              <span class="metric-label">Thời gian Onboard tích hợp</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-val">100%</span>
+              <span class="metric-label">TypeScript Strict</span>
+            </div>
+          </div>
+        </div>
+
+        <h2>Điểm Nổi Bật của HydraOne SDK</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Bảo Mật Zero-Trust</h3>
+            <p>Xác thực nguồn gốc <code>origin</code> hai chiều tuyệt đối, mã định danh duy nhất UUIDv4 correlation multiplexing chống Replay Attacks.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🍏</div>
+            <h3>Vượt Rào Cản Safari ITP</h3>
+            <p>Kiến trúc Dual-Tier Storage Relay tự động phát hiện và chuyển tiếp lưu trữ lên App Center khi bị WebKit chặn LocalStorage trên iOS.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Local Simulator & DevTools</h3>
+            <p>Phát triển độc lập trên localhost:3000 với <code>MockBridgeHost</code> và widget Floating DevTools giả lập ví, độ trễ và mạng lag.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <h3>Hệ Sinh Thái Đa Nền Tảng</h3>
+            <p>Hỗ trợ chuyên biệt các headless adapters cho React 19 / Next.js, Vue 3.5 / Nuxt 3, và canvas game engine Phaser 3.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: Quickstart -->
+      <section id="quickstart" class="doc-section">
+        <h1>Hướng dẫn Bắt đầu Nhanh (15-Phút Quickstart)</h1>
+        <p class="section-lead">
+          Thực hiện 5 bước đơn giản để kết nối ví Cardano CIP-30 và ký giao dịch đầu tiên trong game của bạn.
+        </p>
+
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">1</span>
+            <h3>Cài đặt Package</h3>
+          </div>
+          <div class="step-body">
+            <p>Cài đặt gói chính thức thông qua package manager của bạn:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" data-copy="pnpm add @hydraone/sdk">Copy</button>
+              </div>
+              <pre><code>pnpm add @hydraone/sdk</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">2</span>
+            <h3>Khởi tạo WalletBridgeClient</h3>
+          </div>
+          <div class="step-body">
+            <p>Tạo instance và khởi động kết nối bắt tay với Host Shell:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span class="code-lang">typescript</span>
+                <button class="copy-btn" data-copy="import { WalletBridgeClient } from '@hydraone/sdk';
+
+const bridge = new WalletBridgeClient({
+  appCenterOrigin: 'https://alpha.hydraone.app',
+  handshakeTimeout: 5000
+});
+
+await bridge.init();">Copy</button>
+              </div>
+              <pre><code>import { WalletBridgeClient } from '@hydraone/sdk';
+
+const bridge = new WalletBridgeClient({
+  appCenterOrigin: 'https://alpha.hydraone.app',
+  handshakeTimeout: 5000
+});
+
+// Khởi chạy bắt tay handshake
+await bridge.init();</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">3</span>
+            <h3>Kết nối Ví CIP-30</h3>
+          </div>
+          <div class="step-body">
+            <p>Yêu cầu người dùng kết nối ví và nhận về thông tin địa chỉ ví, mạng blockchain:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span class="code-lang">typescript</span>
+                <button class="copy-btn" data-copy="try {
+  const wallet = await bridge.connect();
+  console.log('Ví đã kết nối:', wallet.address);
+  console.log('Mạng (0=Testnet, 1=Mainnet):', wallet.networkId);
+} catch (error) {
+  if (bridge.isUserRejectedError(error)) {
+    console.warn('Người chơi đã từ chối kết nối ví');
+  }
+}">Copy</button>
+              </div>
+              <pre><code>try {
+  const wallet = await bridge.connect();
+  console.log('Ví đã kết nối:', wallet.address);
+  console.log('Mạng (0=Testnet, 1=Mainnet):', wallet.networkId);
+} catch (error) {
+  if (bridge.isUserRejectedError(error)) {
+    console.warn('Người chơi đã từ chối kết nối ví');
+  }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">4</span>
+            <h3>Truy vấn Số dư & Đơn vị BigInt ADA</h3>
+          </div>
+          <div class="step-body">
+            <p>Sử dụng subpath <code>@hydraone/sdk/cardano</code> để chuyển đổi số dư Lovelace chính xác tuyệt đối:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span class="code-lang">typescript</span>
+                <button class="copy-btn" data-copy="import { lovelaceToAda, parseAssetValue } from '@hydraone/sdk/cardano';
+
+const balanceCbor = await bridge.getBalance();
+const parsed = parseAssetValue(balanceCbor);
+
+console.log(`Số dư ADA: ${lovelaceToAda(parsed.lovelace)} ADA`);">Copy</button>
+              </div>
+              <pre><code>import { lovelaceToAda, parseAssetValue } from '@hydraone/sdk/cardano';
+
+const balanceCbor = await bridge.getBalance();
+const parsed = parseAssetValue(balanceCbor);
+
+console.log(`Số dư ADA: ${lovelaceToAda(parsed.lovelace)} ADA`);</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">5</span>
+            <h3>Ký Giao Dịch Mua Vật Phẩm (CIP-30)</h3>
+          </div>
+          <div class="step-body">
+            <p>Gửi yêu cầu ký giao dịch an toàn tới Host Shell:</p>
+            <div class="code-block-wrapper">
+              <div class="code-header">
+                <span class="code-lang">typescript</span>
+                <button class="copy-btn" data-copy="async function buyGameItem(txCbor: string) {
+  // Gửi popup duyệt ký tới ví người chơi
+  const witnessSet = await bridge.signTx(txCbor, false);
+  
+  // Gửi giao dịch lên Cardano node
+  const txHash = await bridge.submitTx(txCbor);
+  console.log('Giao dịch thành công, TxHash:', txHash);
+  return txHash;
+}">Copy</button>
+              </div>
+              <pre><code>async function buyGameItem(txCbor: string) {
+  // Gửi popup duyệt ký tới ví người chơi
+  const witnessSet = await bridge.signTx(txCbor, false);
+  
+  // Gửi giao dịch lên Cardano node
+  const txHash = await bridge.submitTx(txCbor);
+  console.log('Giao dịch thành công, TxHash:', txHash);
+  return txHash;
+}</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: Scaffolding CLI -->
+      <section id="scaffolding-cli" class="doc-section">
+        <h1>Khởi Tạo Nhanh Dự Án: create-hydraone-game</h1>
+        <p class="section-lead">
+          Tạo ngay dự án Web3 Game hoàn chỉnh với template Nuxt 3, Next.js, hoặc Phaser 3 cấu hình sẵn SDK và DevTools Simulator chỉ bằng một dòng lệnh.
+        </p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">bash</span>
+            <button class="copy-btn" data-copy="npx create-hydraone-game my-space-game">Copy</button>
+          </div>
+          <pre><code># Chế độ tương tác hỏi tên và chọn template
+npx create-hydraone-game my-space-game
+
+# Hoặc chỉ định trực tiếp template:
+npx create-hydraone-game my-space-game --template nuxt-3
+npx create-hydraone-game my-space-game --template next-js
+npx create-hydraone-game my-space-game --template phaser-3</code></pre>
+        </div>
+
+        <h3>Bảng Starter Templates Sẵn Có:</h3>
+        <table class="api-table">
+          <thead>
+            <tr>
+              <th>Template</th>
+              <th>Công nghệ Tích hợp</th>
+              <th>Subpath SDK Sử dụng</th>
+              <th>Mục đích</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>nuxt-3</code></td>
+              <td>Nuxt 3.15+, Vue 3.5+, Vite</td>
+              <td><code>@hydraone/sdk/vue</code>, <code>/simulator</code></td>
+              <td>Game dApp trên nền tảng Vue SSR/SSG với reactive composables</td>
+            </tr>
+            <tr>
+              <td><code>next-js</code></td>
+              <td>Next.js 15, React 19, App Router</td>
+              <td><code>@hydraone/sdk/react</code>, <code>/simulator</code></td>
+              <td>Game dApp trên React với <code>&lt;HydraOneProvider&gt;</code> và hooks</td>
+            </tr>
+            <tr>
+              <td><code>phaser-3</code></td>
+              <td>Phaser 3.87+, TypeScript, Vite</td>
+              <td><code>@hydraone/sdk</code>, <code>/simulator</code></td>
+              <td>Game 2D WebGL/Canvas tích hợp trực tiếp vòng lặp game loop</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION: Architecture -->
+      <section id="architecture" class="doc-section">
+        <h1>Kiến Trúc PostMessage Bridge & Standalone Fallback</h1>
+        <p class="section-lead">
+          Tìm hiểu cách HydraOne SDK thiết lập kênh truyền thông an toàn giữa Game Iframe và Host Shell.
+        </p>
+
+        <div class="info-callout">
+          <strong>🔒 Nguyên tắc Zero-Trust:</strong> Game không bao giờ nắm giữ private key. Mọi thao tác ký ví đều được ủy quyền an toàn lên Host Shell thông qua thông điệp PostMessage có chữ ký định danh <code>correlationId</code> chuẩn UUIDv4.
+        </div>
+
+        <h3>Quy Trình 3 Pha của SDK:</h3>
+        <ol class="styled-list">
+          <li><strong>Pha 1: Handshake (Bắt tay khởi tạo)</strong>: Gửi bản tin <code>HYDRA_HANDSHAKE_INIT</code> tới Host Shell. Nếu nhận được phản hồi <code>HYDRA_HANDSHAKE_ACK</code>, kích hoạt chế độ PostMessage. Nếu quá timeout và phát hiện extension ví trình duyệt, kích hoạt chế độ Direct Fallback.</li>
+          <li><strong>Pha 2: RPC Multiplexing</strong>: Mỗi yêu cầu CIP-30 (connect, getBalance, signTx) được gán một UUIDv4 riêng biệt. Promise chờ kết quả chỉ phân giải khi nhận được phản hồi có ID trùng khớp.</li>
+          <li><strong>Pha 3: Event Stream hai chiều</strong>: Host Shell phát các sự kiện nền (thay đổi theme, âm thanh, thay đổi tài khoản ví) xuống iframe thông qua <code>onHostEvent()</code>.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION: Safari ITP Guide -->
+      <section id="safari-itp" class="doc-section">
+        <h1>Cẩm Nang Khắc Phục Safari ITP & Storage Relay</h1>
+        <p class="section-lead">
+          Giải quyết triệt để rào cản WebKit chặn Third-Party Cookies và LocalStorage trên iOS Safari và WebView.
+        </p>
+
+        <div class="warning-callout">
+          <strong>⚠️ Rủi ro Safari ITP:</strong> Khi game chạy trong iframe cross-origin trên iOS Safari, WebKit mặc định chặn toàn bộ <code>localStorage</code> và <code>document.cookie</code> với lỗi <code>SecurityError: The operation is insecure</code>. Nếu không có cơ chế relay, người chơi sẽ bị mất phiên đăng nhập ngay khi reload trang.
+        </div>
+
+        <h3>Giải Pháp Dual-Tier Storage của HydraOne:</h3>
+        <p>
+          Lớp <code>TieredStorageAdapter</code> của SDK tự động kiểm tra quyền ghi vào <code>localStorage</code> (Tier 1). Nếu phát hiện bị chặn, SDK tự động kích hoạt **Host Storage Relay (Tier 2)**:
+        </p>
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">typescript</span>
+            <button class="copy-btn" data-copy="// SDK tự động thực thi bên dưới khi bạn gọi getItem / setItem
+await storage.setItem('auth_jwt_token', token);
+// Khi bị chặn LocalStorage, SDK gửi:
+// window.parent.postMessage({ type: 'HOST_STORAGE_SET', key: 'hydraone:game_id:auth_jwt_token', value: token })">Copy</button>
+          </div>
+          <pre><code>// SDK tự động thực thi bên dưới khi bạn gọi getItem / setItem
+await storage.setItem('auth_jwt_token', token);
+
+// Khi phát hiện Safari ITP chặn, SDK gửi PostMessage lên App Center cha:
+// window.parent.postMessage({ 
+//   type: 'HOST_STORAGE_SET', 
+//   key: 'hydraone:game_app_id:auth_jwt_token', 
+//   value: token 
+// });</code></pre>
+        </div>
+
+        <h3>Cấu Hình Sandbox Thẻ Iframe Bắt Buộc:</h3>
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">html</span>
+            <button class="copy-btn" data-copy='<iframe src="https://mygame.io" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>'>Copy</button>
+          </div>
+          <pre><code>&lt;iframe 
+  src="https://mygame.io" 
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+  allow="clipboard-write; accelerometer; gyroscope"&gt;
+&lt;/iframe&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: API Core -->
+      <section id="api-core" class="doc-section">
+        <h1>API Reference: @hydraone/sdk (Core)</h1>
+        <p class="section-lead">Module cốt lõi quản lý kết nối, giao thức truyền thông và xác thực Web3.</p>
+
+        <h2>WalletBridgeClient</h2>
+        <table class="api-table">
+          <thead>
+            <tr><th>Phương Thức</th><th>Tham Số</th><th>Kiểu Trả Về</th><th>Mô Tả</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>init()</code></td>
+              <td>Không</td>
+              <td><code>Promise&lt;void&gt;</code></td>
+              <td>Khởi chạy bắt tay handshake với Host Shell hoặc fallback ví extension.</td>
+            </tr>
+            <tr>
+              <td><code>connect(options?)</code></td>
+              <td><code>ConnectOptions</code></td>
+              <td><code>Promise&lt;WalletState&gt;</code></td>
+              <td>Yêu cầu kết nối ví CIP-30 và nhận địa chỉ ví, networkId.</td>
+            </tr>
+            <tr>
+              <td><code>getBalance()</code></td>
+              <td>Không</td>
+              <td><code>Promise&lt;string&gt;</code></td>
+              <td>Lấy tổng số dư tài sản dưới dạng chuỗi CBOR hex.</td>
+            </tr>
+            <tr>
+              <td><code>getUtxos(amount?)</code></td>
+              <td><code>string?</code></td>
+              <td><code>Promise&lt;string[] | null&gt;</code></td>
+              <td>Lấy danh sách UTXOs khả dụng dạng mảng CBOR hex.</td>
+            </tr>
+            <tr>
+              <td><code>signTx(txCbor, partial?)</code></td>
+              <td><code>string, boolean?</code></td>
+              <td><code>Promise&lt;string&gt;</code></td>
+              <td>Ký giao dịch Cardano CIP-30, trả về witness set CBOR.</td>
+            </tr>
+            <tr>
+              <td><code>signData(addr, payload)</code></td>
+              <td><code>string, string</code></td>
+              <td><code>Promise&lt;DataSignature&gt;</code></td>
+              <td>Ký thông điệp xác thực chuẩn CIP-8 (COSE Signature).</td>
+            </tr>
+            <tr>
+              <td><code>submitTx(txCbor)</code></td>
+              <td><code>string</code></td>
+              <td><code>Promise&lt;string&gt;</code></td>
+              <td>Gửi giao dịch lên mạng blockchain, trả về TxHash.</td>
+            </tr>
+            <tr>
+              <td><code>triggerHaptic(type)</code></td>
+              <td><code>'light'|'medium'|'heavy'</code></td>
+              <td><code>void</code></td>
+              <td>Rung phản hồi xúc giác trên thiết bị di động.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION: API Cardano -->
+      <section id="api-cardano" class="doc-section">
+        <h1>API Reference: @hydraone/sdk/cardano</h1>
+        <p class="section-lead">Các tiện ích tính toán BigInt chính xác và giải mã nhị phân CBOR không dependencies.</p>
+
+        <table class="api-table">
+          <thead>
+            <tr><th>Hàm</th><th>Tham Số</th><th>Kiểu Trả Về</th><th>Ví Dụ</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>lovelaceToAda()</code></td>
+              <td><code>bigint | string | number</code></td>
+              <td><code>string</code></td>
+              <td><code>lovelaceToAda(2500000n)</code> → <code>"2.5"</code></td>
+            </tr>
+            <tr>
+              <td><code>adaToLovelace()</code></td>
+              <td><code>string | number</code></td>
+              <td><code>bigint</code></td>
+              <td><code>adaToLovelace("5.2")</code> → <code>5200000n</code></td>
+            </tr>
+            <tr>
+              <td><code>parseAssetValue()</code></td>
+              <td><code>string (CBOR hex)</code></td>
+              <td><code>{ lovelace, assets }</code></td>
+              <td>Phân tích số dư Lovelace và danh sách Native Assets</td>
+            </tr>
+            <tr>
+              <td><code>stringToHex()</code></td>
+              <td><code>string (utf8)</code></td>
+              <td><code>string (hex)</code></td>
+              <td><code>stringToHex("Hydra")</code> → <code>"4879647261"</code></td>
+            </tr>
+            <tr>
+              <td><code>hexToString()</code></td>
+              <td><code>string (hex)</code></td>
+              <td><code>string (utf8)</code></td>
+              <td><code>hexToString("4879647261")</code> → <code>"Hydra"</code></td>
+            </tr>
+            <tr>
+              <td><code>decodeCborValue()</code></td>
+              <td><code>string (CBOR hex)</code></td>
+              <td><code>unknown</code></td>
+              <td>Giải mã cấu trúc CBOR nhị phân</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION: API React -->
+      <section id="api-react" class="doc-section">
+        <h1>API Reference: @hydraone/sdk/react</h1>
+        <p class="section-lead">Provider và Headless Hooks chuẩn React 18/19 & Next.js.</p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">tsx</span>
+            <button class="copy-btn" data-copy="import { useWallet, useHydraAuth } from '@hydraone/sdk/react';
+
+export function GameWalletWidget() {
+  const { isConnected, address, balanceAda, connect, signTx } = useWallet();
+  const { isAuthenticated, signIn } = useHydraAuth();
+
+  return (
+    <div>
+      {isConnected ? (
+        <p>Ví: {address} | Số dư: {balanceAda} ADA</p>
+      ) : (
+        <button onClick={() => connect()}>Kết nối Ví</button>
+      )}
+    </div>
+  );
+}">Copy</button>
+          </div>
+          <pre><code>import { useWallet, useHydraAuth } from '@hydraone/sdk/react';
+
+export function GameWalletWidget() {
+  const { isConnected, address, balanceAda, connect, signTx } = useWallet();
+  const { isAuthenticated, signIn } = useHydraAuth();
+
+  return (
+    &lt;div&gt;
+      {isConnected ? (
+        &lt;p&gt;Ví: {address} | Số dư: {balanceAda} ADA&lt;/p&gt;
+      ) : (
+        &lt;button onClick={() =&gt; connect()}&gt;Kết nối Ví&lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: API Vue -->
+      <section id="api-vue" class="doc-section">
+        <h1>API Reference: @hydraone/sdk/vue</h1>
+        <p class="section-lead">Headless Composables phản ứng (reactive) cho Vue 3.5+ & Nuxt 3.</p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">vue</span>
+            <button class="copy-btn" data-copy='<script setup lang="ts">
+import { useWalletBridgeClient, useGameAuth } from "@hydraone/sdk/vue";
+
+const { isConnected, address, balanceAda, connect } = useWalletBridgeClient();
+const { isAuthenticated, signIn } = useGameAuth();
+</script>
+
+<template>
+  <button v-if="!isConnected" @click="connect">Kết nối Ví Cardano</button>
+  <div v-else>Ví: {{ address }} - {{ balanceAda }} ADA</div>
+</template>'>Copy</button>
+          </div>
+          <pre><code>&lt;script setup lang="ts"&gt;
+import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
+
+const { isConnected, address, balanceAda, connect } = useWalletBridgeClient();
+const { isAuthenticated, signIn } = useGameAuth();
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;button v-if="!isConnected" @click="connect"&gt;Kết nối Ví Cardano&lt;/button&gt;
+  &lt;div v-else&gt;Ví: {{ address }} - {{ balanceAda }} ADA&lt;/div&gt;
+&lt;/template&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: API Phaser -->
+      <section id="api-phaser" class="doc-section">
+        <h1>Tích hợp Phaser 3 Game Engine</h1>
+        <p class="section-lead">Mô hình tích hợp WalletBridgeClient an toàn bên trong Canvas Game Scene.</p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">typescript</span>
+            <button class="copy-btn" data-copy="import Phaser from 'phaser';
+import { WalletBridgeClient } from '@hydraone/sdk';
+
+export class MainScene extends Phaser.Scene {
+  private client!: WalletBridgeClient;
+
+  create() {
+    this.client = new WalletBridgeClient();
+    this.client.init();
+
+    const btn = this.add.text(50, 50, 'Kết nối Ví', { fontSize: '20px', color: '#00ffcc' })
+      .setInteractive()
+      .on('pointerdown', async () => {
+        const wallet = await this.client.connect();
+        btn.setText(`Ví: ${wallet.address.slice(0, 10)}...`);
+      });
+  }
+}">Copy</button>
+          </div>
+          <pre><code>import Phaser from 'phaser';
+import { WalletBridgeClient } from '@hydraone/sdk';
+
+export class MainScene extends Phaser.Scene {
+  private client!: WalletBridgeClient;
+
+  create() {
+    this.client = new WalletBridgeClient();
+    this.client.init();
+
+    const btn = this.add.text(50, 50, 'Kết nối Ví', { fontSize: '20px', color: '#00ffcc' })
+      .setInteractive()
+      .on('pointerdown', async () => {
+        const wallet = await this.client.connect();
+        btn.setText(`Ví: ${wallet.address.slice(0, 10)}...`);
+      });
+  }
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: API Simulator -->
+      <section id="api-simulator" class="doc-section">
+        <h1>API Reference: @hydraone/sdk/simulator</h1>
+        <p class="section-lead">Môi trường giả lập Sandbox và widget Floating DevTools cho nhà phát triển.</p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">typescript</span>
+            <button class="copy-btn" data-copy="import { MockBridgeHost, mountFloatingDevToolsUI } from '@hydraone/sdk/simulator';
+
+const host = new MockBridgeHost({
+  wallet: {
+    address: 'addr_test1mockedwallet0001',
+    lovelace: 1_000_000_000n,
+    networkId: 0
+  },
+  latencyMs: 150
+});
+host.start();
+
+mountFloatingDevToolsUI({ host, position: 'bottom-right' });">Copy</button>
+          </div>
+          <pre><code>import { MockBridgeHost, mountFloatingDevToolsUI } from '@hydraone/sdk/simulator';
+
+const host = new MockBridgeHost({
+  wallet: {
+    address: 'addr_test1mockedwallet0001',
+    lovelace: 1_000_000_000n,
+    networkId: 0
+  },
+  latencyMs: 150
+});
+host.start();
+
+// Gắn widget điều khiển trực quan góc màn hình
+mountFloatingDevToolsUI({ host, position: 'bottom-right' });</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: API Diagnostics -->
+      <section id="api-diagnostics" class="doc-section">
+        <h1>API Reference: @hydraone/sdk/diagnostics</h1>
+        <p class="section-lead">Bộ tự chẩn đoán toàn diện sức khỏe kết nối cầu nối.</p>
+
+        <div class="code-block-wrapper">
+          <div class="code-header">
+            <span class="code-lang">typescript</span>
+            <button class="copy-btn" data-copy="import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+
+const report = await checkBridgeHealth(bridge);
+console.log('Tình trạng:', report.overallStatus); // 'PASS' | 'WARN' | 'FAIL'
+console.table(report.checks);">Copy</button>
+          </div>
+          <pre><code>import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+
+const report = await checkBridgeHealth(bridge);
+console.log('Tình trạng:', report.overallStatus); // 'PASS' | 'WARN' | 'FAIL'
+console.table(report.checks);</code></pre>
+        </div>
+      </section>
+
+      <!-- SECTION: Error Codes -->
+      <section id="error-codes" class="doc-section">
+        <h1>Hệ Thống Mã Lỗi (Error Codes)</h1>
+        <table class="api-table">
+          <thead>
+            <tr><th>Mã Lỗi</th><th>Lớp Ngoại Lệ</th><th>Mô Tả</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ERR_HANDSHAKE_TIMEOUT</code></td><td><code>HandshakeTimeoutError</code></td><td>Quá 5s không nhận được bản tin bắt tay từ Host Shell</td></tr>
+            <tr><td><code>ERR_RPC_TIMEOUT</code></td><td><code>RpcTimeoutError</code></td><td>Lệnh gọi RPC không nhận được phản hồi trong thời gian quy định</td></tr>
+            <tr><td><code>ERR_USER_REJECTED</code></td><td><code>WalletRejectedError</code></td><td>Người dùng bấm hủy bỏ kết nối ví hoặc từ chối ký</td></tr>
+            <tr><td><code>ERR_INVALID_ORIGIN</code></td><td><code>SecurityError</code></td><td>Nhận bản tin từ domain không khớp với appCenterOrigin</td></tr>
+            <tr><td><code>ERR_STORAGE_RESTRICTED</code></td><td><code>StorageRestrictedError</code></td><td>LocalStorage bị chặn hoàn toàn bởi Safari ITP</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- SECTION: Interactive Live Playground -->
+      <section id="playground" class="doc-section">
+        <h1>⚡ Interactive Live Playground</h1>
+        <p class="section-lead">
+          Thử nghiệm gọi các hàm của HydraOne SDK với Host Giả Lập (Mock Host Engine) trực tiếp ngay trên trang tài liệu này!
+        </p>
+
+        <div class="playground-box">
+          <div class="playground-controls">
+            <div class="control-row">
+              <label class="toggle-label">
+                <input type="checkbox" id="pg-itp-toggle" />
+                <span>Giả lập Safari ITP (Chặn Storage)</span>
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" id="pg-reject-toggle" />
+                <span>Giả lập Người dùng Bấm Từ chối Ký</span>
+              </label>
+            </div>
+
+            <div class="action-buttons">
+              <button id="btn-pg-connect" class="pg-btn primary">1. Connect Wallet</button>
+              <button id="btn-pg-balance" class="pg-btn">2. Get Balance</button>
+              <button id="btn-pg-signtx" class="pg-btn">3. Sign Tx (CIP-30)</button>
+              <button id="btn-pg-signdata" class="pg-btn">4. Sign Data (CIP-8)</button>
+              <button id="btn-pg-storage" class="pg-btn">5. Test Storage Relay</button>
+              <button id="btn-pg-diag" class="pg-btn warning">6. Run Diagnostics</button>
+            </div>
+          </div>
+
+          <div class="playground-console">
+            <div class="console-header">
+              <span>Console Output</span>
+              <button id="btn-pg-clear" class="console-clear-btn">Xóa</button>
+            </div>
+            <pre id="pg-console" class="console-body"><code>// Sẵn sàng! Bấm nút "1. Connect Wallet" phía trên để bắt đầu thử nghiệm...</code></pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

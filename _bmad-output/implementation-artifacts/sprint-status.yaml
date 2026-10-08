@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 22:38
+last_updated: 10-08-2026 23:22
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -67,7 +67,7 @@ development_status:
 
   epic-6: in-progress
   6-1-game-scaffolding-cli-create-hydraone-game: done
-  6-2-interactive-developer-documentation-portal-guides: backlog
+  6-2-interactive-developer-documentation-portal-guides: review
   epic-6-retrospective: optional
 
 action_items:
