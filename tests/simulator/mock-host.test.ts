@@ -508,6 +508,54 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
       cleanup();
       expect(fakeWindow.removeEventListener).toHaveBeenCalledWith('message', handler);
     });
+
+    it('broadcast phát sự kiện audioMuted và theme tới window đính kèm qua listenWindow', () => {
+      const fakeWindow = {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        postMessage: vi.fn(),
+      };
+
+      const cleanup = host.listenWindow(fakeWindow as any);
+      host.broadcastAudioMuted(true);
+      expect(fakeWindow.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'AUDIO_MUTED_CHANGED',
+          payload: { muted: true },
+        }),
+        '*'
+      );
+
+      host.broadcastTheme('light');
+      expect(fakeWindow.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'THEME_CHANGED',
+          payload: { theme: 'light' },
+        }),
+        '*'
+      );
+
+      cleanup();
+    });
+
+    it('gọi listenWindow nhiều lần tự động gỡ bỏ listener cũ, không làm rò rỉ listener', () => {
+      const fakeWindow = {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        postMessage: vi.fn(),
+      };
+
+      host.listenWindow(fakeWindow as any);
+      expect(fakeWindow.addEventListener).toHaveBeenCalledTimes(1);
+
+      // Gọi lần 2
+      host.listenWindow(fakeWindow as any);
+      expect(fakeWindow.removeEventListener).toHaveBeenCalledTimes(1);
+      expect(fakeWindow.addEventListener).toHaveBeenCalledTimes(2);
+
+      host.destroy();
+      expect(fakeWindow.removeEventListener).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('Dọn dẹp tài nguyên & Destroy', () => {
@@ -531,6 +579,79 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
 
       customHost.destroy();
       expect(() => customHost.destroy()).not.toThrow();
+    });
+
+    it('host.destroy() giải phóng an toàn các promise đang đợi latency timer', async () => {
+      const customHost = new MockBridgeHost({ latencyMs: 5000 });
+      let messageSent = false;
+      const sendPromise = customHost.handleClientMessage(
+        {
+          id: 'req-pending',
+          type: 'GET_BALANCE',
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        },
+        () => {
+          messageSent = true;
+        }
+      );
+
+      // Hủy host ngay khi đang đợi timer
+      customHost.destroy();
+
+      // Promise phải được resolve ngay lập tức, không bị treo vĩnh viễn
+      await expect(sendPromise).resolves.toBeUndefined();
+      expect(messageSent).toBe(false);
+    });
+
+    it('handleClientMessage bắt lỗi an toàn và phản hồi RPC_ERROR nếu processMessage gặp ngoại lệ', async () => {
+      let receivedResponse: any = null;
+      // Giả lập ngoại lệ bằng cách gửi payload gây lỗi hoặc mock
+      vi.spyOn(host as any, 'processMessage').mockImplementationOnce(() => {
+        throw new Error('Simulated internal engine failure');
+      });
+
+      await host.handleClientMessage(
+        {
+          id: 'req-crash',
+          type: 'GET_BALANCE',
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        },
+        (res) => {
+          receivedResponse = res;
+        }
+      );
+
+      expect(receivedResponse).toMatchObject({
+        type: 'RPC_ERROR',
+        payload: {
+          requestId: 'req-crash',
+          error: {
+            code: ERROR_CODES.ERR_INVALID_PARAMS,
+            message: 'Simulated internal engine failure',
+          },
+        },
+      });
+    });
+
+    it('HOST_STORAGE_CLEAR với prefix rỗng "" xóa sạch toàn bộ storage', async () => {
+      host.setStorage('prefix_a:1', 'val1');
+      host.setStorage('prefix_b:2', 'val2');
+
+      await (client as any).executeRpc(
+        {
+          id: 'req-clear-all',
+          type: 'HOST_STORAGE_CLEAR',
+          payload: { prefix: '' },
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        },
+        5000
+      );
+
+      expect(host.getStorage('prefix_a:1')).toBeUndefined();
+      expect(host.getStorage('prefix_b:2')).toBeUndefined();
     });
   });
 });

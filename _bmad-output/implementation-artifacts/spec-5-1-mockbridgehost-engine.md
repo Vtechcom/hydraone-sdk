@@ -84,10 +84,10 @@ context:
 
 ### Review Findings
 
-- [x] [Review][Patch] Support multi-asset CBOR encoding via `encodeCardanoValueToCbor` for CIP-30 `getBalance()` when mock wallet has native assets [src/simulator/mock-host.ts:74]
-- [x] [Review][Patch] Sanitize `targetOrigin` to avoid null-origin issues in `listenWindow` for sandboxed iframe environments [src/simulator/mock-host.ts:354]
-- [x] [Review][Patch] Support per-transport latency option in `MockClientTransport.send()` via `MockClientTransportOptions` [src/simulator/mock-transport.ts:31]
-- [x] [Review][Patch] Add comprehensive unit tests covering multi-asset encoding, per-transport latency, and `updateWalletState` [tests/simulator/mock-host.test.ts:55]
+- [x] [Review][Patch] Broadcast events to attached windows in MockBridgeHost.broadcast() and prevent window listener leak in listenWindow() [src/simulator/mock-host.ts:371]
+- [x] [Review][Patch] Wrap processMessage in try-catch to return standard RPC_ERROR on unexpected errors instead of hanging client [src/simulator/mock-host.ts:460]
+- [x] [Review][Patch] Fix empty prefix handling in HOST_STORAGE_CLEAR using nullish coalescing [src/simulator/mock-host.ts:631]
+- [x] [Review][Patch] Validate even-length hex string in encodeCborBytes and resolve pending message promises on destroy() [src/simulator/mock-host.ts:50]
 
 **Acceptance Criteria:**
 - Given `MockBridgeHost` khởi tạo với cấu hình mặc định, when client kết nối qua `mockHost.createClientTransport()`, then bắt tay `CLIENT_READY ⇄ HOST_ACK` thành công và `client.isConnected` là `true`.
@@ -103,7 +103,7 @@ context:
 - Đảm bảo 100% Hexagonal Architecture tách rời, hỗ trợ kết nối in-memory không phụ thuộc DOM (`createClientTransport()`) và kết nối window postMessage cho browser dev environment (`listenWindow()`).
 - Giả lập chuẩn xác các phương thức CIP-30 (1,000 ADA testnet, UTxOs, addresses, native assets), ký giao dịch CIP-30/CIP-8, độ trễ mạng giả lập `latencyMs`, chế độ `rejectionMode` & `rejectNext()`, và Safari ITP storage block (`storageBlock`).
 - Giải quyết action item từ Retro Epic 1: Chuẩn hóa error mapping giữa generic `ITransport` và request-capable transport bằng cách đóng gói `RPC_ERROR` với các mã lỗi chuẩn (`ERR_USER_REJECTED`, `ERR_STORAGE_UNAVAILABLE`, `ERR_TIMEOUT`).
-- Bộ kiểm thử `tests/simulator/mock-host.test.ts` gồm 33 tests pass 100%, nâng tổng số test của dự án lên 395 tests (18 test suites) pass 100%. Kích thước gzipped của bundle simulator chỉ ~5 KB.
+- Bộ kiểm thử `tests/simulator/mock-host.test.ts` gồm 38 tests pass 100%, nâng tổng số test của dự án lên 400 tests (18 test suites) pass 100%. Kích thước gzipped của bundle simulator chỉ ~5 KB.
 
 ## Spec Change Log
 
@@ -111,10 +111,10 @@ context:
 
 | ID | Lens | Verdict | Location | Content & Fix |
 |---|---|---|---|---|
-| 1 | `blind-hunter` | patch | `src/simulator/mock-host.ts:74` | Hiện thực `encodeCardanoValueToCbor` hỗ trợ mã hóa 2-tuple `[coins, multiasset]` khi ví có native assets theo chuẩn CIP-30. |
-| 2 | `edge-case-hunter` | patch | `src/simulator/mock-host.ts:354` | Chuẩn hóa `targetOrigin` trong `listenWindow` (tránh lỗi khi iframe sandbox không có `allow-same-origin` trả về origin `'null'`). |
-| 3 | `blind-hunter` | patch | `src/simulator/mock-transport.ts:31` | Bổ sung xử lý `options.latencyMs` per-transport khi host latency bằng 0. |
-| 4 | `verification-gap` | patch | `tests/simulator/mock-host.test.ts` | Bổ sung test coverage cho `encodeCardanoValueToCbor`, multi-asset `getBalance()`, per-transport latency, và `updateWalletState`. |
+| 1 | `acceptance-auditor` + `blind-hunter` | patch | `src/simulator/mock-host.ts:371` | Hỗ trợ phát bản tin broadcast (`AUDIO_MUTED_CHANGED`, `THEME_CHANGED`) tới các windows đính kèm qua `listenWindow` và tự động dọn dẹp listener cũ chống rò rỉ bộ nhớ. |
+| 2 | `edge-case-hunter` + `blind-hunter` | patch | `src/simulator/mock-host.ts:460` | Bọc `try-catch` trong `execute()` / `processMessage()` để phản hồi lỗi `RPC_ERROR` chuẩn `ERR_INVALID_PARAMS` thay vì làm treo client khi gặp ngoại lệ runtime. |
+| 3 | `edge-case-hunter` | patch | `src/simulator/mock-host.ts:631` | Thay thế `||` bằng `??` trong `HOST_STORAGE_CLEAR` để cho phép truyền `prefix: ""` xóa sạch toàn bộ key storage. |
+| 4 | `edge-case-hunter` + `verification-gap` | patch | `src/simulator/mock-host.ts:50` | Padding số 0 cho hex độ dài lẻ trong `encodeCborBytes`, giải phóng ngay các promise đang chờ latency timer khi `destroy()`, và bổ sung 5 unit tests xác minh. |
 
 ## Design Notes
 

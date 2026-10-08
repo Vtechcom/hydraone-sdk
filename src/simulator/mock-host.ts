@@ -46,7 +46,10 @@ export function encodeLovelaceToCbor(lovelace: bigint): string {
  * Mã hóa chuỗi byte CBOR (Major type 2)
  */
 function encodeCborBytes(hex: string): string {
-  const cleanHex = hex.replace(/^0x/i, '');
+  let cleanHex = hex.replace(/^0x/i, '');
+  if (cleanHex.length % 2 !== 0) {
+    cleanHex = '0' + cleanHex;
+  }
   const byteLen = cleanHex.length / 2;
   if (byteLen <= 23) {
     return (0x40 + byteLen).toString(16).padStart(2, '0') + cleanHex;
@@ -133,7 +136,9 @@ export class MockBridgeHost {
   private playerProfile: MockPlayerProfile;
   private readonly storage = new Map<string, string>();
   private readonly clients = new Set<MockClientTransport>();
+  private readonly attachedWindows = new Set<Window>();
   private readonly activeTimers = new Set<ReturnType<typeof setTimeout>>();
+  private readonly pendingResolvers = new Set<() => void>();
   private windowCleanup?: () => void;
   private rejectNextFlag = false;
   private rejectNextReason?: string;
@@ -340,6 +345,12 @@ export class MockBridgeHost {
       return () => {};
     }
 
+    if (this.windowCleanup) {
+      this.windowCleanup();
+    }
+
+    this.attachedWindows.add(win);
+
     const messageHandler = (event: MessageEvent) => {
       const data = event.data;
       if (
@@ -369,12 +380,16 @@ export class MockBridgeHost {
     };
 
     win.addEventListener('message', messageHandler);
-    this.windowCleanup = () => {
+    const cleanup = () => {
       win.removeEventListener('message', messageHandler);
-      this.windowCleanup = undefined;
+      this.attachedWindows.delete(win);
+      if (this.windowCleanup === cleanup) {
+        this.windowCleanup = undefined;
+      }
     };
+    this.windowCleanup = cleanup;
 
-    return this.windowCleanup;
+    return cleanup;
   }
 
   // ==========================================
@@ -410,11 +425,20 @@ export class MockBridgeHost {
   }
 
   /**
-   * Gửi một bản tin broadcast tới tất cả connected client transports
+   * Gửi một bản tin broadcast tới tất cả connected client transports và attached windows
    */
   public broadcast(message: BridgeMessage): void {
     for (const client of Array.from(this.clients)) {
       client.dispatchToClient(message);
+    }
+    for (const win of Array.from(this.attachedWindows)) {
+      try {
+        win.postMessage(message, '*');
+      } catch (err) {
+        if (this.debug) {
+          console.error('[MockBridgeHost] Failed to postMessage broadcast to window:', err);
+        }
+      }
     }
   }
 
@@ -457,19 +481,41 @@ export class MockBridgeHost {
           return;
         }
 
-        const response = this.processMessage(message);
-        if (response) {
-          reply(response);
+        try {
+          const response = this.processMessage(message);
+          if (response) {
+            reply(response);
+          }
+        } catch (err) {
+          if (this.debug) {
+            console.error('[MockBridgeHost] Error processing client message:', err);
+          }
+          const errorResponse = this.createRpcError(
+            message.id,
+            ERROR_CODES.ERR_INVALID_PARAMS,
+            err instanceof Error ? err.message : 'Internal mock host error'
+          );
+          reply(errorResponse);
         }
         resolve();
       };
 
       if (this.latencyMs > 0) {
-        const timer = setTimeout(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        const timerResolver = () => {
           this.activeTimers.delete(timer);
+          this.pendingResolvers.delete(timerResolver);
+          resolve();
+        };
+
+        timer = setTimeout(() => {
+          this.activeTimers.delete(timer);
+          this.pendingResolvers.delete(timerResolver);
           execute();
         }, this.latencyMs);
+
         this.activeTimers.add(timer);
+        this.pendingResolvers.add(timerResolver);
       } else {
         execute();
       }
@@ -628,7 +674,7 @@ export class MockBridgeHost {
           'Safari ITP SecurityError: Host storage access blocked'
         );
       }
-      const prefix = (payload as any)?.prefix || 'hydra:sdk:';
+      const prefix = (payload as any)?.prefix ?? 'hydra:sdk:';
       for (const k of Array.from(this.storage.keys())) {
         if (k.startsWith(prefix)) {
           this.storage.delete(k);
@@ -700,9 +746,15 @@ export class MockBridgeHost {
     }
     this.activeTimers.clear();
 
+    for (const resolver of Array.from(this.pendingResolvers)) {
+      resolver();
+    }
+    this.pendingResolvers.clear();
+
     if (this.windowCleanup) {
       this.windowCleanup();
     }
+    this.attachedWindows.clear();
 
     for (const client of Array.from(this.clients)) {
       client.destroy();
