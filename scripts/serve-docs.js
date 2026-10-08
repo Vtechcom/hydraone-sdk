@@ -23,14 +23,24 @@ const MIME_TYPES = {
 export function createDocsServer() {
   return http.createServer((req, res) => {
     let reqPath = req.url ? req.url.split('?')[0] : '/';
+    try {
+      reqPath = decodeURIComponent(reqPath);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('400 Bad Request');
+      return;
+    }
+
     if (reqPath === '/') {
       reqPath = '/index.html';
     }
 
-    const filePath = path.join(DOCS_DIR, reqPath);
+    const resolvedDocsDir = path.resolve(DOCS_DIR);
+    const filePath = path.resolve(resolvedDocsDir, '.' + (reqPath.startsWith('/') ? reqPath : '/' + reqPath));
 
     // Prevent directory traversal
-    if (!filePath.startsWith(DOCS_DIR)) {
+    const safePrefix = resolvedDocsDir.endsWith(path.sep) ? resolvedDocsDir : resolvedDocsDir + path.sep;
+    if (filePath !== resolvedDocsDir && !filePath.startsWith(safePrefix)) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('403 Forbidden');
       return;
@@ -39,10 +49,15 @@ export function createDocsServer() {
     fs.stat(filePath, (err, stats) => {
       if (err || !stats.isFile()) {
         // Fallback to index.html for SPA-like routes
-        const fallbackPath = path.join(DOCS_DIR, 'index.html');
+        const fallbackPath = path.join(resolvedDocsDir, 'index.html');
         if (fs.existsSync(fallbackPath)) {
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          fs.createReadStream(fallbackPath).pipe(res);
+          const stream = fs.createReadStream(fallbackPath);
+          stream.on('error', () => {
+            if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('500 Internal Server Error');
+          });
+          stream.pipe(res);
           return;
         }
         res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -54,14 +69,27 @@ export function createDocsServer() {
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
       res.writeHead(200, { 'Content-Type': contentType });
-      fs.createReadStream(filePath).pipe(res);
+      const stream = fs.createReadStream(filePath);
+      stream.on('error', () => {
+        if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('500 Internal Server Error');
+      });
+      stream.pipe(res);
     });
   });
 }
 
 // Only listen if executed directly
-if (process.argv[1] === __filename) {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const server = createDocsServer();
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\x1b[31mPort ${PORT} is already in use. Please specify another port: PORT=${PORT + 1} pnpm run docs\x1b[0m`);
+    } else {
+      console.error('\x1b[31mFailed to start docs server:\x1b[0m', err);
+    }
+    process.exit(1);
+  });
   server.listen(PORT, () => {
     console.log(`\x1b[36m⚡ HydraOne Docs Portal running at: \x1b[1mhttp://localhost:${PORT}\x1b[0m`);
     console.log(`\x1b[90mPress Ctrl+C to stop.\x1b[0m\n`);

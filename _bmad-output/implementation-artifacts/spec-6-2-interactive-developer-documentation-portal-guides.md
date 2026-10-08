@@ -75,6 +75,12 @@ context:
 - [x] `package.json` -- Thêm script `"docs": "node -e ..."` hoặc script phục vụ tĩnh mở cổng preview -- Hỗ trợ lập trình viên mở xem tài liệu dễ dàng.
 - [x] `tests/docs/docs.test.ts` -- Viết bộ test kiểm tra sự tồn tại và tính hợp lệ của tất cả tài liệu, cấu trúc portal và độ phủ của các API exported -- Đảm bảo chất lượng tài liệu không bị suy thoái.
 
+### Review Findings
+- [x] [Review][Patch] Ngăn chặn Directory Traversal và xử lý URL decoding/stream errors trong HTTP Docs Server [scripts/serve-docs.js:25-58]
+- [x] [Review][Patch] Bổ sung phím tắt Ctrl+K/Cmd+K và chặn cướp focus khi đang gõ trong form [docs/app.js:122-132]
+- [x] [Review][Patch] Tối ưu trích xuất text code block cho nút Copy [docs/app.js:73]
+- [x] [Review][Patch] Bổ sung test tích hợp HTTP server (200, 403 traversal, 404) và phím tắt Ctrl+K [tests/docs/docs.test.ts:241,262]
+
 **Acceptance Criteria:**
 - Given cổng tài liệu `docs/index.html` và các file hướng dẫn trong `docs/`
 - When nhà phát triển truy cập phần Quickstart
@@ -92,7 +98,7 @@ context:
 - Soạn thảo 4 cẩm nang markdown chi tiết trong `docs/`: `quickstart.md` (Quickstart 15 phút), `api-reference.md` (Tra cứu toàn bộ 6 subpaths và Phaser 3), `safari-itp-guide.md` (Giải quyết rào cản Safari ITP & Storage Relay), `architecture-overview.md` (Mô hình PostMessage Bridge & Fallback).
 - Tạo mới file `README.md` gốc hoàn chỉnh với badges, bảng subpaths, hướng dẫn CLI và link docs.
 - Bổ sung lệnh `"docs"` vào `package.json` sử dụng Node.js built-ins mở web server nội bộ xem tài liệu mà không cần thêm runtime dependencies.
-- Bổ sung 34 tests trong `tests/docs/docs.test.ts`, nâng tổng số test cases của toàn dự án lên 525 tests pass 100%.
+- Bổ sung 36 tests trong `tests/docs/docs.test.ts`, nâng tổng số test cases của toàn dự án lên 528 tests pass 100%.
 
 ## Spec Change Log
 
@@ -105,6 +111,10 @@ context:
 | RV-6-2-03 | edge-case-hunter | `showSection` khi nhận URL hash không tồn tại sẽ ẩn tất cả các section. | low | patch | Đã bổ sung kiểm tra phần tử đích và fallback an toàn về `'overview'`. |
 | RV-6-2-04 | blind-hunter | Thiếu thẻ `<meta name="theme-color">` cho dark theme trên trình duyệt mobile. | low | patch | Đã thêm `<meta name="theme-color" content="#0a0e17">` vào `docs/index.html`. |
 | RV-6-2-05 | verification-gap | Bảng API table có thể bị tràn chiều ngang trên màn hình di động hẹp. | low | patch | Đã bổ sung wrapper `.table-container` có `overflow-x: auto` và cập nhật CSS/test suite. |
+| RV-6-2-06 | blind-hunter+edge-case-hunter | Ngăn chặn Directory Traversal và xử lý URL decoding/stream errors trong HTTP Docs Server | medium | patch | Đã sửa boundary check path.sep, decodeURIComponent và stream error handler trong scripts/serve-docs.js. |
+| RV-6-2-07 | acceptance-auditor+blind-hunter | Bổ sung phím tắt Ctrl+K/Cmd+K và chặn cướp focus khi đang gõ trong form | medium | patch | Đã bổ sung isCmdK và kiểm tra tagName/isContentEditable trong docs/app.js. |
+| RV-6-2-08 | blind-hunter | Tối ưu trích xuất text code block cho nút Copy | low | patch | Đã cải tiến trích xuất text trực tiếp từ pre code trong docs/app.js. |
+| RV-6-2-09 | verification-gap+acceptance-auditor | Bổ sung test tích hợp HTTP server (200, 403 traversal, 404) và phím tắt Ctrl+K | medium | patch | Đã bổ sung test cases kiểm tra HTTP server và phím tắt vào tests/docs/docs.test.ts. |
 
 ## Design Notes
 

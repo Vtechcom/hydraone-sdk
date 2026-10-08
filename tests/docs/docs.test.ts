@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as http from 'node:http';
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const DOCS_DIR = path.join(ROOT_DIR, 'docs');
@@ -235,10 +236,11 @@ describe('Story 6.2: Interactive Developer Documentation Portal & Guides', () =>
       expect(css).toContain('.playground-box');
     });
 
-    it('JavaScript cài đặt bộ tìm kiếm tức thì và phím tắt "/"', () => {
+    it('JavaScript cài đặt bộ tìm kiếm tức thì và phím tắt "/" hoặc "Ctrl+K"', () => {
       expect(js).toContain('searchIndex');
       expect(js).toContain('searchInput');
       expect(js).toContain('e.key === \'/\'');
+      expect(js).toContain('isCmdK');
       expect(js).toContain('copy-btn');
       expect(js).toContain('navigator.clipboard.writeText');
     });
@@ -263,12 +265,58 @@ describe('Story 6.2: Interactive Developer Documentation Portal & Guides', () =>
       const serverPath = path.join(ROOT_DIR, 'scripts/serve-docs.js');
       expect(fs.existsSync(serverPath)).toBe(true);
 
+      // @ts-expect-error JS module without declaration file
       const { createDocsServer } = await import('../../scripts/serve-docs.js');
       expect(typeof createDocsServer).toBe('function');
 
       const server = createDocsServer();
       expect(server).toBeDefined();
       expect(typeof server.listen).toBe('function');
+    });
+
+    it('createDocsServer phục vụ đúng index.html, static assets và chặn directory traversal', async () => {
+      // @ts-expect-error JS module without declaration file
+      const { createDocsServer } = await import('../../scripts/serve-docs.js');
+      const server = createDocsServer();
+
+      await new Promise<void>((resolve) => {
+        server.listen(0, '127.0.0.1', () => resolve());
+      });
+
+      const addr = server.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      const baseUrl = `http://127.0.0.1:${port}`;
+
+      try {
+        // 1. Root -> 200 text/html (index.html)
+        const rootRes = await fetch(`${baseUrl}/`);
+        expect(rootRes.status).toBe(200);
+        expect(rootRes.headers.get('content-type')).toContain('text/html');
+        const rootText = await rootRes.text();
+        expect(rootText).toContain('HydraOne SDK');
+
+        // 2. CSS asset -> 200 text/css
+        const cssRes = await fetch(`${baseUrl}/styles.css`);
+        expect(cssRes.status).toBe(200);
+        expect(cssRes.headers.get('content-type')).toContain('text/css');
+
+        // 3. Directory traversal attempt -> 403 Forbidden
+        const traversalStatus = await new Promise<number>((resolve, reject) => {
+          const req = http.request({
+            hostname: '127.0.0.1',
+            port,
+            path: '/../package.json',
+            method: 'GET'
+          }, (res) => {
+            resolve(res.statusCode || 0);
+          });
+          req.on('error', reject);
+          req.end();
+        });
+        expect(traversalStatus).toBe(403);
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
     });
   });
 });

@@ -70,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyBtns = document.querySelectorAll('.copy-btn');
   copyBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
-      const textToCopy = btn.getAttribute('data-copy') || btn.parentElement.nextElementSibling?.innerText || '';
+      const codeEl = btn.closest('.code-block-wrapper')?.querySelector('pre code');
+      const textToCopy = btn.getAttribute('data-copy') || (codeEl ? codeEl.innerText : btn.parentElement.nextElementSibling?.innerText) || '';
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(textToCopy);
@@ -119,11 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   if (searchInput && searchResults) {
-    // Focus search on '/' key
+    // Focus search on '/' or 'Ctrl+K' / 'Cmd+K'
     document.addEventListener('keydown', (e) => {
-      if (e.key === '/' && document.activeElement !== searchInput) {
+      const isInput = document.activeElement && (
+        ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) ||
+        document.activeElement.isContentEditable
+      );
+
+      const isSlash = e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isInput;
+      const isCmdK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k';
+
+      if (isSlash || isCmdK) {
         e.preventDefault();
         searchInput.focus();
+        searchInput.select();
       } else if (e.key === 'Escape') {
         searchResults.classList.remove('active');
         searchInput.blur();
