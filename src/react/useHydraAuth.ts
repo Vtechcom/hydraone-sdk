@@ -2,7 +2,7 @@ import { useContext, useState, useEffect, useCallback, useMemo, useRef } from 'r
 import { HydraOneContext } from './context';
 import type { UseHydraAuthOptions, UseHydraAuthReturn } from './types';
 import type { AuthSession, SignInParams, AuthState } from '../core/types';
-import { GameAuthManager, isJwtExpired } from '../core/auth';
+import { GameAuthManager, isJwtExpired, parseJwt } from '../core/auth';
 import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapters/storage';
 
 /**
@@ -14,29 +14,24 @@ import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapter
 export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn {
   const context = useContext(HydraOneContext);
 
-  // Khởi tạo hoặc lấy authManager từ options hoặc context
-  const authManagerRef = useRef<GameAuthManager | null>(null);
-  if (!authManagerRef.current) {
-    if (options?.authManager) {
-      authManagerRef.current = options.authManager;
-    } else if (context?.authManager) {
-      authManagerRef.current = context.authManager;
-    } else if (options?.client ?? context?.client) {
-      const activeClient = (options?.client ?? context?.client)!;
-      const storage =
-        options?.storage ??
-        context?.storage ??
-        (typeof window !== 'undefined'
-          ? new SafeLocalStorageAdapter()
-          : new InMemoryStorageAdapter());
-      authManagerRef.current = new GameAuthManager({
-        client: activeClient,
-        storage,
-      });
-    }
+  // Khởi tạo nội bộ authManager fallback nếu không có manager từ options hoặc context
+  const internalAuthManagerRef = useRef<GameAuthManager | null>(null);
+  const client = options?.client ?? context?.client;
+  if (!options?.authManager && !context?.authManager && client && !internalAuthManagerRef.current) {
+    const storage =
+      options?.storage ??
+      context?.storage ??
+      (typeof window !== 'undefined'
+        ? new SafeLocalStorageAdapter()
+        : new InMemoryStorageAdapter());
+    internalAuthManagerRef.current = new GameAuthManager({
+      client,
+      storage,
+    });
   }
 
-  const authManager = options?.authManager ?? authManagerRef.current;
+  const authManager =
+    options?.authManager ?? context?.authManager ?? internalAuthManagerRef.current;
 
   if (!authManager) {
     throw new Error(
@@ -62,7 +57,22 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
   const token = authState.token;
   const jwtToken = token;
   const address = authState.address;
-  const claims = authState.claims ?? null;
+
+  const claims = useMemo<Record<string, any> | null>(() => {
+    if (authState.claims) return authState.claims;
+    if (token) {
+      try {
+        return parseJwt<Record<string, any>>(token);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [authState.claims, token]);
+
+  const user = useMemo<Record<string, any> | null>(() => {
+    return claims ?? (address ? { address } : null);
+  }, [claims, address]);
 
   const isExpired = useMemo<boolean>(() => {
     if (!token) return true;
@@ -139,12 +149,13 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
       return;
     }
 
+    setAuthState(authManager.state);
+    setError(authManager.state.error ?? null);
+
     const unsubscribe = authManager.onAuthStateChanged((newState: AuthState) => {
       if (!isMountedRef.current) return;
       setAuthState(newState);
-      if (newState.error) {
-        setError(newState.error);
-      }
+      setError(newState.error ?? null);
     });
 
     return () => {
@@ -164,6 +175,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
     jwtToken,
     address,
     claims,
+    user,
     isExpired,
     isAuthenticating,
     error,

@@ -56,10 +56,31 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     };
   }, []);
 
+  const autoRefreshBalance =
+    options?.autoRefreshBalance ?? context?.autoRefreshBalance ?? true;
+
   // 2. Computed shortAddress
   const shortAddress = useMemo(() => formatShortAddress(address), [address]);
 
-  // 3. Actions cập nhật số dư & địa chỉ ví
+  // 3. Actions cập nhật mạng, số dư & địa chỉ ví
+  const refreshNetwork = useCallback(async (): Promise<number | null> => {
+    try {
+      if (!client.isConnected) {
+        if (isMountedRef.current) {
+          setNetworkId(null);
+        }
+        return null;
+      }
+      const netId = await client.getNetworkId();
+      if (isMountedRef.current && client.isConnected) {
+        setNetworkId(netId);
+      }
+      return netId;
+    } catch {
+      return null;
+    }
+  }, [client]);
+
   const refreshAddress = useCallback(async (): Promise<string | null> => {
     try {
       if (!client.isConnected) {
@@ -71,7 +92,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       }
       const addrs = await client.getUsedAddresses();
       if (Array.isArray(addrs) && addrs.length > 0 && addrs[0]) {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && client.isConnected) {
           setUsedAddresses(addrs);
           setAddress(addrs[0]);
         }
@@ -80,8 +101,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       try {
         const changeAddr = await client.getChangeAddress();
         if (changeAddr) {
-          if (isMountedRef.current) {
+          if (isMountedRef.current && client.isConnected) {
             setAddress(changeAddr);
+            setUsedAddresses([changeAddr]);
           }
           return changeAddr;
         }
@@ -109,7 +131,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (utxos && utxos.length > 0) {
         const lovelace = getTotalLovelace(utxos);
         const adaStr = getAdaBalance(utxos);
-        if (isMountedRef.current) {
+        if (isMountedRef.current && client.isConnected) {
           setBalanceLovelace(lovelace);
           setBalanceADA(adaStr);
         }
@@ -120,7 +142,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       const rawBalance = await client.getBalance();
       const lovelace = getTotalLovelace(rawBalance ? [rawBalance] : []);
       const adaStr = getAdaBalance(rawBalance ? [rawBalance] : []);
-      if (isMountedRef.current) {
+      if (isMountedRef.current && client.isConnected) {
         setBalanceLovelace(lovelace);
         setBalanceADA(adaStr);
       }
@@ -148,15 +170,16 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         setIsAudioMuted(client.isAudioMuted);
       }
     }
+    await refreshNetwork();
     await refreshAddress();
-    if (options?.autoRefreshBalance !== false) {
+    if (autoRefreshBalance) {
       try {
         await refreshBalance();
       } catch {
         // Bắt lỗi an toàn
       }
     }
-  }, [client, options?.autoRefreshBalance, refreshAddress, refreshBalance]);
+  }, [client, autoRefreshBalance, refreshNetwork, refreshAddress, refreshBalance]);
 
   const disconnect = useCallback(async (): Promise<void> => {
     await client.disconnect();
@@ -167,6 +190,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       setUsedAddresses([]);
       setBalanceADA(null);
       setBalanceLovelace(null);
+      setNetworkId(null);
     }
   }, [client]);
 
@@ -236,8 +260,15 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       setHostInfo(client.hostInfo ?? null);
 
       if (state === 'connected') {
+        if (client.theme !== undefined) {
+          setTheme(client.theme);
+        }
+        if (client.isAudioMuted !== undefined) {
+          setIsAudioMuted(client.isAudioMuted);
+        }
+        refreshNetwork().catch(() => {});
         refreshAddress().catch(() => {});
-        if (options?.autoRefreshBalance !== false) {
+        if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
       } else if (state === 'disconnected' || state === 'error') {
@@ -245,6 +276,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         setUsedAddresses([]);
         setBalanceADA(null);
         setBalanceLovelace(null);
+        setNetworkId(null);
       }
     };
 
@@ -253,7 +285,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (Array.isArray(addrs)) {
         setUsedAddresses(addrs);
         setAddress(addrs[0] ?? null);
-        if (options?.autoRefreshBalance !== false) {
+        if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
       }
@@ -272,6 +304,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       setUsedAddresses([]);
       setBalanceADA(null);
       setBalanceLovelace(null);
+      setNetworkId(null);
     };
 
     const onHostAck = (_payload: unknown) => {
@@ -285,8 +318,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (client.isAudioMuted !== undefined) {
         setIsAudioMuted(client.isAudioMuted);
       }
+      refreshNetwork().catch(() => {});
       refreshAddress().catch(() => {});
-      if (options?.autoRefreshBalance !== false) {
+      if (autoRefreshBalance) {
         refreshBalance().catch(() => {});
       }
     };
@@ -309,8 +343,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
     // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
     if (client.isConnected) {
+      refreshNetwork().catch(() => {});
       refreshAddress().catch(() => {});
-      if (options?.autoRefreshBalance !== false) {
+      if (autoRefreshBalance) {
         refreshBalance().catch(() => {});
       }
     }
@@ -328,7 +363,14 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         }
       }
     };
-  }, [client, options?.autoConnect, options?.autoRefreshBalance, refreshAddress, refreshBalance]);
+  }, [
+    client,
+    autoRefreshBalance,
+    options?.autoConnect,
+    refreshNetwork,
+    refreshAddress,
+    refreshBalance,
+  ]);
 
   return {
     client,

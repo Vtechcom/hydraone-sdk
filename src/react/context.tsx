@@ -39,7 +39,7 @@ export function HydraOneProvider({
   appCenterOrigin,
   options,
   autoConnect = false,
-  autoRefreshBalance: _autoRefreshBalance = true,
+  autoRefreshBalance = true,
   children,
 }: HydraOneProviderProps): React.JSX.Element {
   // Tạo hoặc giữ instance storage ổn định
@@ -108,8 +108,9 @@ export function HydraOneProvider({
       client: activeClient,
       authManager: activeAuthManager,
       storage: activeStorage,
+      autoRefreshBalance,
     }),
-    [activeClient, activeAuthManager, activeStorage]
+    [activeClient, activeAuthManager, activeStorage, autoRefreshBalance]
   );
 
   return <HydraOneContext.Provider value={contextValue}>{children}</HydraOneContext.Provider>;

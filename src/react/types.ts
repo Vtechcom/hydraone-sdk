@@ -37,6 +37,11 @@ export interface HydraOneContextValue {
    * Instance IStorage (storage relay hoặc local)
    */
   storage: IStorage;
+
+  /**
+   * Cấu hình mặc định tự động làm mới số dư khi ví kết nối thành công
+   */
+  autoRefreshBalance?: boolean;
 }
 
 /**
@@ -285,6 +290,11 @@ export interface UseHydraAuthReturn {
    * Claims trích xuất từ JWT payload hoặc null
    */
   claims: Record<string, any> | null;
+
+  /**
+   * Thông tin định danh người dùng (claims hoặc đối tượng chứa address)
+   */
+  user: Record<string, any> | null;
 
   /**
    * true nếu JWT token hiện tại đã hết hạn

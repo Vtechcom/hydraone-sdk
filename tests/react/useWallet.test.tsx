@@ -101,6 +101,19 @@ class MockTransport implements ITransport {
       };
     }
 
+    if (msg.type === 'GET_NETWORK_ID') {
+      return {
+        id: msg.id || 'res_net',
+        type: 'RPC_RESPONSE',
+        payload: {
+          requestId: msg.id,
+          result: 1,
+        } as any,
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      };
+    }
+
     if (msg.type === 'SIGN_TX') {
       return {
         id: msg.id || 'res_sig',
@@ -258,6 +271,10 @@ describe('useWallet hook', () => {
       )
     ).toBe('addr1q...5a3x');
     expect(formatShortAddress('addr1test', 0, 0)).toBe('addr1test');
+    expect(formatShortAddress('1234567890123', 6, 4)).toBe('1234567890123');
+    expect(formatShortAddress('12345678901234', 6, 4)).toBe('123456...1234');
+    expect(formatShortAddress('addr1testlong', 6, 0)).toBe('addr1t...');
+    expect(formatShortAddress('addr1testlong', 0, 4)).toBe('...long');
   });
 
   it('kết nối thành công qua connect() và tính toán số dư BigInt', async () => {
@@ -275,6 +292,7 @@ describe('useWallet hook', () => {
     expect(result.current.shortAddress).toBe('addr1q...5a3x');
     expect(result.current.balanceLovelace).toBe(7500000n);
     expect(result.current.balanceADA).toBe('7.5');
+    expect(result.current.networkId).toBe(1);
   });
 
   it('fallback lấy getChangeAddress khi usedAddresses rỗng', async () => {
@@ -289,6 +307,9 @@ describe('useWallet hook', () => {
     expect(result.current.address).toBe(
       'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999'
     );
+    expect(result.current.usedAddresses).toEqual([
+      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
+    ]);
   });
 
   it('reset trạng thái khi gọi disconnect()', async () => {
@@ -298,6 +319,7 @@ describe('useWallet hook', () => {
       await result.current.connect();
     });
     expect(result.current.isConnected).toBe(true);
+    expect(result.current.networkId).toBe(1);
 
     await act(async () => {
       await result.current.disconnect();
@@ -306,6 +328,29 @@ describe('useWallet hook', () => {
     expect(result.current.isConnected).toBe(false);
     expect(result.current.connectionState).toBe('disconnected');
     expect(result.current.address).toBeNull();
+    expect(result.current.balanceADA).toBeNull();
+    expect(result.current.balanceLovelace).toBeNull();
+    expect(result.current.networkId).toBeNull();
+  });
+
+  it('tôn trọng autoRefreshBalance={false} được truyền từ HydraOneProvider', async () => {
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <HydraOneProvider client={client} autoRefreshBalance={false}>
+        {children}
+      </HydraOneProvider>
+    );
+
+    const { result } = renderHook(() => useWallet(), { wrapper: customWrapper });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.address).toBe(
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
+    );
+    // Số dư không được tự động tải khi autoRefreshBalance = false
     expect(result.current.balanceADA).toBeNull();
     expect(result.current.balanceLovelace).toBeNull();
   });

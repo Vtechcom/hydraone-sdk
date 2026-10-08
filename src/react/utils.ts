@@ -18,11 +18,15 @@ export function formatShortAddress(
   if (cleanAddress.length === 0) {
     return '';
   }
-  if (startChars <= 0 || endChars <= 0) {
+  const validStart = Math.max(0, startChars);
+  const validEnd = Math.max(0, endChars);
+  if (validStart === 0 && validEnd === 0) {
     return cleanAddress;
   }
-  if (cleanAddress.length <= startChars + endChars) {
+  if (cleanAddress.length <= validStart + validEnd + 3) {
     return cleanAddress;
   }
-  return `${cleanAddress.slice(0, startChars)}...${cleanAddress.slice(-endChars)}`;
+  const prefix = validStart > 0 ? cleanAddress.slice(0, validStart) : '';
+  const suffix = validEnd > 0 ? cleanAddress.slice(-validEnd) : '';
+  return `${prefix}...${suffix}`;
 }

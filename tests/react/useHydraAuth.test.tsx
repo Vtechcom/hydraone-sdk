@@ -169,6 +169,7 @@ describe('useHydraAuth and useAuth hooks', () => {
       'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
     );
     expect(result.current.claims?.role).toBe('player');
+    expect(result.current.user?.role).toBe('player');
     expect(result.current.isExpired).toBe(false);
     expect(result.current.isAuthenticating).toBe(false);
     expect(result.current.error).toBeNull();
@@ -190,10 +191,11 @@ describe('useHydraAuth and useAuth hooks', () => {
     expect(result.current.token).toBeNull();
     expect(result.current.address).toBeNull();
     expect(result.current.claims).toBeNull();
+    expect(result.current.user).toBeNull();
     expect(result.current.isExpired).toBe(true);
   });
 
-  it('lưu lỗi và ném lại lỗi khi signIn() thất bại do user reject', async () => {
+  it('lưu lỗi và ném lại lỗi khi signIn() thất bại do user reject, sau đó xóa lỗi khi đăng nhập lại thành công', async () => {
     transport.shouldRejectSignData = true;
     const { result } = renderHook(() => useHydraAuth(), { wrapper });
 
@@ -210,6 +212,15 @@ describe('useHydraAuth and useAuth hooks', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.error).toBeTruthy();
     expect(result.current.isAuthenticating).toBe(false);
+
+    // Thử lại khi người dùng đồng ý ký
+    transport.shouldRejectSignData = false;
+    await act(async () => {
+      await result.current.signIn({ challenge: 'nonce_retry_success' });
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.error).toBeNull();
   });
 
   it('dọn dẹp event listener khi unmount', () => {

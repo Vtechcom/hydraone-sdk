@@ -52,7 +52,7 @@ export function useHostStorage(options?: UseHostStorageOptions): UseHostStorageR
 
   return {
     storage,
-    isAvailable: true,
+    isAvailable: Boolean(storage),
     getItem,
     setItem,
     removeItem,

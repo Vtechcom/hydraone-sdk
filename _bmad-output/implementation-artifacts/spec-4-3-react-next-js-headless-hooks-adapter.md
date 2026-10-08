@@ -5,7 +5,7 @@ created: '2026-10-08'
 status: 'done'
 baseline_commit: '781f9557fd711b052a53264c7a4050ad0f7d6cc1'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-4-context.md'
@@ -82,6 +82,19 @@ context:
 - [x] `tests/react/*.test.tsx` -- Viết bộ unit tests toàn diện bao phủ Provider, `useWallet`, `useHydraAuth`, `useHostStorage`, SSR guard và unmount cleanup -- Xác minh tính đúng đắn theo tiêu chuẩn chất lượng
 - [x] `tests/build.test.ts` -- Bổ sung kiểm tra build artifacts cho subpath `@hydraone/sdk/react` -- Đảm bảo quy trình đóng gói hoàn tất thành công
 
+### Review Findings
+
+- [x] [Review][Patch] Query and sync networkId on wallet connection and initial mount [src/react/useWallet.ts:45]
+- [x] [Review][Patch] Reset networkId to null on wallet disconnect or connection error [src/react/useWallet.ts:169]
+- [x] [Review][Patch] Pass autoRefreshBalance from HydraOneProvider context to useWallet [src/react/context.tsx:42]
+- [x] [Review][Patch] Guard formatShortAddress from producing output longer than input and support partial zero lengths [src/react/utils.ts:21]
+- [x] [Review][Patch] Guard against in-flight race conditions during refreshAddress and refreshBalance on disconnect [src/react/useWallet.ts:74]
+- [x] [Review][Patch] Clear error in useHydraAuth when newState.error is cleared or null [src/react/useHydraAuth.ts:145]
+- [x] [Review][Patch] Sync usedAddresses with fallback changeAddress when getUsedAddresses returns empty [src/react/useWallet.ts:84]
+- [x] [Review][Patch] Derive claims and add user convenience property in useHydraAuth [src/react/useHydraAuth.ts:65]
+- [x] [Review][Patch] Avoid stale authManagerRef in useHydraAuth when context provides dynamic authManager [src/react/useHydraAuth.ts:18]
+- [x] [Review][Patch] Add unit tests for networkId lifecycle, formatShortAddress boundary conditions, and auth error reset [tests/react/useWallet.test.tsx:249]
+
 **Acceptance Criteria:**
 - Given ứng dụng React 18+ hoặc Next.js cài đặt `@hydraone/sdk/react`, when bọc component bằng `<HydraOneProvider appCenterOrigin="...">` và gọi `useWallet()`, then trả về `{ isConnected, address, shortAddress, balanceADA, balanceLovelace, signTx, submitTx, refreshBalance }` tự động cập nhật khi trạng thái ví thay đổi.
 - Given địa chỉ ví `addr1q9...xyz`, when gọi `formatShortAddress(address)` hoặc truy cập `shortAddress`, then trả về chuỗi rút gọn định dạng `addr1q...xyz` (hoặc `""` khi chưa kết nối).
@@ -106,11 +119,18 @@ context:
 
 ## Review Triage Log
 
-| ID | Lens | Verdict | Evidence |
-|---|---|---|---|
-| 1 | Blind Hunter | false | Đã kiểm tra tính đầy đủ của public API: Cung cấp đầy đủ `<HydraOneProvider>`, `useHydraOne`, `useWallet`, `useHydraAuth`, `useAuth`, `useHostStorage`, và `formatShortAddress`. |
-| 2 | Edge Case Hunter | false | Đã kiểm tra SSR-safety và lifecycle unmount: Toàn bộ truy cập window/DOM được kiểm tra `typeof window !== 'undefined'`, listeners được đăng ký trong `useEffect` và tự động tháo gỡ khi unmount, `isMountedRef` ngăn ngừa warning state update. |
-| 3 | Verification Gap | false | Toàn bộ 100% matrix scenarios đã được kiểm thử với 27 unit tests mới trong `tests/react/` và kiểm tra build artifacts trong `tests/build.test.ts`. Toàn bộ 361 test cases vượt qua 100%. |
+| ID | Lens | Verdict | Location | Content & Fix |
+|---|---|---|---|---|
+| 1 | `blind-hunter` | patch | `src/react/useWallet.ts:45` | Bổ sung `refreshNetwork` truy vấn `client.getNetworkId()` khi ví kết nối, khắc phục `networkId` bị null mặc định. |
+| 2 | `blind-hunter` | patch | `src/react/useWallet.ts:169` | Reset `networkId` về `null` khi `disconnect()` hoặc khi gặp sự kiện ngắt kết nối / lỗi kết nối. |
+| 3 | `blind-hunter` | patch | `src/react/context.tsx:42` | Đưa `autoRefreshBalance` từ `<HydraOneProvider>` vào context value và truyền xuống `useWallet`. |
+| 4 | `blind-hunter` + `acceptance-auditor` | patch | `src/react/utils.ts:21` | Đồng bộ logic `formatShortAddress` với Vue adapter: guard chuỗi ngắn không bị dài hơn chuỗi gốc và hỗ trợ start/end = 0. |
+| 5 | `blind-hunter` + `edge-case-hunter` | patch | `src/react/useWallet.ts:74` | Thêm guard `client.isConnected` sau khi hoàn thành async fetching trong `refreshAddress` và `refreshBalance` chống race condition khi ngắt kết nối. |
+| 6 | `blind-hunter` | patch | `src/react/useHydraAuth.ts:145` | Đồng bộ xóa state `error` về `null` khi auth state chuyển trạng thái hợp lệ hoặc thành công. |
+| 7 | `edge-case-hunter` | patch | `src/react/useWallet.ts:84` | Đồng bộ `usedAddresses` chứa `changeAddress` khi ví mới chưa có used addresses trong fallback. |
+| 8 | `blind-hunter` + `acceptance-auditor` | patch | `src/react/useHydraAuth.ts:65` | Tự động phân tích `claims` qua `parseJwt` từ token khi state chưa có claims, bổ sung tiện ích `user`. |
+| 9 | `blind-hunter` | patch | `src/react/useHydraAuth.ts:18` | Tránh găm cứng `authManagerRef` khi context provider thay đổi instance `authManager`. |
+| 10 | `verification-gap` | patch | `tests/react/*.test.tsx` | Bổ sung unit tests cho `networkId`, `formatShortAddress` boundary conditions, `autoRefreshBalance={false}` và auth error reset. |
 
 ## Design Notes
 
