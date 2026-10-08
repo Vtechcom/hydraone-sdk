@@ -14,6 +14,7 @@ import type { BridgeMessage } from '../../src/core/types';
  */
 class MockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
+  public returnEmptyUsedAddresses: boolean = false;
   private messageHandlers: Array<(msg: BridgeMessage) => void> = [];
 
   public async send(message: BridgeMessage): Promise<void> {
@@ -55,9 +56,24 @@ class MockTransport implements ITransport {
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result: [
-            'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-          ],
+          result: this.returnEmptyUsedAddresses
+            ? []
+            : [
+                'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
+              ],
+        } as any,
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      };
+    }
+
+    if (msg.type === 'GET_CHANGE_ADDRESS') {
+      return {
+        id: msg.id || 'res_change',
+        type: 'RPC_RESPONSE',
+        payload: {
+          requestId: msg.id,
+          result: 'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -174,6 +190,14 @@ describe('formatShortAddress', () => {
   it('giữ nguyên chuỗi nếu địa chỉ quá ngắn', () => {
     expect(formatShortAddress('addr1short', 6, 4)).toBe('addr1short');
   });
+
+  it('xử lý chính xác các trường hợp biên như endChars = 0 hoặc tham số âm', () => {
+    const fullAddr =
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
+    expect(formatShortAddress(fullAddr, 6, 0)).toBe('addr1q...');
+    expect(formatShortAddress(fullAddr, 0, 4)).toBe('...5a3x');
+    expect(formatShortAddress(fullAddr, -2, -3)).toBe('...');
+  });
 });
 
 describe('useWalletBridgeClient', () => {
@@ -181,6 +205,7 @@ describe('useWalletBridgeClient', () => {
   let client: WalletBridgeClient;
 
   beforeEach(() => {
+    (globalThis as any).window = globalThis;
     setSharedWalletBridgeClient(null);
     mockTransport = new MockTransport();
     client = new WalletBridgeClient({
@@ -195,6 +220,7 @@ describe('useWalletBridgeClient', () => {
   afterEach(() => {
     client.destroy();
     setSharedWalletBridgeClient(null);
+    delete (globalThis as any).window;
   });
 
   it('khởi tạo với trạng thái ban đầu an toàn (chưa kết nối)', () => {
@@ -340,20 +366,83 @@ describe('useWalletBridgeClient', () => {
     expect(capturedComposable!.isAudioMuted.value).toBe(false);
   });
 
-  it('an toàn tuyệt đối trong môi trường SSR (window is undefined)', () => {
+  it('tự động fallback sang getChangeAddress khi usedAddresses rỗng', async () => {
+    mockTransport.returnEmptyUsedAddresses = true;
+    const { address, init } = useWalletBridgeClient({ client });
+
+    await init();
+    expect(address.value).toBe(
+      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999'
+    );
+  });
+
+  it('khởi tạo với client đã kết nối đồng bộ chính xác theme và isAudioMuted ban đầu', async () => {
+    // Kết nối client trước
+    await client.init();
+    // Giả lập client đang có theme và muted
+    (client as any)._theme = 'light';
+    (client as any)._isAudioMuted = true;
+
+    const { theme, isAudioMuted, isConnected } = useWalletBridgeClient({ client });
+
+    expect(isConnected.value).toBe(true);
+    expect(theme.value).toBe('light');
+    expect(isAudioMuted.value).toBe(true);
+  });
+
+  it('lắng nghe HOST_ACK và tự động cập nhật trạng thái kết nối sang connected', async () => {
+    const { connectionState, isConnected, hostInfo } = useWalletBridgeClient({ client });
+
+    expect(connectionState.value).toBe('disconnected');
+    expect(isConnected.value).toBe(false);
+
+    // Host Shell phát HOST_ACK
+    mockTransport.simulateMessage({
+      id: 'ack_unsolicited',
+      type: 'HOST_ACK',
+      payload: {
+        appCenterVersion: '2.0.0',
+        walletSupported: true,
+        theme: 'dark',
+        audioMuted: true,
+      } as any,
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+
+    expect(connectionState.value).toBe('connected');
+    expect(isConnected.value).toBe(true);
+    expect(hostInfo.value).toEqual(
+      expect.objectContaining({
+        appCenterVersion: '2.0.0',
+        walletSupported: true,
+      })
+    );
+  });
+
+  it('an toàn tuyệt đối trong môi trường SSR (window is undefined) và không gắn listeners vào client', () => {
     const originalWindow = globalThis.window;
     try {
       // Giả lập SSR
       (globalThis as any).window = undefined;
 
+      const ssrClient = new WalletBridgeClient({
+        transport: mockTransport,
+        isIframeFn: () => true,
+      });
+
       const composable = useWalletBridgeClient({
-        client,
+        client: ssrClient,
       });
 
       expect(composable.isConnected.value).toBe(false);
       expect(composable.address.value).toBeNull();
       expect(composable.shortAddress.value).toBe('');
       expect(composable.balanceADA.value).toBeNull();
+
+      // Kiểm tra không có listener nào bị rò rỉ vào client trong môi trường SSR
+      const listenersMap = (ssrClient as any).eventListeners as Map<string, Set<any>>;
+      expect(listenersMap.size).toBe(0);
     } finally {
       (globalThis as any).window = originalWindow;
     }

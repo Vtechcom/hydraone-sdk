@@ -47,9 +47,18 @@ export function setSharedGameAuthManager(authManager: GameAuthManager | null): v
  * @returns Object chứa các reactive refs, computed properties và actions
  */
 export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
-  // 1. Xác định instance GameAuthManager
+  // 1. Xác định instance GameAuthManager (ưu tiên authManager -> client riêng -> shared manager)
   const authManager: GameAuthManager =
-    options?.authManager ?? getSharedGameAuthManager(options);
+    options?.authManager ??
+    (options?.client
+      ? new GameAuthManager({
+          client: options.client,
+          storage:
+            typeof window !== 'undefined'
+              ? new SafeLocalStorageAdapter()
+              : new InMemoryStorageAdapter(),
+        })
+      : getSharedGameAuthManager(options));
 
   // 2. Lấy trạng thái hiện tại
   const initialState: AuthState = authManager.state;
@@ -77,18 +86,23 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
     error.value = state.error ?? null;
   };
 
-  // 5. Đăng ký lắng nghe sự kiện AUTH_STATE_CHANGED từ AuthManager
-  const unsubscribe = authManager.onAuthStateChanged((newState: AuthState) => {
-    syncState(newState);
-  });
+  // 5. Đăng ký lắng nghe sự kiện AUTH_STATE_CHANGED từ AuthManager (chỉ chạy ở client-side để tránh rò rỉ SSR)
+  let unsubscribe: (() => void) | undefined;
+  if (typeof window !== 'undefined') {
+    unsubscribe = authManager.onAuthStateChanged((newState: AuthState) => {
+      syncState(newState);
+    });
+  }
 
   // 6. Tự động dọn dẹp listener khi reactive scope hoặc component bị hủy (onScopeDispose)
   if (getCurrentScope()) {
     onScopeDispose(() => {
-      try {
-        unsubscribe();
-      } catch {
-        // Bỏ qua lỗi khi unsubscribe
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch {
+          // Bỏ qua lỗi khi unsubscribe
+        }
       }
     });
   }

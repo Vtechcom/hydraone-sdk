@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 10:31
+last_updated: 10-08-2026 10:54
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -54,7 +54,7 @@ development_status:
 
   epic-4: in-progress
   4-1-cardano-domain-utilities-subpath: done
-  4-2-vue-3-nuxt-headless-composable-adapter: review
+  4-2-vue-3-nuxt-headless-composable-adapter: done
   4-3-react-next-js-headless-hooks-adapter: backlog
   4-4-phaser-3-event-emitter-game-plugin: backlog
   epic-4-retrospective: optional

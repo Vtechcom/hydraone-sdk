@@ -39,6 +39,7 @@ describe('useGameAuth', () => {
   let authManager: GameAuthManager;
 
   beforeEach(() => {
+    (globalThis as any).window = globalThis;
     setSharedGameAuthManager(null);
     mockClient = new MockAuthClient();
     storage = new InMemoryStorageAdapter();
@@ -60,6 +61,7 @@ describe('useGameAuth', () => {
   afterEach(() => {
     authManager.destroy();
     setSharedGameAuthManager(null);
+    delete (globalThis as any).window;
   });
 
   it('khởi tạo với trạng thái chưa đăng nhập an toàn', () => {
@@ -169,18 +171,35 @@ describe('useGameAuth', () => {
     expect(capturedAuth!.isAuthenticated.value).toBe(true);
   });
 
-  it('an toàn tuyệt đối trong môi trường SSR (window is undefined)', () => {
+  it('an toàn tuyệt đối trong môi trường SSR (window is undefined) và không gắn listeners vào authManager', () => {
     const originalWindow = globalThis.window;
     try {
       (globalThis as any).window = undefined;
 
-      const composable = useGameAuth({ authManager });
+      const ssrAuthManager = new GameAuthManager({
+        client: mockClient,
+        storage,
+      });
+
+      const composable = useGameAuth({ authManager: ssrAuthManager });
       expect(composable.isAuthenticated.value).toBe(false);
       expect(composable.jwtToken.value).toBeNull();
       expect(composable.isExpired.value).toBe(true);
+
+      // Xác minh không có listener nào bị rò rỉ vào authManager trong môi trường SSR
+      const listeners = (ssrAuthManager as any).listeners as Set<any>;
+      expect(listeners.size).toBe(0);
     } finally {
       (globalThis as any).window = originalWindow;
     }
+  });
+
+  it('tôn trọng options.client riêng biệt khi truyền vào useGameAuth', () => {
+    const customClient = new MockAuthClient();
+    customClient.address = 'addr1qcustomclient99999999999999999999999999999999999999999999999999999';
+
+    const { authManager: customAuthManager } = useGameAuth({ client: customClient as any });
+    expect((customAuthManager as any).client).toBe(customClient);
   });
 
   it('ghi nhận lỗi vào error.value khi signIn() thất bại', async () => {

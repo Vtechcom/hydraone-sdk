@@ -50,5 +50,7 @@ describe('Build Output Verification', () => {
     expect(vueEsmContent).toContain('useWalletBridgeClient');
     expect(vueEsmContent).toContain('useGameAuth');
     expect(vueEsmContent).toContain('formatShortAddress');
+    // Đảm bảo vue là external peer dependency, không bị đóng gói trực tiếp vào dist/vue/index.js
+    expect(vueEsmContent).toMatch(/from ["']vue["']/);
   });
 });

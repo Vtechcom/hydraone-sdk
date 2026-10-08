@@ -5,7 +5,7 @@ created: '2026-10-08'
 status: 'done'
 baseline_commit: '01b6ca77d08781de32b154856ac0fe9f5fedb032'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-4-context.md'
@@ -72,6 +72,20 @@ context:
 - [x] `src/vue/index.ts` -- Xuất khẩu public API của subpath `@hydraone/sdk/vue` -- Hoàn thiện entrypoint của module
 - [x] `tests/vue/useWalletBridgeClient.test.ts` & `tests/vue/useGameAuth.test.ts` -- Viết bộ unit tests toàn diện bao phủ ma trận I/O, reactivity, SSR guard và unmount cleanup -- Xác minh tính đúng đắn theo tiêu chuẩn chất lượng
 - [x] `tests/build.test.ts` -- Bổ sung kiểm tra build artifacts cho subpath `@hydraone/sdk/vue` -- Đảm bảo quy trình đóng gói hoàn tất thành công
+
+### Review Findings
+
+- [x] [Review][Patch] Prevent SSR event listener memory leaks by gating listener registrations in useWalletBridgeClient and useGameAuth with typeof window !== 'undefined' [src/vue/useWalletBridgeClient.ts:243] [src/vue/useGameAuth.ts:80]
+- [x] [Review][Patch] Eliminate redundant duplicate event listener registrations for AUDIO_MUTED_CHANGED and THEME_CHANGED [src/vue/useWalletBridgeClient.ts:248]
+- [x] [Review][Patch] Guard formatShortAddress against zero or negative endChars parameter causing duplicated string suffix [src/vue/useWalletBridgeClient.ts:70]
+- [x] [Review][Patch] Initialize isAudioMuted and theme refs from existing client state when instantiated with an active client [src/vue/useWalletBridgeClient.ts:102]
+- [x] [Review][Patch] Register HOST_ACK event listener in useWalletBridgeClient to synchronize connection state upon host handshake [src/vue/useWalletBridgeClient.ts:243]
+- [x] [Review][Patch] Ensure useGameAuth honors custom options.client rather than returning singleton bound to default client [src/vue/useGameAuth.ts:51]
+- [x] [Review][Patch] Catch refreshBalance errors in init() gracefully to avoid rejecting successful wallet connection [src/vue/useWalletBridgeClient.ts:288]
+- [x] [Review][Patch] Add regression unit tests and build verification for external Vue bundle isolation and edge cases [tests/build.test.ts:49] [tests/vue/useWalletBridgeClient.test.ts:175]
+
+#### Rejected Findings
+- [Rejected][False] refreshBalance returns '0' when disconnected while setting balanceADA ref to null -- '0' is an explicit fallback string satisfying Promise<string> return type; ref distinction is intentional.
 
 **Acceptance Criteria:**
 - Given ứng dụng Vue 3 (3.5+) hoặc Nuxt 3/4 cài đặt `@hydraone/sdk/vue`, when gọi `const { isConnected, address, shortAddress, balanceADA } = useWalletBridgeClient()`, then `isConnected` và `address` là các Vue reactive `Ref`s tự động cập nhật khi trạng thái ví thay đổi.

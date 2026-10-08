@@ -67,10 +67,14 @@ export function formatShortAddress(
   if (trimmed === '') {
     return '';
   }
-  if (trimmed.length <= startChars + endChars + 3) {
+  const validStart = Math.max(0, startChars);
+  const validEnd = Math.max(0, endChars);
+  if (trimmed.length <= validStart + validEnd + 3) {
     return trimmed;
   }
-  return `${trimmed.slice(0, startChars)}...${trimmed.slice(-endChars)}`;
+  const prefix = validStart > 0 ? trimmed.slice(0, validStart) : '';
+  const suffix = validEnd > 0 ? trimmed.slice(-validEnd) : '';
+  return `${prefix}...${suffix}`;
 }
 
 /**
@@ -99,8 +103,8 @@ export function useWalletBridgeClient(
   const balanceLovelace = ref<bigint | null>(null);
   const networkId = ref<number | null>(null);
   const hostInfo = ref<HostInfo | null>(client.hostInfo ?? null);
-  const isAudioMuted = ref<boolean>(false);
-  const theme = ref<ThemeMode | null>(null);
+  const isAudioMuted = ref<boolean>(client.isAudioMuted ?? false);
+  const theme = ref<ThemeMode | null>(client.theme ?? null);
   const error = ref<Error | null>(null);
 
   // 3. Computed rút gọn địa chỉ ví
@@ -166,94 +170,82 @@ export function useWalletBridgeClient(
     }
   };
 
-  // 5. Đăng ký các event listeners theo dõi trạng thái từ Client
+  // 5. Đăng ký các event listeners theo dõi trạng thái từ Client (chỉ chạy ở client-side để tránh rò rỉ bộ nhớ SSR)
   const cleanups: Array<() => void> = [];
 
-  const onConnStateChanged = (state: ConnectionState) => {
-    connectionState.value = state;
-    isConnected.value = state === 'connected';
-    hostInfo.value = client.hostInfo ?? null;
+  if (typeof window !== 'undefined') {
+    const onConnStateChanged = (state: ConnectionState) => {
+      connectionState.value = state;
+      isConnected.value = state === 'connected';
+      hostInfo.value = client.hostInfo ?? null;
 
-    if (state === 'connected') {
-      refreshAddress().catch(() => {});
-      if (options?.autoRefreshBalance !== false) {
-        refreshBalance().catch(() => {});
+      if (state === 'connected') {
+        refreshAddress().catch(() => {});
+        if (options?.autoRefreshBalance !== false) {
+          refreshBalance().catch(() => {});
+        }
+      } else if (state === 'disconnected' || state === 'error') {
+        address.value = null;
+        usedAddresses.value = [];
+        balanceADA.value = null;
+        balanceLovelace.value = null;
       }
-    } else if (state === 'disconnected' || state === 'error') {
+    };
+
+    const onAccountChanged = (addrs: string[]) => {
+      if (Array.isArray(addrs)) {
+        usedAddresses.value = addrs;
+        address.value = addrs[0] ?? null;
+        if (options?.autoRefreshBalance !== false) {
+          refreshBalance().catch(() => {});
+        }
+      }
+    };
+
+    const onNetworkChanged = (netId: number) => {
+      networkId.value = netId;
+    };
+
+    const onDisconnected = () => {
+      connectionState.value = 'disconnected';
+      isConnected.value = false;
       address.value = null;
       usedAddresses.value = [];
       balanceADA.value = null;
       balanceLovelace.value = null;
-    }
-  };
+    };
 
-  const onAccountChanged = (addrs: string[]) => {
-    if (Array.isArray(addrs)) {
-      usedAddresses.value = addrs;
-      address.value = addrs[0] ?? null;
+    const onHostAck = (_payload: unknown) => {
+      connectionState.value = 'connected';
+      isConnected.value = true;
+      hostInfo.value = client.hostInfo ?? null;
+      if (client.theme !== undefined) {
+        theme.value = client.theme;
+      }
+      if (client.isAudioMuted !== undefined) {
+        isAudioMuted.value = client.isAudioMuted;
+      }
+      refreshAddress().catch(() => {});
       if (options?.autoRefreshBalance !== false) {
         refreshBalance().catch(() => {});
       }
-    }
-  };
+    };
 
-  const onNetworkChanged = (netId: number) => {
-    networkId.value = netId;
-  };
+    // Gắn listeners vào client
+    cleanups.push(client.on('HOST_ACK', onHostAck));
+    cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
+    cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
+    cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
+    cleanups.push(client.onAudioMutedChanged((muted) => { isAudioMuted.value = muted; }));
+    cleanups.push(client.onThemeChanged((newTheme) => { theme.value = newTheme; }));
+    cleanups.push(client.on('DISCONNECTED', onDisconnected));
 
-  const onAudioMutedChanged = (payload: unknown) => {
-    if (typeof payload === 'boolean') {
-      isAudioMuted.value = payload;
-    } else if (
-      payload &&
-      typeof payload === 'object' &&
-      'muted' in payload &&
-      typeof (payload as any).muted === 'boolean'
-    ) {
-      isAudioMuted.value = (payload as any).muted;
-    }
-  };
-
-  const onThemeChanged = (payload: unknown) => {
-    const raw =
-      typeof payload === 'string'
-        ? payload.trim().toLowerCase()
-        : payload &&
-            typeof payload === 'object' &&
-            'theme' in payload &&
-            typeof (payload as any).theme === 'string'
-          ? (payload as any).theme.trim().toLowerCase()
-          : undefined;
-
-    if (raw === 'dark' || raw === 'light') {
-      theme.value = raw as ThemeMode;
-    }
-  };
-
-  const onDisconnected = () => {
-    connectionState.value = 'disconnected';
-    isConnected.value = false;
-    address.value = null;
-    usedAddresses.value = [];
-    balanceADA.value = null;
-    balanceLovelace.value = null;
-  };
-
-  // Gắn listeners vào client
-  cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
-  cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
-  cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
-  cleanups.push(client.onAudioMutedChanged((muted) => { isAudioMuted.value = muted; }));
-  cleanups.push(client.onThemeChanged((newTheme) => { theme.value = newTheme; }));
-  cleanups.push(client.on('AUDIO_MUTED_CHANGED', onAudioMutedChanged));
-  cleanups.push(client.on('THEME_CHANGED', onThemeChanged));
-  cleanups.push(client.on('DISCONNECTED', onDisconnected));
-
-  // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
-  if (client.isConnected) {
-    refreshAddress().catch(() => {});
-    if (options?.autoRefreshBalance !== false) {
-      refreshBalance().catch(() => {});
+    // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
+    if (client.isConnected) {
+      refreshAddress().catch(() => {});
+      if (options?.autoRefreshBalance !== false) {
+        refreshBalance().catch(() => {});
+      }
     }
   }
 
@@ -287,7 +279,12 @@ export function useWalletBridgeClient(
       }
       await refreshAddress();
       if (options?.autoRefreshBalance !== false) {
-        await refreshBalance();
+        try {
+          await refreshBalance();
+        } catch (balErr: any) {
+          // Ghi nhận lỗi lấy số dư vào ref error nhưng không làm crash trạng thái kết nối đã handshake thành công
+          error.value = balErr instanceof Error ? balErr : new Error(String(balErr));
+        }
       }
     } catch (err: any) {
       const errObj = err instanceof Error ? err : new Error(String(err));
