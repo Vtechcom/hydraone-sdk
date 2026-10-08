@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 16:00
+last_updated: 10-08-2026 16:38
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -59,10 +59,10 @@ development_status:
   4-4-phaser-3-event-emitter-game-plugin: backlog
   epic-4-retrospective: optional
 
-  epic-5: in-progress
+  epic-5: done
   5-1-mockbridgehost-engine: done
   5-2-floating-devtools-ui-widget: done
-  5-3-bridge-health-diagnostics-suite: backlog
+  5-3-bridge-health-diagnostics-suite: done
   epic-5-retrospective: optional
 
   epic-6: backlog

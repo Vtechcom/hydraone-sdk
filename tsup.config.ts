@@ -7,6 +7,7 @@ export default defineConfig({
     'vue/index': 'src/vue/index.ts',
     'react/index': 'src/react/index.ts',
     'simulator/index': 'src/simulator/index.ts',
+    'diagnostics/index': 'src/diagnostics/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

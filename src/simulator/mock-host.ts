@@ -658,6 +658,14 @@ export class MockBridgeHost {
       };
     }
 
+    // 1.1 Ping-Pong Diagnostic Response
+    if (type === 'PING') {
+      return this.createRpcResponse(id, {
+        pong: true,
+        timestamp: Date.now(),
+      });
+    }
+
     // 2. CIP-30 State Queries & Signing
     const cip30Operations = [
       'GET_BALANCE',

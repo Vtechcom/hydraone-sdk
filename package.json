@@ -32,6 +32,11 @@
       "import": "./dist/simulator/index.js",
       "require": "./dist/simulator/index.cjs"
     },
+    "./diagnostics": {
+      "types": "./dist/diagnostics/index.d.ts",
+      "import": "./dist/diagnostics/index.js",
+      "require": "./dist/diagnostics/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

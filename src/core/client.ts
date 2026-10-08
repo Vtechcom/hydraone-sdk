@@ -37,6 +37,8 @@ import {
   DirectExtensionTransport,
   detectCardanoWallets,
 } from './adapters/direct-extension-transport';
+import { checkBridgeHealth } from '../diagnostics/health-check';
+import type { BridgeHealthReport, CheckHealthOptions } from '../diagnostics/types';
 
 /**
  * Sinh ID duy nhất cho mỗi yêu cầu RPC ngẫu nhiên và an toàn
@@ -73,6 +75,7 @@ interface PendingRequest<T = unknown> {
 export class WalletBridgeClient {
   public transport?: ITransport;
   public readonly handshakeTimeoutMs: number;
+  public readonly pingTimeoutMs: number;
   public readonly queryTimeoutMs: number;
   public readonly signingTimeoutMs: number;
   public readonly fallbackToExtension: boolean;
@@ -100,6 +103,7 @@ export class WalletBridgeClient {
 
     this.transport = options.transport;
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
+    this.pingTimeoutMs = TIERED_TIMEOUTS.PING;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
     this.fallbackToExtension = options.fallbackToExtension ?? false;
@@ -1303,6 +1307,57 @@ export class WalletBridgeClient {
       return result;
     }
     return {} as PlayerProfile;
+  }
+
+  // ==========================================
+  // Bridge Health Diagnostics Suite (Story 5.3)
+  // ==========================================
+
+  /**
+   * Gửi bản tin PING tới Host Shell và đợi phản hồi để đo lường độ trễ roundtrip
+   * 
+   * @param options Tùy chọn truy vấn { timeoutMs }
+   * @returns Thông tin phản hồi pong và timestamp
+   */
+  public async ping(options?: QueryOptions): Promise<{ pong: boolean; timestamp: number }> {
+    if (this.isStandaloneBrowser()) {
+      throw new HydraBridgeError(
+        'PostMessage Host Shell is not available outside App Center iframe',
+        ERROR_CODES.ERR_NOT_IN_IFRAME
+      );
+    }
+
+    this.assertConnected();
+
+    const timeout = options?.timeoutMs ?? this.pingTimeoutMs;
+    const message: BridgeMessage = {
+      id: generateId(),
+      type: 'PING',
+      payload: {},
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    const result = await this.executeRpc<{ pong: boolean; timestamp: number }>(message, timeout);
+    if (result && typeof result === 'object' && 'pong' in result) {
+      return result;
+    }
+    return { pong: true, timestamp: Date.now() };
+  }
+
+  /**
+   * Tự kiểm tra và chẩn đoán toàn diện sức khỏe kết nối cầu nối HydraOne
+   * 
+   * Kiểm tra tự động 3 hạng mục:
+   * 1. Thuộc tính quyền sandbox của iframe (`allow-scripts`, `allow-same-origin`)
+   * 2. Độ trễ 2 chiều postMessage (ping-pong roundtrip latency)
+   * 3. Tính sẵn sàng đọc/ghi của Storage (Local Storage & Host Storage Relay)
+   * 
+   * @param options Tùy chọn cấu hình kiểm tra
+   * @returns Báo cáo chẩn đoán chi tiết BridgeHealthReport
+   */
+  public async checkHealth(options?: CheckHealthOptions): Promise<BridgeHealthReport> {
+    return checkBridgeHealth(this, options);
   }
 
   /**

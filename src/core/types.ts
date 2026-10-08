@@ -7,6 +7,7 @@ import type { IStorage } from './ports/storage';
 export type BridgeMessageType =
   | 'CLIENT_READY'
   | 'HOST_ACK'
+  | 'PING'
   | 'GET_USED_ADDRESSES'
   | 'GET_UTXOS'
   | 'GET_BALANCE'
@@ -130,6 +131,8 @@ export interface PostMessageTransportOptions {
 export const TIERED_TIMEOUTS = {
   /** Thời gian chờ tối đa cho quá trình bắt tay handshake CLIENT_READY (3,000ms) */
   HANDSHAKE: 3000,
+  /** Thời gian chờ tối đa cho bản tin kiểm tra độ trễ PING (3,000ms) */
+  PING: 3000,
   /** Thời gian chờ mặc định cho các truy vấn trạng thái ví CIP-30 (15,000ms) */
   QUERY: 15000,
   /** Thời gian chờ cho các tác vụ tương tác người dùng / ký ví CIP-30 & CIP-8 (120,000ms) */

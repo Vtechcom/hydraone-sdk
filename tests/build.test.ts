@@ -85,5 +85,21 @@ describe('Build Output Verification', () => {
     expect(simulatorEsmContent).toContain('DevToolsWidget');
     expect(simulatorEsmContent).toContain('mountDevTools');
     expect(simulatorEsmContent).toContain('SafariItpStorageSimulator');
+
+    const diagnosticsEsm = path.join(distPath, 'diagnostics/index.js');
+    const diagnosticsCjs = path.join(distPath, 'diagnostics/index.cjs');
+    const diagnosticsDts = path.join(distPath, 'diagnostics/index.d.ts');
+
+    expect(fs.existsSync(diagnosticsEsm)).toBe(true);
+    expect(fs.existsSync(diagnosticsCjs)).toBe(true);
+    expect(fs.existsSync(diagnosticsDts)).toBe(true);
+
+    const diagnosticsEsmContent = fs.readFileSync(diagnosticsEsm, 'utf-8');
+    expect(diagnosticsEsmContent).toContain('checkBridgeHealth');
+    expect(diagnosticsEsmContent).toContain('checkIframeSandbox');
+    expect(diagnosticsEsmContent).toContain('checkPostMessageLatency');
+    expect(diagnosticsEsmContent).toContain('checkStorageHealth');
+
+    expect(esmContent).toContain('checkBridgeHealth');
   });
 });
