@@ -14,9 +14,6 @@ importers:
       react:
         specifier: '>=18.0.0'
         version: 19.3.0
-      vue:
-        specifier: '>=3.0.0'
-        version: 3.5.43(typescript@5.9.3)
     devDependencies:
       '@types/node':
         specifier: ^26.6.4
@@ -30,6 +27,9 @@ importers:
       vitest:
         specifier: ^3.0.7
         version: 3.2.7(@types/node@26.6.4)
+      vue:
+        specifier: ^3.5.43
+        version: 3.5.43(typescript@5.9.3)
 
 packages:
 

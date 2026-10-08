@@ -285,17 +285,19 @@ So that I can calculate Lovelace and multi-asset quantities without floating-poi
 **And** `getAdaBalance(utxos)` converts Lovelace to decimal ADA string without scientific notation or floating-point rounding errors
 **And** `getAssetQuantity(utxos, policyId, assetName)` parses and returns the token quantity as a `bigint`.
 
-### Story 4.2: Vue 3 / Nuxt 3 Headless Composable Adapter (@hydraone/sdk/vue)
-As a Vue 3 / Nuxt 3 Game Developer,
+### Story 4.2: Vue 3 / Nuxt 3 & Nuxt 4 Headless Composable Adapter (@hydraone/sdk/vue)
+As a Vue 3.5+ / Nuxt 3 / Nuxt 4 Game Developer,
 I want reactive composables `useWalletBridgeClient` and `useGameAuth`,
-So that I can bind wallet connection states and user balances directly to Vue templates.
+So that I can bind wallet connection states and user balances directly to Vue templates with full SSR safety.
 
 **Acceptance Criteria:**
-**Given** a Vue 3 or Nuxt 3 application with `@hydraone/sdk/vue` installed
+**Given** a Vue 3 (3.5+) or Nuxt (Nuxt 3 / Nuxt 4) application with `@hydraone/sdk/vue` installed
 **When** calling `const { isConnected, address, shortAddress, balanceADA } = useWalletBridgeClient()`
 **Then** `isConnected` and `address` are reactive `Ref`s that update automatically when wallet status changes
 **And** `shortAddress` computed property formats `addr1q...` into truncated display string (e.g. `addr1q...4xyz`)
-**And** `useGameAuth()` provides reactive `isAuthenticated`, `jwtToken`, `login()`, `logout()`.
+**And** `useGameAuth()` provides reactive `isAuthenticated`, `jwtToken`, `login()`, `logout()`
+**And** composables are SSR-safe (do not crash or access `window` during Nuxt SSR hydration/render cycle)
+**And** composables clean up event listeners via `onScopeDispose` when the component or reactive scope unmounts.
 
 ### Story 4.3: React / Next.js Headless Hooks Adapter (@hydraone/sdk/react)
 As a React / Next.js Game Developer,

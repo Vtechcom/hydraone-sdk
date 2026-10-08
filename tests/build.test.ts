@@ -37,5 +37,18 @@ describe('Build Output Verification', () => {
     expect(cardanoEsmContent).toContain('getAssetQuantity');
     expect(cardanoEsmContent).toContain('stringToHex');
     expect(cardanoEsmContent).toContain('hexToString');
+
+    const vueEsm = path.join(distPath, 'vue/index.js');
+    const vueCjs = path.join(distPath, 'vue/index.cjs');
+    const vueDts = path.join(distPath, 'vue/index.d.ts');
+
+    expect(fs.existsSync(vueEsm)).toBe(true);
+    expect(fs.existsSync(vueCjs)).toBe(true);
+    expect(fs.existsSync(vueDts)).toBe(true);
+
+    const vueEsmContent = fs.readFileSync(vueEsm, 'utf-8');
+    expect(vueEsmContent).toContain('useWalletBridgeClient');
+    expect(vueEsmContent).toContain('useGameAuth');
+    expect(vueEsmContent).toContain('formatShortAddress');
   });
 });

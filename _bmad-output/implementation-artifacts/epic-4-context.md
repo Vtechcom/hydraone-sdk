@@ -9,7 +9,7 @@ Lập trình viên Vue, React hoặc Phaser có thể sử dụng các composabl
 ## Stories
 
 - Story 4.1: Cardano Domain Utilities Subpath (@hydraone/sdk/cardano)
-- Story 4.2: Vue 3 / Nuxt 3 Headless Composable Adapter (@hydraone/sdk/vue)
+- Story 4.2: Vue 3 / Nuxt 3 & Nuxt 4 Headless Composable Adapter (@hydraone/sdk/vue)
 - Story 4.3: React / Next.js Headless Hooks Adapter (@hydraone/sdk/react)
 - Story 4.4: Phaser 3 Event Emitter Game Plugin (@hydraone/sdk/phaser)
 
@@ -21,7 +21,7 @@ Lập trình viên Vue, React hoặc Phaser có thể sử dụng các composabl
   - Chuyển đổi Lovelace thành chuỗi thập phân ADA chuẩn xác mà không dùng ký hiệu số mũ khoa học (scientific notation).
   - Hợp nhất và re-export các tiện ích chuyển đổi `stringToHex` và `hexToString` từ subpath `@hydraone/sdk/cardano` (theo action item Retro Epic 2).
 - **Headless Framework Adapters (FR-5.1, FR-5.2, FR-5.3, UX-DR-1)**:
-  - Vue 3 / Nuxt 3: Cung cấp `useWalletBridgeClient` và `useGameAuth` trả về reactive `Ref`s, tự động cập nhật khi trạng thái ví/auth thay đổi.
+  - Vue 3 / Nuxt (Vue 3.5+, Nuxt 3.x, Nuxt 4.x): Cung cấp `useWalletBridgeClient` và `useGameAuth` trả về reactive `Ref`s, tự động cập nhật khi trạng thái ví/auth thay đổi. Hỗ trợ đầy đủ SSR-safe (tránh lỗi `window is not defined` trong môi trường server của Nuxt) và tự động dọn dẹp bộ nhớ (auto-cleanup với `onScopeDispose` / `onUnmounted`).
   - React / Next.js: Cung cấp `<HydraOneProvider>`, hooks `useWallet()`, `useHydraAuth()`, `useHostStorage()`.
   - Phaser 3: Cung cấp Event Emitter / Plugin tích hợp trực tiếp vào vòng lặp game của Phaser Scene.
   - Nguyên tắc Headless: Không áp đặt bất kỳ UI cố định nào lên dApp của lập trình viên.

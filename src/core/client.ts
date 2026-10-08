@@ -913,6 +913,16 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Alias ngắn gọn cho onHostEvent
+   */
+  public on<T = any>(
+    type: string,
+    handler: (payload: T) => void
+  ): UnsubscribeFn {
+    return this.onHostEvent(type, handler);
+  }
+
+  /**
    * Đăng ký lắng nghe sự kiện thay đổi trạng thái tắt tiếng âm thanh từ Host Shell
    * 
    * @param handler Hàm callback nhận giá trị boolean (true nếu tắt tiếng, false nếu bật tiếng)
