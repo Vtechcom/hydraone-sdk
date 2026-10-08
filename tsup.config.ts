@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'cardano/index': 'src/cardano/index.ts',
     'vue/index': 'src/vue/index.ts',
+    'react/index': 'src/react/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
@@ -13,5 +14,5 @@ export default defineConfig({
   splitting: false,
   target: 'es2022',
   outDir: 'dist',
-  external: ['vue'],
+  external: ['vue', 'react', 'react-dom'],
 });

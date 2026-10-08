@@ -52,5 +52,22 @@ describe('Build Output Verification', () => {
     expect(vueEsmContent).toContain('formatShortAddress');
     // Đảm bảo vue là external peer dependency, không bị đóng gói trực tiếp vào dist/vue/index.js
     expect(vueEsmContent).toMatch(/from ["']vue["']/);
+
+    const reactEsm = path.join(distPath, 'react/index.js');
+    const reactCjs = path.join(distPath, 'react/index.cjs');
+    const reactDts = path.join(distPath, 'react/index.d.ts');
+
+    expect(fs.existsSync(reactEsm)).toBe(true);
+    expect(fs.existsSync(reactCjs)).toBe(true);
+    expect(fs.existsSync(reactDts)).toBe(true);
+
+    const reactEsmContent = fs.readFileSync(reactEsm, 'utf-8');
+    expect(reactEsmContent).toContain('HydraOneProvider');
+    expect(reactEsmContent).toContain('useWallet');
+    expect(reactEsmContent).toContain('useHydraAuth');
+    expect(reactEsmContent).toContain('useHostStorage');
+    expect(reactEsmContent).toContain('formatShortAddress');
+    // Đảm bảo react là external peer dependency, không bị đóng gói trực tiếp vào dist/react/index.js
+    expect(reactEsmContent).toMatch(/from ["']react["']/);
   });
 });
