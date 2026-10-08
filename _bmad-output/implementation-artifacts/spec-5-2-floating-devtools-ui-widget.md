@@ -5,7 +5,7 @@ created: '2026-10-08'
 status: 'done'
 baseline_commit: '47242a441acfa7024bb9e4f59bec29e33e96c8db'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-5-context.md'
@@ -80,6 +80,11 @@ context:
 
 ### Review Findings
 
+- [x] [Review][Patch] Store `options.container` in DevToolsWidget so parameterless `mount()` mounts to configured container [src/simulator/devtools-ui.ts:195]
+- [x] [Review][Patch] Restore Storage methods and lengthDescriptor cleanly in SafariItpStorageSimulator.disable() and intercept length getter [src/simulator/devtools-ui.ts:91, 136]
+- [x] [Review][Patch] Add custom latency input field and event handlers to fulfill spec latency input requirement [src/simulator/devtools-ui.ts:643]
+- [x] [Review][Patch] Support `theme: 'auto'` evaluating system prefers-color-scheme media query [src/simulator/devtools-ui.ts:730]
+- [x] [Review][Patch] Await `client.disconnect()` in disconnectMockWallet and query document-wide for duplicate host container [src/simulator/devtools-ui.ts:270, 453]
 - [x] [Review][Patch] Add missing `isWalletConnected?: boolean` to `MockBridgeHostOptions` [src/simulator/types.ts:43]
 - [x] [Review][Patch] Replace `any` types for `host` and `client` in `DevToolsWidgetOptions` with typed interfaces [src/simulator/types.ts:118]
 - [x] [Review][Patch] Remove existing container before appending to prevent duplicate `#hydra-devtools-host` on re-mount [src/simulator/devtools-ui.ts:273]
@@ -101,11 +106,11 @@ context:
 
 - Hiện thực thành công `DevToolsWidget`, `mountDevTools` và lớp tiện ích `SafariItpStorageSimulator` trong subpath độc lập `@hydraone/sdk/simulator`.
 - Widget được đóng gói hoàn toàn trong Shadow DOM (`attachShadow({ mode: 'open' })`) với CSS biệt lập, cung cấp giao diện nổi đa năng hỗ trợ thu gọn thành floating badge (kèm đèn LED chỉ báo trạng thái kết nối) hoặc mở rộng thành panel điều khiển.
-- Cung cấp đầy đủ các nút tương tác một chạm: "Connect Mock Wallet", "Disconnect", "Trigger Reject Next Signing", "Simulate Safari ITP Storage Block", bộ chọn độ trễ mạng giả lập (0ms, 500ms, 1000ms, 2000ms), và các broadcast toggle cho Theme và Audio của Host Shell.
+- Cung cấp đầy đủ các nút tương tác một chạm: "Connect Mock Wallet", "Disconnect", "Trigger Reject Next Signing", "Simulate Safari ITP Storage Block", bộ chọn độ trễ mạng giả lập (0ms, 500ms, 1000ms, 2000ms) kèm ô nhập ms tùy chỉnh ("Set" và Enter), và các broadcast toggle cho Theme và Audio của Host Shell.
 - Mở rộng `MockBridgeHost` với thuộc tính `isWalletConnected`, các hàm điều khiển `connectWallet()`, `disconnectWallet()`, `onStateChange()`, `notifyStateChange()`, và tự động trả về `ERR_NOT_CONNECTED` cho các truy vấn CIP-30 khi ví ngắt kết nối.
-- Hiện thực lớp `SafariItpStorageSimulator` can thiệp an toàn vào `globalThis.localStorage` bằng `Object.defineProperty` để mô phỏng chính xác `SecurityError` khi bật Safari ITP, đồng thời khôi phục trọn vẹn khi tắt hoặc hủy widget.
+- Hiện thực lớp `SafariItpStorageSimulator` can thiệp an toàn vào `globalThis.localStorage` bằng `Object.defineProperty` để mô phỏng chính xác `SecurityError` khi bật Safari ITP, đồng thời khôi phục trọn vẹn methods và `length` khi tắt hoặc hủy widget.
 - An toàn tuyệt đối trong môi trường SSR/Node.js khi không có `document`.
-- Toàn bộ 32 tests trong `tests/simulator/devtools-ui.test.ts` pass 100%, nâng tổng số test của SDK lên 432 tests (19 test suites) pass 100%. TypeScript strict 100%, build tsup sinh đầy đủ ESM, CJS và DTS.
+- Toàn bộ 37 tests trong `tests/simulator/devtools-ui.test.ts` pass 100%, nâng tổng số test của SDK lên 437 tests (19 test suites) pass 100%. TypeScript strict 100%, build tsup sinh đầy đủ ESM, CJS và DTS.
 
 ## Spec Change Log
 
@@ -122,6 +127,12 @@ context:
 | RV-5-2-07 | edge-case-hunter | Khi `MockBridgeHost.storageBlock` bị thay đổi từ bên ngoài qua code, `SafariItpStorageSimulator` không tự động đồng bộ. | medium | patch | Bổ sung logic đồng bộ `storageSimulator` trong callback `onStateChange` khi `interceptLocalStorage` bật. |
 | RV-5-2-08 | edge-case-hunter | Khi gọi `rejectNext('')` với chuỗi rỗng, `checkRejection` gán message lỗi rỗng. | low | patch | Bổ sung fallback về `'User rejected the wallet operation'` khi lý do là chuỗi rỗng/chỉ chứa khoảng trắng. |
 | RV-5-2-09 | verification-gap | Bổ sung test cases bao phủ `isWalletConnected: false`, HMR mount duplicate cleanup, external storageBlock sync, và empty rejectNext reason. | low | patch | Đã bổ sung 5 unit tests mới trong `tests/simulator/devtools-ui.test.ts` pass 100%. |
+| RV-5-2-10 | blind-hunter | `options.container` không được lưu trong `DevToolsWidget`, gọi `mount()` không đối số bị bỏ qua container đã cấu hình. | high | patch | Lưu `this.container = options.container` và sử dụng trong `mount()`. |
+| RV-5-2-11 | edge-case-hunter | `SafariItpStorageSimulator.enable()` bỏ qua getter `length`, và `disable()` cần khôi phục `length` descriptor. | medium | patch | Bổ sung lưu trữ `lengthDescriptor` và khôi phục trong `disable()`. |
+| RV-5-2-12 | acceptance-auditor | Thiếu ô nhập ms tùy chỉnh trong phần điều khiển latency trên panel UI theo yêu cầu spec. | medium | patch | Bổ sung input `input-custom-latency` cùng nút `btn-apply-latency` và sự kiện phím Enter. |
+| RV-5-2-13 | blind-hunter | `DevToolsTheme: 'auto'` không đánh giá system media query `prefers-color-scheme: dark`. | low | patch | Tích hợp `window.matchMedia('(prefers-color-scheme: dark)')` khi `theme === 'auto'`. |
+| RV-5-2-14 | edge-case-hunter | `disconnectMockWallet()` không `await` `this.client.disconnect()`, có nguy cơ unhandled promise rejection. | low | patch | Bổ sung `await this.client.disconnect()` và bắt lỗi an toàn. |
+| RV-5-2-15 | acceptance-auditor | Nút bật/tắt Rejection Mode vĩnh viễn trên UI: Spec chỉ yêu cầu "Trigger Reject Next Signing". | false | rejected | Spec Table chỉ yêu cầu nút one-shot trigger reject next; rejection mode dài hạn là API của MockHost. |
 
 ## Design Notes
 

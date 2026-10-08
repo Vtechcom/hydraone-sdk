@@ -18,7 +18,6 @@ import type {
  */
 export class SafariItpStorageSimulator {
   private originalMethods = new Map<Storage, {
-    hadOwnProperty: Set<string>;
     methods: {
       getItem?: (key: string) => string | null;
       setItem?: (key: string, value: string) => void;
@@ -26,6 +25,7 @@ export class SafariItpStorageSimulator {
       clear?: () => void;
       key?: (index: number) => string | null;
     };
+    lengthDescriptor?: PropertyDescriptor;
   }>();
 
   private _isActive = false;
@@ -87,16 +87,12 @@ export class SafariItpStorageSimulator {
       };
 
       for (const storage of storages) {
-        const hadOwnProperty = new Set<string>();
         const props = ['getItem', 'setItem', 'removeItem', 'clear', 'key'] as const;
-        for (const prop of props) {
-          if (Object.prototype.hasOwnProperty.call(storage, prop)) {
-            hadOwnProperty.add(prop);
-          }
-        }
+        const lengthDescriptor =
+          Object.getOwnPropertyDescriptor(storage, 'length') ||
+          Object.getOwnPropertyDescriptor(Object.getPrototypeOf(storage), 'length');
 
         this.originalMethods.set(storage, {
-          hadOwnProperty,
           methods: {
             getItem: storage.getItem ? storage.getItem.bind(storage) : undefined,
             setItem: storage.setItem ? storage.setItem.bind(storage) : undefined,
@@ -104,6 +100,7 @@ export class SafariItpStorageSimulator {
             clear: storage.clear ? storage.clear.bind(storage) : undefined,
             key: storage.key ? storage.key.bind(storage) : undefined,
           },
+          lengthDescriptor,
         });
 
         for (const prop of props) {
@@ -116,6 +113,15 @@ export class SafariItpStorageSimulator {
           } catch {
             // Ignored
           }
+        }
+
+        try {
+          Object.defineProperty(storage, 'length', {
+            configurable: true,
+            get: throwSecurityError,
+          });
+        } catch {
+          // Ignored
         }
       }
 
@@ -146,6 +152,14 @@ export class SafariItpStorageSimulator {
             } catch {
               (storage as any)[prop] = originalFn;
             }
+          }
+        }
+
+        if (data.lengthDescriptor) {
+          try {
+            Object.defineProperty(storage, 'length', data.lengthDescriptor);
+          } catch {
+            // Ignored
           }
         }
       }
@@ -182,6 +196,7 @@ export class DevToolsWidget {
   public readonly interceptLocalStorage: boolean;
   public readonly debug: boolean;
 
+  private readonly container?: HTMLElement;
   private readonly isInternalHost: boolean;
   private _isCollapsed: boolean;
   private _isMounted = false;
@@ -196,6 +211,7 @@ export class DevToolsWidget {
     this.isInternalHost = !options.host;
     this.host = options.host ?? new MockBridgeHost({ debug: options.debug });
     this.client = options.client;
+    this.container = options.container;
     this.position = options.position ?? 'bottom-right';
     this.theme = options.theme ?? 'dark';
     this.title = options.title ?? 'HydraOne DevTools';
@@ -258,7 +274,7 @@ export class DevToolsWidget {
       return this;
     }
 
-    const parent = targetContainer ?? (document.body || document.documentElement);
+    const parent = targetContainer ?? this.container ?? (document.body || document.documentElement);
     if (!parent) {
       if (this.debug) {
         console.warn('[DevToolsWidget] Target mount container not found');
@@ -266,8 +282,8 @@ export class DevToolsWidget {
       return this;
     }
 
-    // Gỡ bỏ container cũ nếu đã tồn tại trong parent để tránh nhân bản #hydra-devtools-host khi re-mount
-    const existing = parent.querySelector('#hydra-devtools-host');
+    // Gỡ bỏ container cũ nếu đã tồn tại trên toàn document để tránh nhân bản #hydra-devtools-host khi re-mount
+    const existing = document.querySelector('#hydra-devtools-host');
     if (existing && existing.parentNode) {
       existing.parentNode.removeChild(existing);
     }
@@ -450,7 +466,7 @@ export class DevToolsWidget {
     this.host.disconnectWallet();
     if (this.client && typeof this.client.disconnect === 'function') {
       try {
-        this.client.disconnect();
+        await this.client.disconnect();
       } catch (err) {
         if (this.debug) {
           console.warn('[DevToolsWidget] Client disconnect error:', err);
@@ -646,6 +662,18 @@ export class DevToolsWidget {
           <button class="btn-preset ${currentLatency === 1000 ? 'selected' : ''}" data-latency="1000">1000ms</button>
           <button class="btn-preset ${currentLatency === 2000 ? 'selected' : ''}" data-latency="2000">2000ms</button>
         </div>
+        <div class="custom-latency-row">
+          <input
+            type="number"
+            class="input-latency"
+            id="input-custom-latency"
+            placeholder="Custom ms"
+            min="0"
+            max="30000"
+            value="${currentLatency}"
+          />
+          <button class="btn btn-secondary btn-apply-latency" id="btn-apply-latency">Set</button>
+        </div>
 
         <!-- Section: Host Shell Lifecycle -->
         <div class="section-title">Host Shell Controls</div>
@@ -702,7 +730,7 @@ export class DevToolsWidget {
       btnToggleItp.addEventListener('click', () => this.toggleSafariItp());
     }
 
-    // 5. Latency Presets
+    // 5. Latency Presets & Custom Latency Input
     const presetButtons = this.shadow.querySelectorAll('.btn-preset');
     presetButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -713,6 +741,27 @@ export class DevToolsWidget {
         }
       });
     });
+
+    const btnApplyLatency = this.shadow.getElementById('btn-apply-latency');
+    const inputCustomLatency = this.shadow.getElementById('input-custom-latency') as HTMLInputElement | null;
+    const applyCustomLatency = () => {
+      if (inputCustomLatency) {
+        const parsed = parseInt(inputCustomLatency.value, 10);
+        if (!Number.isNaN(parsed)) {
+          this.setLatency(parsed);
+        }
+      }
+    };
+    if (btnApplyLatency) {
+      btnApplyLatency.addEventListener('click', applyCustomLatency);
+    }
+    if (inputCustomLatency) {
+      inputCustomLatency.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          applyCustomLatency();
+        }
+      });
+    }
 
     // 6. Host Lifecycle Broadcasts
     const btnToggleTheme = this.shadow.getElementById('btn-toggle-theme');
@@ -727,7 +776,16 @@ export class DevToolsWidget {
   }
 
   private getStyles(): string {
-    const isDark = this.theme !== 'light';
+    let isDark = this.theme === 'dark';
+    if (this.theme === 'auto') {
+      if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        isDark = true;
+      }
+    } else {
+      isDark = this.theme !== 'light';
+    }
 
     const bgPanel = isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)';
     const textPrimary = isDark ? '#f8fafc' : '#0f172a';
@@ -1095,7 +1153,33 @@ export class DevToolsWidget {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 4px;
+        margin-bottom: 6px;
+      }
+
+      .custom-latency-row {
+        display: flex;
+        gap: 6px;
         margin-bottom: 10px;
+      }
+
+      .input-latency {
+        flex: 1;
+        padding: 5px 8px;
+        border-radius: 6px;
+        border: 1px solid ${borderColor};
+        background: ${cardBg};
+        color: ${textPrimary};
+        font-size: 11px;
+        outline: none;
+      }
+
+      .input-latency:focus {
+        border-color: #38bdf8;
+      }
+
+      .btn-apply-latency {
+        width: 52px;
+        padding: 5px 8px;
       }
 
       .btn-preset {

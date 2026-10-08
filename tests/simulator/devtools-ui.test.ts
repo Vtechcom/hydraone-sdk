@@ -567,16 +567,94 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(rpcResponse?.payload?.error?.message).toBe('User rejected the wallet operation');
     });
 
-    it('SafariItpStorageSimulator.disable() khôi phục hoạt động lưu trữ của localStorage', () => {
+    it('SafariItpStorageSimulator.disable() khôi phục hoạt động lưu trữ và thuộc tính length của localStorage', () => {
       const sim = new SafariItpStorageSimulator();
       sim.enable();
       expect(sim.isActive).toBe(true);
       expect(() => localStorage.setItem('patch_key', 'val')).toThrowError(/Safari ITP/);
+      expect(() => localStorage.length).toThrowError(/Safari ITP/);
 
       sim.disable();
       expect(sim.isActive).toBe(false);
       expect(() => localStorage.setItem('patch_key', 'val')).not.toThrow();
       expect(localStorage.getItem('patch_key')).toBe('val');
+      expect(typeof localStorage.length).toBe('number');
+    });
+
+    it('new DevToolsWidget({ container: customContainer }).mount() gắn vào đúng container khi không truyền tham số', () => {
+      const customDiv = document.createElement('div');
+      customDiv.id = 'target-game-div';
+      document.body.appendChild(customDiv);
+
+      widget = new DevToolsWidget({ host, container: customDiv });
+      widget.mount(); // Không truyền tham số
+
+      expect(customDiv.querySelector('#hydra-devtools-host')).not.toBeNull();
+      expect(widget.element?.parentElement).toBe(customDiv);
+    });
+
+    it('nhập độ trễ tùy chỉnh qua input và click Set cập nhật latency trên MockBridgeHost', () => {
+      widget = mountDevTools({ host, defaultCollapsed: false });
+
+      const input = widget.shadowRoot?.querySelector('#input-custom-latency') as HTMLInputElement;
+      const btnSet = widget.shadowRoot?.querySelector('#btn-apply-latency') as HTMLButtonElement;
+
+      expect(input).not.toBeNull();
+      expect(btnSet).not.toBeNull();
+
+      input.value = '1750';
+      btnSet.click();
+
+      expect(host.getLatency()).toBe(1750);
+      expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('1750ms');
+    });
+
+    it('nhập độ trễ tùy chỉnh và nhấn Enter cập nhật latency', () => {
+      widget = mountDevTools({ host, defaultCollapsed: false });
+
+      const input = widget.shadowRoot?.querySelector('#input-custom-latency') as HTMLInputElement;
+      input.value = '350';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+      expect(host.getLatency()).toBe(350);
+      expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('350ms');
+    });
+
+    it('hỗ trợ theme: "auto" với prefers-color-scheme media query', () => {
+      const originalMatchMedia = window.matchMedia;
+      try {
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+          matches: query.includes('dark'),
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+
+        widget = mountDevTools({ host, theme: 'auto', defaultCollapsed: false });
+        expect(widget.shadowRoot?.querySelector('style')?.textContent).toContain('#f8fafc');
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+
+    it('disconnectMockWallet() xử lý an toàn khi client.disconnect() trả về Promise', async () => {
+      let resolved = false;
+      const asyncClient = {
+        disconnect: vi.fn().mockImplementation(async () => {
+          await new Promise((r) => setTimeout(r, 10));
+          resolved = true;
+        }),
+      };
+
+      widget = mountDevTools({ host, client: asyncClient });
+      await widget.disconnectMockWallet();
+
+      expect(asyncClient.disconnect).toHaveBeenCalled();
+      expect(resolved).toBe(true);
     });
   });
 });
