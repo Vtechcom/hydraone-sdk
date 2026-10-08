@@ -50,7 +50,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
       details: {
         isIframe: false,
         isStandalone: true,
-        origin: window.location.origin || window.origin,
+        origin: window.location?.origin || window.origin || '',
       },
       hint: 'If deploying to HydraOne App Center, ensure the game is embedded inside an iframe with sandbox="allow-scripts allow-same-origin".',
     };
@@ -83,7 +83,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
       const sandboxAttr = window.frameElement.getAttribute('sandbox');
       if (sandboxAttr !== null) {
         hasExplicitSandboxAttr = true;
-        sandboxTokens = sandboxAttr.split(/\s+/).filter(Boolean);
+        sandboxTokens = sandboxAttr.toLowerCase().split(/\s+/).filter(Boolean);
 
         const hasScripts = sandboxTokens.includes('allow-scripts');
         const hasSameOrigin = sandboxTokens.includes('allow-same-origin');
@@ -262,7 +262,8 @@ export async function checkPostMessageLatency(
 
     const isTimeout =
       err?.code === 'ERR_TIMEOUT' ||
-      (err?.message && String(err.message).toLowerCase().includes('time'));
+      err?.name === 'HydraTimeoutError' ||
+      (typeof err?.message === 'string' && /timed?\s*out|timeout/i.test(err.message));
 
     if (err?.code === 'ERR_NOT_IN_IFRAME') {
       return {
@@ -405,10 +406,11 @@ export async function checkStorageHealth(
     client?.storage ??
     (client?.getItem && client?.setItem ? client : undefined);
 
-  // Nếu client có transport nhưng chưa có storage adapter riêng, tự động tạo HostStorageRelayAdapter qua transport
-  if (!storageAdapter && client?.transport && typeof client.transport.send === 'function') {
+  // Nếu client có transport hoặc clientOrStorage chính là một ITransport (có hàm send)
+  const transport = client?.transport ?? (typeof client?.send === 'function' ? client : undefined);
+  if (!storageAdapter && transport && typeof transport.send === 'function') {
     try {
-      storageAdapter = new HostStorageRelayAdapter({ transport: client.transport });
+      storageAdapter = new HostStorageRelayAdapter({ transport });
     } catch {
       // bỏ qua
     }
@@ -521,16 +523,23 @@ export async function checkBridgeHealth(
     checks.push(sandboxCheck);
   }
 
-  // 2. Kiểm tra Độ trễ PostMessage (nếu không bỏ qua)
-  if (!options?.skipLatencyCheck) {
-    const latencyCheck = await checkPostMessageLatency(clientOrTransport, options);
-    checks.push(latencyCheck);
+  // 2. Chạy đồng thời kiểm tra độ trễ PostMessage và kiểm tra Storage để tối ưu hóa hiệu năng
+  const latencyPromise = !options?.skipLatencyCheck
+    ? checkPostMessageLatency(clientOrTransport, options)
+    : Promise.resolve(null);
+
+  const storagePromise = !options?.skipStorageCheck
+    ? checkStorageHealth(clientOrTransport, options)
+    : Promise.resolve(null);
+
+  const [latencyResult, storageResults] = await Promise.all([latencyPromise, storagePromise]);
+
+  if (latencyResult) {
+    checks.push(latencyResult);
   }
 
-  // 3. Kiểm tra Tính sẵn sàng Storage (nếu không bỏ qua)
-  if (!options?.skipStorageCheck) {
-    const storageChecks = await checkStorageHealth(clientOrTransport, options);
-    checks.push(...storageChecks);
+  if (storageResults) {
+    checks.push(...storageResults);
   }
 
   // Xác định trạng thái tổng thể

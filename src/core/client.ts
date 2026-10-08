@@ -103,7 +103,7 @@ export class WalletBridgeClient {
 
     this.transport = options.transport;
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
-    this.pingTimeoutMs = TIERED_TIMEOUTS.PING;
+    this.pingTimeoutMs = options.pingTimeoutMs ?? TIERED_TIMEOUTS.PING;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
     this.fallbackToExtension = options.fallbackToExtension ?? false;

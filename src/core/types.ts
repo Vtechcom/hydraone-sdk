@@ -188,6 +188,8 @@ export interface WalletBridgeClientOptions {
   transport?: ITransport;
   /** Thời gian chờ bắt tay handshake (ms), mặc định 3000ms */
   handshakeTimeoutMs?: number;
+  /** Thời gian chờ tối đa cho bản tin PING kiểm tra độ trễ (ms), mặc định 3000ms */
+  pingTimeoutMs?: number;
   /** Thời gian chờ mặc định cho các truy vấn trạng thái (ms), mặc định 15000ms */
   queryTimeoutMs?: number;
   /** Thời gian chờ mặc định cho các tác vụ ký ví và nộp giao dịch (ms), mặc định 120000ms */

@@ -410,5 +410,94 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       const results = await checkStorageHealth(undefined, { customKey: '   ' });
       expect(results.length).toBeGreaterThan(0);
     });
+
+    it('hỗ trợ truyền trực tiếp một instance ITransport vào checkStorageHealth và checkBridgeHealth', async () => {
+      // Truyền trực tiếp transport (không qua client)
+      const storageResults = await checkStorageHealth(transport);
+      const relayCheck = storageResults.find((r) => r.id === 'storage-relay');
+      expect(relayCheck).toBeDefined();
+      expect(relayCheck?.status).toBe('PASS');
+      expect(relayCheck?.message).toContain('fully operational');
+
+      const fullReport = await checkBridgeHealth(transport, {
+        skipIframeCheck: true,
+      });
+      const reportRelayCheck = fullReport.checks.find((r) => r.id === 'storage-relay');
+      expect(reportRelayCheck).toBeDefined();
+      expect(reportRelayCheck?.status).toBe('PASS');
+    });
+
+    it('nhận diện cờ iframe sandbox không phân biệt chữ hoa chữ thường (case-insensitive)', () => {
+      const originalTop = window.top;
+      const originalFrameElement = window.frameElement;
+      try {
+        Object.defineProperty(window, 'top', {
+          value: {},
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(window, 'frameElement', {
+          value: {
+            getAttribute: (attr: string) => (attr === 'sandbox' ? 'ALLOW-SCRIPTS ALLOW-SAME-ORIGIN' : null),
+          },
+          configurable: true,
+          writable: true,
+        });
+
+        const result = checkIframeSandbox();
+        expect(result.id).toBe('iframe-sandbox');
+        expect(result.status).toBe('PASS');
+        expect(result.message).toContain('properly configured');
+      } finally {
+        Object.defineProperty(window, 'top', {
+          value: originalTop,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(window, 'frameElement', {
+          value: originalFrameElement,
+          configurable: true,
+          writable: true,
+        });
+      }
+    });
+
+    it('checkIframeSandbox xử lý an toàn khi window.location là undefined trong standalone mode', () => {
+      const originalLocation = window.location;
+      try {
+        delete (window as any).location;
+        const result = checkIframeSandbox();
+        expect(result.id).toBe('iframe-sandbox');
+        expect(result.status).toBe('WARN');
+        expect(result.details?.origin).toBeDefined();
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: originalLocation,
+          configurable: true,
+          writable: true,
+        });
+      }
+    });
+
+    it('không phân loại nhầm lỗi có chứa từ "time" (ví dụ Runtime error) thành lỗi timeout trong checkPostMessageLatency', async () => {
+      const mockClientWithRuntimeError = {
+        ping: vi.fn().mockRejectedValue(new Error('Runtime error in host execution engine')),
+      };
+
+      const result = await checkPostMessageLatency(mockClientWithRuntimeError);
+      expect(result.id).toBe('postmessage-latency');
+      expect(result.status).toBe('FAIL');
+      expect(result.details?.isTimeout).toBe(false);
+      expect(result.hint).toContain('Verify that App Center host is connected');
+    });
+
+    it('khởi tạo WalletBridgeClient với tùy chọn cấu hình pingTimeoutMs tùy biến', () => {
+      const customClient = new WalletBridgeClient({
+        transport,
+        pingTimeoutMs: 8000,
+      });
+      expect(customClient.pingTimeoutMs).toBe(8000);
+      customClient.destroy();
+    });
   });
 });

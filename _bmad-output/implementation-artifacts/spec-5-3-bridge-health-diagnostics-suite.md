@@ -5,7 +5,7 @@ created: '2026-10-08'
 status: 'done'
 baseline_commit: '44dc6eb706c9d83fac23d32a3f4a2bc2f1ab04d1'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-5-context.md'
@@ -85,6 +85,16 @@ context:
 - [x] [Review][Patch] Export `checkBridgeHealth`, `checkIframeSandbox`, `checkPostMessageLatency`, `checkStorageHealth` and diagnostics types from `src/index.ts` [src/index.ts:27]
 - [x] [Review][Patch] Clean up transient storage key in `finally` block in `checkStorageHealth` to ensure it is always executed [src/diagnostics/health-check.ts:396, 448]
 - [x] [Review][Patch] Add verification unit tests for `options.storage`, `ERR_NOT_CONNECTED`, `ERR_NOT_IN_IFRAME` standalone ping, and `options.customKey` whitespace fallback [tests/diagnostics/health-check.test.ts:325]
+- [x] [Review][Patch] Support direct ITransport parameter in checkStorageHealth and checkBridgeHealth for Host Storage Relay [src/diagnostics/health-check.ts:409]
+- [x] [Review][Patch] Use optional chaining for window.location in checkIframeSandbox standalone check to prevent TypeError [src/diagnostics/health-check.ts:53]
+- [x] [Review][Patch] Normalize iframe sandbox tokens to lowercase for case-insensitive checking [src/diagnostics/health-check.ts:86]
+- [x] [Review][Patch] Tighten timeout error matching in checkPostMessageLatency to avoid false positives on substring 'time' [src/diagnostics/health-check.ts:265]
+- [x] [Review][Patch] Add pingTimeoutMs to WalletBridgeClientOptions for client-level ping timeout configuration [src/core/types.ts:192, src/core/client.ts:106]
+- [x] [Review][Patch] Run postMessage latency check and storage check concurrently in checkBridgeHealth for faster execution [src/diagnostics/health-check.ts:526]
+
+#### Rejected Findings
+- `checkBridgeHealth reports PASS when all checks are skipped` — Rejected: Spec AC-6 specifies status logic; summary accurately states all checks skipped.
+- `checkPostMessageLatency does not attempt ping on transport lacking request method` — Rejected: Bare ITransport lacks correlation semantics; WARN is the intended, documented behavior.
 
 **Acceptance Criteria:**
 - Given `WalletBridgeClient` đã được khởi tạo, when gọi `bridge.checkHealth()`, then hàm thực hiện kiểm tra tự động 3 hạng mục và trả về `BridgeHealthReport` có `status` là 'PASS', 'WARN', hoặc 'FAIL'.
