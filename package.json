@@ -12,6 +12,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./cardano": {
+      "types": "./dist/cardano/index.d.ts",
+      "import": "./dist/cardano/index.js",
+      "require": "./dist/cardano/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

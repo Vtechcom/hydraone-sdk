@@ -22,5 +22,20 @@ describe('Build Output Verification', () => {
     const esmContent = fs.readFileSync(esmFile, 'utf-8');
     expect(esmContent).toContain('HydraBridgeError');
     expect(esmContent).toContain('SDK_VERSION');
+
+    const cardanoEsm = path.join(distPath, 'cardano/index.js');
+    const cardanoCjs = path.join(distPath, 'cardano/index.cjs');
+    const cardanoDts = path.join(distPath, 'cardano/index.d.ts');
+
+    expect(fs.existsSync(cardanoEsm)).toBe(true);
+    expect(fs.existsSync(cardanoCjs)).toBe(true);
+    expect(fs.existsSync(cardanoDts)).toBe(true);
+
+    const cardanoEsmContent = fs.readFileSync(cardanoEsm, 'utf-8');
+    expect(cardanoEsmContent).toContain('getTotalLovelace');
+    expect(cardanoEsmContent).toContain('getAdaBalance');
+    expect(cardanoEsmContent).toContain('getAssetQuantity');
+    expect(cardanoEsmContent).toContain('stringToHex');
+    expect(cardanoEsmContent).toContain('hexToString');
   });
 });
