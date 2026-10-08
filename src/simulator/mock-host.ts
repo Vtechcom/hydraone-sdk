@@ -5,6 +5,8 @@ import type {
   MockWalletState,
   MockPlayerProfile,
   MockClientTransportOptions,
+  MockBridgeHostState,
+  MockHostStateListener,
 } from './types';
 import { MockClientTransport } from './mock-transport';
 
@@ -143,6 +145,8 @@ export class MockBridgeHost {
   private rejectNextFlag = false;
   private rejectNextReason?: string;
   private isDestroyed = false;
+  private _isWalletConnected = true;
+  private readonly stateListeners = new Set<MockHostStateListener>();
 
   constructor(options: MockBridgeHostOptions = {}) {
     this.appName = options.appName ?? 'HydraOne Mock Host';
@@ -154,6 +158,7 @@ export class MockBridgeHost {
     this.theme = options.theme ?? 'dark';
     this.audioMuted = options.audioMuted ?? false;
     this.debug = options.debug ?? false;
+    this._isWalletConnected = options.isWalletConnected ?? true;
 
     const defaultAddress =
       'addr_test1qre38q4p8q5f8s7vd24q6s8tky2x6l78rzk9m37s8r2k5u89qq30x2u942j4s53t7vxq9w3k6n5c5c9r98q2j4s';
@@ -195,6 +200,7 @@ export class MockBridgeHost {
    */
   public setLatency(ms: number): void {
     this.latencyMs = Math.max(0, ms);
+    this.notifyStateChange();
   }
 
   /**
@@ -209,6 +215,7 @@ export class MockBridgeHost {
    */
   public setRejectionMode(enabled: boolean): void {
     this.rejectionMode = enabled;
+    this.notifyStateChange();
   }
 
   /**
@@ -224,6 +231,14 @@ export class MockBridgeHost {
   public rejectNext(reason?: string): void {
     this.rejectNextFlag = true;
     this.rejectNextReason = reason;
+    this.notifyStateChange();
+  }
+
+  /**
+   * Kiểm tra cờ reject next có đang được kích hoạt hay không
+   */
+  public isRejectNextActive(): boolean {
+    return this.rejectNextFlag;
   }
 
   /**
@@ -231,6 +246,7 @@ export class MockBridgeHost {
    */
   public setStorageBlock(enabled: boolean): void {
     this.storageBlock = enabled;
+    this.notifyStateChange();
   }
 
   /**
@@ -238,6 +254,44 @@ export class MockBridgeHost {
    */
   public isStorageBlock(): boolean {
     return this.storageBlock;
+  }
+
+  /**
+   * Kiểm tra xem ví giả lập có đang được kết nối không
+   */
+  public isConnected(): boolean {
+    return this._isWalletConnected;
+  }
+
+  /**
+   * Kiểm tra xem ví giả lập có đang được kết nối không
+   */
+  public isWalletConnected(): boolean {
+    return this._isWalletConnected;
+  }
+
+  /**
+   * Kết nối ví giả lập
+   */
+  public connectWallet(): void {
+    this._isWalletConnected = true;
+    this.notifyStateChange();
+  }
+
+  /**
+   * Ngắt kết nối ví giả lập
+   */
+  public disconnectWallet(): void {
+    this._isWalletConnected = false;
+    this.notifyStateChange();
+  }
+
+  /**
+   * Đặt trạng thái kết nối của ví giả lập
+   */
+  public setWalletConnected(connected: boolean): void {
+    this._isWalletConnected = connected;
+    this.notifyStateChange();
   }
 
   /**
@@ -255,6 +309,7 @@ export class MockBridgeHost {
       }
       this.walletState.assets = normalizedAssets;
     }
+    this.notifyStateChange();
   }
 
   /**
@@ -272,6 +327,53 @@ export class MockBridgeHost {
       ...this.walletState,
       ...updates,
     };
+    this.notifyStateChange();
+  }
+
+  /**
+   * Lấy snapshot trạng thái hiện tại của MockBridgeHost
+   */
+  public getStateSnapshot(): MockBridgeHostState {
+    return {
+      appName: this.appName,
+      appVersion: this.appVersion,
+      walletName: this.walletName,
+      isWalletConnected: this._isWalletConnected,
+      latencyMs: this.latencyMs,
+      rejectionMode: this.rejectionMode,
+      rejectNext: this.rejectNextFlag,
+      storageBlock: this.storageBlock,
+      theme: this.theme,
+      audioMuted: this.audioMuted,
+      balanceLovelace: this.walletState.balanceLovelace,
+      address: this.walletState.address,
+    };
+  }
+
+  /**
+   * Đăng ký lắng nghe thay đổi trạng thái của MockBridgeHost
+   */
+  public onStateChange(listener: MockHostStateListener): () => void {
+    this.stateListeners.add(listener);
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Phát thông báo cập nhật trạng thái tới toàn bộ listeners
+   */
+  public notifyStateChange(): void {
+    const snapshot = this.getStateSnapshot();
+    for (const listener of Array.from(this.stateListeners)) {
+      try {
+        listener(snapshot);
+      } catch (err) {
+        if (this.debug) {
+          console.error('[MockBridgeHost] State listener error:', err);
+        }
+      }
+    }
   }
 
   /**
@@ -401,6 +503,7 @@ export class MockBridgeHost {
    */
   public broadcastAudioMuted(muted: boolean): void {
     this.audioMuted = muted;
+    this.notifyStateChange();
     this.broadcast({
       id: generateId(),
       type: 'AUDIO_MUTED_CHANGED',
@@ -415,6 +518,7 @@ export class MockBridgeHost {
    */
   public broadcastTheme(theme: 'dark' | 'light'): void {
     this.theme = theme;
+    this.notifyStateChange();
     this.broadcast({
       id: generateId(),
       type: 'THEME_CHANGED',
@@ -454,6 +558,7 @@ export class MockBridgeHost {
       this.rejectNextFlag = false;
       const reason = this.rejectNextReason;
       this.rejectNextReason = undefined;
+      this.notifyStateChange();
       return { shouldReject: true, reason: reason ?? 'User rejected the wallet operation' };
     }
     if (this.rejectionMode) {
@@ -552,7 +657,25 @@ export class MockBridgeHost {
       };
     }
 
-    // 2. CIP-30 State Queries
+    // 2. CIP-30 State Queries & Signing
+    const cip30Operations = [
+      'GET_BALANCE',
+      'GET_UTXOS',
+      'GET_USED_ADDRESSES',
+      'GET_UNUSED_ADDRESSES',
+      'GET_CHANGE_ADDRESS',
+      'GET_REWARD_ADDRESSES',
+      'GET_NETWORK_ID',
+      'GET_COLLATERAL',
+      'SIGN_TX',
+      'SUBMIT_TX',
+      'SIGN_DATA',
+    ];
+
+    if (cip30Operations.includes(type) && !this._isWalletConnected) {
+      return this.createRpcError(id, ERROR_CODES.ERR_NOT_CONNECTED, 'Wallet is disconnected');
+    }
+
     if (type === 'GET_BALANCE') {
       return this.createRpcResponse(
         id,
@@ -761,5 +884,6 @@ export class MockBridgeHost {
     }
     this.clients.clear();
     this.storage.clear();
+    this.stateListeners.clear();
   }
 }

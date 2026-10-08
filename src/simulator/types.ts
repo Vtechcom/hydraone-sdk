@@ -61,6 +61,8 @@ export interface MockBridgeHostOptions {
   audioMuted?: boolean;
   /** Thông tin người chơi ban đầu */
   playerProfile?: Partial<MockPlayerProfile>;
+  /** Trạng thái kết nối ban đầu của ví giả lập (mặc định true) */
+  isWalletConnected?: boolean;
   /** Bật log debug */
   debug?: boolean;
 }
@@ -72,5 +74,62 @@ export interface MockClientTransportOptions {
   /** Độ trễ nhân tạo bổ sung per-transport */
   latencyMs?: number;
   /** Bật log debug */
+  debug?: boolean;
+}
+
+/**
+ * Trạng thái snapshot của MockBridgeHost dùng để đồng bộ dữ liệu giao diện
+ */
+export interface MockBridgeHostState {
+  appName: string;
+  appVersion: string;
+  walletName: string;
+  isWalletConnected: boolean;
+  latencyMs: number;
+  rejectionMode: boolean;
+  rejectNext: boolean;
+  storageBlock: boolean;
+  theme: 'dark' | 'light';
+  audioMuted: boolean;
+  balanceLovelace: bigint;
+  address: string;
+}
+
+/**
+ * Hàm callback lắng nghe thay đổi trạng thái của MockBridgeHost
+ */
+export type MockHostStateListener = (state: MockBridgeHostState) => void;
+
+/**
+ * Các vị trí neo (anchor positions) cho DevTools Widget trên màn hình
+ */
+export type DevToolsPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+/**
+ * Chủ đề giao diện cho DevTools Widget
+ */
+export type DevToolsTheme = 'dark' | 'light' | 'auto';
+
+/**
+ * Cấu hình tùy chọn khi khởi tạo DevToolsWidget
+ */
+export interface DevToolsWidgetOptions {
+  /** Tham chiếu MockBridgeHost cần điều khiển */
+  host?: any;
+  /** Tham chiếu WalletBridgeClient cần tương tác */
+  client?: any;
+  /** Phần tử HTML container để gắn widget (mặc định document.body) */
+  container?: HTMLElement;
+  /** Trạng thái ban đầu thu gọn hay mở rộng (mặc định false) */
+  defaultCollapsed?: boolean;
+  /** Vị trí hiển thị trên màn hình (mặc định 'bottom-right') */
+  position?: DevToolsPosition;
+  /** Chủ đề giao diện (mặc định 'dark') */
+  theme?: DevToolsTheme;
+  /** Tiêu đề hiển thị trên header của DevTools */
+  title?: string;
+  /** Có can thiệp globalThis.localStorage khi bật simulate Safari ITP hay không (mặc định true) */
+  interceptLocalStorage?: boolean;
+  /** Bật debug log */
   debug?: boolean;
 }

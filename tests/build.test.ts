@@ -82,5 +82,8 @@ describe('Build Output Verification', () => {
     expect(simulatorEsmContent).toContain('MockBridgeHost');
     expect(simulatorEsmContent).toContain('MockClientTransport');
     expect(simulatorEsmContent).toContain('encodeLovelaceToCbor');
+    expect(simulatorEsmContent).toContain('DevToolsWidget');
+    expect(simulatorEsmContent).toContain('mountDevTools');
+    expect(simulatorEsmContent).toContain('SafariItpStorageSimulator');
   });
 });
