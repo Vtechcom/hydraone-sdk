@@ -5,7 +5,7 @@ created: '2026-10-08'
 status: 'done'
 baseline_commit: '9bdf172430f63f8bac1aa132b705a62556b659c2'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - '_bmad-output/planning-artifacts/architecture/architecture-hydraone-sdk-2026-10-05/ARCHITECTURE-SPINE.md'
   - '_bmad-output/implementation-artifacts/epic-4-context.md'
@@ -77,6 +77,17 @@ context:
 - [x] `src/cardano/index.ts` -- Xuất khẩu public API của subpath `@hydraone/sdk/cardano` -- Hoàn thiện entrypoint của module
 - [x] `tests/cardano/assets.test.ts` & `tests/cardano/hex.test.ts` -- Viết bộ test cases đầy đủ bao phủ ma trận I/O và edge cases -- Xác minh tính đúng đắn của logic tính toán và định dạng
 - [x] `tests/build.test.ts` -- Bổ sung kiểm thử build artifacts cho subpath `@hydraone/sdk/cardano` -- Đảm bảo quy trình đóng gói hoàn tất thành công
+
+### Review Findings
+
+- [x] [Review][Patch] Support uppercase 0X prefix in hex utilities and CBOR hex parsing [src/cardano/hex.ts:25] [src/cardano/assets.ts:38] [src/cardano/cbor.ts:285]
+- [x] [Review][Patch] Catch invalid numeric string quantities in parseValue and throw HydraBridgeError ERR_INVALID_PARAMS instead of uncaught SyntaxError [src/cardano/assets.ts:57]
+- [x] [Review][Patch] Validate assetName parameter type and prevent false positive matching of all assets in getAssetQuantity [src/cardano/assets.ts:307] [src/cardano/assets.ts:353]
+- [x] [Review][Patch] Use HydraBridgeError with code ERR_INVALID_PARAMS across all hex utilities in hex.ts [src/cardano/hex.ts:23]
+- [x] [Review][Patch] Decode CBOR Tag 2 (Positive Bignum) into native bigint in CborReader [src/cardano/cbor.ts:174]
+- [x] [Review][Patch] Remove unreachable duplicate check for decoded.length >= 2 in extractValueFromDecoded [src/cardano/cbor.ts:253]
+- [x] [Review][Patch] Reject invalid empty policyId representations like '0x' in getAssetQuantity [src/cardano/assets.ts:302]
+- [x] [Review][Patch] Add regression unit tests for uppercase 0X, malformed quantity strings, and Tag 2 bignums [tests/cardano/assets.test.ts:70] [tests/cardano/hex.test.ts:28]
 
 **Acceptance Criteria:**
 - Given một danh sách UTxO (dạng đối tượng hoặc chuỗi CBOR hex CIP-30), when gọi `getTotalLovelace(utxos)`, then nhận về tổng Lovelace dạng `bigint` nguyên thủy chính xác tuyệt đối.

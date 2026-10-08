@@ -65,8 +65,15 @@ describe('Cardano Assets & Precision BigInt Math', () => {
       expect(getTotalLovelace([cborValueHex])).toBe(3000000n);
     });
 
-    it('hỗ trợ chuỗi CBOR hex có tiền tố 0x', () => {
+    it('hỗ trợ chuỗi CBOR hex có tiền tố 0x và 0X', () => {
       expect(getTotalLovelace(['0x1a002dc6c0'])).toBe(3000000n);
+      expect(getTotalLovelace(['0X1a002dc6c0'])).toBe(3000000n);
+    });
+
+    it('giải mã chính xác CBOR Tag 2 (Positive Bignum) > 64-bit sang BigInt', () => {
+      // c2 (tag 2) 49 (bytes len 9) 010000000000000000 (1 << 64) = 18446744073709551616n
+      const cborBignumHex = 'c249010000000000000000';
+      expect(getTotalLovelace([cborBignumHex])).toBe(18446744073709551616n);
     });
 
     it('ném HydraBridgeError (ERR_INVALID_PARAMS) khi utxos không phải mảng', () => {
@@ -246,9 +253,16 @@ describe('Cardano Assets & Precision BigInt Math', () => {
       expect(getAssetQuantity(utxos, policyA, tokenNameA)).toBe(hugeTokenSupply);
     });
 
-    it('ném lỗi khi policyId không hợp lệ', () => {
+    it('ném lỗi khi policyId không hợp lệ hoặc chỉ chứa 0x', () => {
       expect(() => getAssetQuantity([], '')).toThrow(HydraBridgeError);
       expect(() => getAssetQuantity([], '   ')).toThrow(HydraBridgeError);
+      expect(() => getAssetQuantity([], '0x')).toThrow(HydraBridgeError);
+      expect(() => getAssetQuantity([], '0X')).toThrow(HydraBridgeError);
+    });
+
+    it('ném lỗi khi assetName có kiểu không hợp lệ', () => {
+      expect(() => getAssetQuantity([], policyA, 123 as unknown as string)).toThrow(HydraBridgeError);
+      expect(() => getAssetQuantity([], policyA, null as unknown as string)).toThrow(HydraBridgeError);
     });
   });
 
@@ -258,6 +272,17 @@ describe('Cardano Assets & Precision BigInt Math', () => {
       expect(parseValue(2500000)).toEqual({ coins: 2500000n, assets: {} });
       expect(parseValue('5000000')).toEqual({ coins: 5000000n, assets: {} });
       expect(parseValue(null)).toEqual({ coins: 0n, assets: {} });
+      expect(parseValue('0X1a002dc6c0')).toEqual({ coins: 3000000n, assets: {} });
+    });
+
+    it('ném HydraBridgeError khi gặp chuỗi số lượng sai định dạng trong UTxO', () => {
+      expect(() => parseValue({ coins: 'not-a-number' })).toThrow(HydraBridgeError);
+      expect(() => parseValue({ amount: [{ unit: 'lovelace', quantity: 'abc' }] })).toThrow(HydraBridgeError);
+      try {
+        parseValue({ coins: 'not-a-number' });
+      } catch (err) {
+        expect((err as HydraBridgeError).code).toBe('ERR_INVALID_PARAMS');
+      }
     });
   });
 });

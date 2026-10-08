@@ -1,3 +1,5 @@
+import { HydraBridgeError } from '../core/errors';
+
 /**
  * Chuyển đổi mảng byte sang chuỗi Hex
  * 
@@ -15,19 +17,22 @@ export function bytesToHex(bytes: Uint8Array): string {
 /**
  * Chuyển đổi chuỗi Hex sang mảng byte Uint8Array
  * 
- * @param hex Chuỗi Hex cần chuyển đổi (chấp nhận tiền tố 0x)
+ * @param hex Chuỗi Hex cần chuyển đổi (chấp nhận tiền tố 0x hoặc 0X)
  * @returns Mảng byte Uint8Array
  */
 export function hexToBytes(hex: string): Uint8Array {
   if (typeof hex !== 'string') {
-    throw new Error('Expected hex string to convert to bytes');
+    throw new HydraBridgeError('Expected hex string to convert to bytes', 'ERR_INVALID_PARAMS');
   }
-  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+  const cleanHex = hex.replace(/^0x/i, '');
   if (cleanHex.length % 2 !== 0) {
-    throw new Error('Invalid hex string length: must have an even number of characters');
+    throw new HydraBridgeError(
+      'Invalid hex string length: must have an even number of characters',
+      'ERR_INVALID_PARAMS'
+    );
   }
   if (!/^[0-9a-fA-F]*$/.test(cleanHex)) {
-    throw new Error('Invalid hex string: contains non-hex characters');
+    throw new HydraBridgeError('Invalid hex string: contains non-hex characters', 'ERR_INVALID_PARAMS');
   }
   const bytes = new Uint8Array(cleanHex.length / 2);
   for (let i = 0; i < cleanHex.length; i += 2) {
@@ -44,7 +49,7 @@ export function hexToBytes(hex: string): Uint8Array {
  */
 export function stringToHex(str: string): string {
   if (typeof str !== 'string') {
-    throw new Error('Expected string input to convert to hex');
+    throw new HydraBridgeError('Expected string input to convert to hex', 'ERR_INVALID_PARAMS');
   }
   const bytes = new TextEncoder().encode(str);
   return bytesToHex(bytes);
@@ -53,12 +58,12 @@ export function stringToHex(str: string): string {
 /**
  * Chuyển đổi chuỗi Hex về chuỗi văn bản UTF-8
  * 
- * @param hex Chuỗi Hex cần giải mã (chấp nhận tiền tố 0x)
+ * @param hex Chuỗi Hex cần giải mã (chấp nhận tiền tố 0x hoặc 0X)
  * @returns Chuỗi văn bản UTF-8
  */
 export function hexToString(hex: string): string {
   if (typeof hex !== 'string') {
-    throw new Error('Expected hex string to convert to string');
+    throw new HydraBridgeError('Expected hex string to convert to string', 'ERR_INVALID_PARAMS');
   }
   const bytes = hexToBytes(hex);
   return new TextDecoder().decode(bytes);

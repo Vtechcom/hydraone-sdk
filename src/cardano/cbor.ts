@@ -171,8 +171,17 @@ class CborReader {
       }
       // 6: Tag
       case 6: {
-        this.readLength(additionalInfo); // skip tag number
-        return this.decodeItem();
+        const tagNum = this.readLength(additionalInfo);
+        const item = this.decodeItem();
+        // Tag 2: Positive Bignum (RFC 8949) dạng byte string
+        if (tagNum === 2n && item instanceof Uint8Array) {
+          let val = 0n;
+          for (let i = 0; i < item.length; i++) {
+            val = (val << 8n) | BigInt(item[i]);
+          }
+          return val;
+        }
+        return item;
       }
       // 7: Simple / Float
       case 7: {
@@ -243,14 +252,8 @@ function extractValueFromDecoded(decoded: unknown): CardanoValue | null {
       return parseValueTuple(decoded[0], decoded[1]);
     }
 
-    // Trường hợp mảng [address, value, ...] (TransactionOutput)
+    // Trường hợp mảng [address, value, ...] (TransactionOutput) hoặc [tx_in, tx_out]
     if (decoded.length >= 2) {
-      const candidateValue = extractValueFromDecoded(decoded[1]);
-      if (candidateValue) return candidateValue;
-    }
-
-    // Trường hợp [tx_in, tx_out] (TransactionUnspentOutput)
-    if (decoded.length >= 2 && (Array.isArray(decoded[1]) || decoded[1] instanceof Map)) {
       const candidateValue = extractValueFromDecoded(decoded[1]);
       if (candidateValue) return candidateValue;
     }
@@ -282,7 +285,7 @@ function parseValueTuple(coins: bigint, multiassetMap: Map<unknown, unknown>): C
     if (policyKey instanceof Uint8Array) {
       policyIdHex = bytesToHex(policyKey);
     } else if (typeof policyKey === 'string') {
-      policyKey.startsWith('0x') ? (policyIdHex = policyKey.slice(2)) : (policyIdHex = policyKey);
+      policyIdHex = policyKey.replace(/^0x/i, '');
     }
 
     if (!policyIdHex || !(assetMap instanceof Map)) {
@@ -294,7 +297,7 @@ function parseValueTuple(coins: bigint, multiassetMap: Map<unknown, unknown>): C
       if (nameKey instanceof Uint8Array) {
         assetNameHex = bytesToHex(nameKey);
       } else if (typeof nameKey === 'string') {
-        assetNameHex = nameKey.startsWith('0x') ? nameKey.slice(2) : nameKey;
+        assetNameHex = nameKey.replace(/^0x/i, '');
       }
 
       let quantity = 0n;

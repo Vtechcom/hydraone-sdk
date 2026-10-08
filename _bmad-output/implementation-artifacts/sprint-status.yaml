@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: 10-05-2026 16:32
-last_updated: 10-08-2026 09:32
+last_updated: 10-08-2026 09:57
 project: hydraone-sdk
 project_key: HYDRAONE
 tracking_system: file-system
@@ -53,7 +53,7 @@ development_status:
   epic-3-retrospective: done
 
   epic-4: in-progress
-  4-1-cardano-domain-utilities-subpath: review
+  4-1-cardano-domain-utilities-subpath: done
   4-2-vue-3-nuxt-3-headless-composable-adapter: backlog
   4-3-react-next-js-headless-hooks-adapter: backlog
   4-4-phaser-3-event-emitter-game-plugin: backlog
@@ -104,7 +104,7 @@ action_items:
     action: "Consolidate and re-export stringToHex and hexToString utilities from
       @hydraone/sdk/cardano subpath in Story 4.1"
     owner: "Amelia"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-2-retro-10-06-2026.md"
   - id: "epic-2-retro-item-6-evaluate-and-optionally-support-browser"
     epic: 2

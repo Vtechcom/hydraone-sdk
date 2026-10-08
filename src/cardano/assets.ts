@@ -3,6 +3,24 @@ import { parseCborUtxoOrValue } from './cbor';
 import { bytesToHex, stringToHex } from './hex';
 import type { CardanoValue, CardanoUtxoInput, FormatAdaOptions, StructuredUtxo } from './types';
 
+function toSafeBigInt(val: unknown, fieldName = 'quantity'): bigint {
+  if (typeof val === 'bigint') return val;
+  if (typeof val === 'number') {
+    if (!Number.isFinite(val) || !Number.isInteger(val)) {
+      throw new HydraBridgeError(`Invalid numeric value for ${fieldName}: must be a finite integer`, 'ERR_INVALID_PARAMS', { val });
+    }
+    return BigInt(val);
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!/^-?\d+$/.test(trimmed)) {
+      throw new HydraBridgeError(`Invalid integer string for ${fieldName}: "${val}"`, 'ERR_INVALID_PARAMS', { val });
+    }
+    return BigInt(trimmed);
+  }
+  throw new HydraBridgeError(`Invalid value type for ${fieldName}`, 'ERR_INVALID_PARAMS', { val });
+}
+
 /**
  * Phân tích và chuẩn hóa bất kỳ biểu diễn UTxO hoặc Value nào thành CardanoValue chuẩn
  * 
@@ -34,8 +52,8 @@ export function parseValue(input: unknown): CardanoValue {
     if (/^-?\d+$/.test(trimmed)) {
       return { coins: BigInt(trimmed), assets: {} };
     }
-    // Chuỗi Hex CBOR (hỗ trợ cả tiền tố 0x)
-    const cleanHex = trimmed.replace(/^0x/, '');
+    // Chuỗi Hex CBOR (hỗ trợ cả tiền tố 0x hoặc 0X)
+    const cleanHex = trimmed.replace(/^0x/i, '');
     if (/^[0-9a-fA-F]+$/.test(cleanHex)) {
       return parseCborUtxoOrValue(cleanHex);
     }
@@ -55,7 +73,7 @@ export function parseValue(input: unknown): CardanoValue {
         if (!item || typeof item !== 'object') continue;
         const unit = String(item.unit || '').trim();
         const rawQty = item.quantity;
-        const qty = typeof rawQty === 'bigint' ? rawQty : BigInt(String(rawQty || '0'));
+        const qty = toSafeBigInt(rawQty, 'amount quantity');
 
         if (unit.toLowerCase() === 'lovelace' || unit === '') {
           coins += qty;
@@ -87,16 +105,16 @@ export function parseValue(input: unknown): CardanoValue {
 
       let coins = 0n;
       if (valObj.coins !== undefined) {
-        coins = typeof valObj.coins === 'bigint' ? valObj.coins : BigInt(String(valObj.coins));
+        coins = toSafeBigInt(valObj.coins, 'coins');
       } else if (valObj.lovelace !== undefined) {
-        coins = typeof valObj.lovelace === 'bigint' ? valObj.lovelace : BigInt(String(valObj.lovelace));
+        coins = toSafeBigInt(valObj.lovelace, 'lovelace');
       }
 
       const assets: Record<string, bigint> = {};
       if (valObj.assets && typeof valObj.assets === 'object') {
         for (const [k, v] of Object.entries(valObj.assets)) {
           const cleanKey = k.toLowerCase().replace(/^0x/, '');
-          const qty = typeof v === 'bigint' ? v : BigInt(String(v));
+          const qty = toSafeBigInt(v, 'asset quantity');
           assets[cleanKey] = (assets[cleanKey] || 0n) + qty;
         }
       }
@@ -105,7 +123,7 @@ export function parseValue(input: unknown): CardanoValue {
           if (map && typeof map === 'object') {
             for (const [name, v] of Object.entries(map)) {
               const cleanKey = `${policyId.toLowerCase().replace(/^0x/, '')}${name.toLowerCase().replace(/^0x/, '')}`;
-              const qty = typeof v === 'bigint' ? v : BigInt(String(v));
+              const qty = toSafeBigInt(v, 'multiasset quantity');
               assets[cleanKey] = (assets[cleanKey] || 0n) + qty;
             }
           }
@@ -119,9 +137,9 @@ export function parseValue(input: unknown): CardanoValue {
     if (utxo.coins !== undefined || utxo.lovelace !== undefined) {
       let coins = 0n;
       if (utxo.coins !== undefined) {
-        coins = typeof utxo.coins === 'bigint' ? utxo.coins : BigInt(String(utxo.coins));
+        coins = toSafeBigInt(utxo.coins, 'coins');
       } else if (utxo.lovelace !== undefined) {
-        coins = typeof utxo.lovelace === 'bigint' ? utxo.lovelace : BigInt(String(utxo.lovelace));
+        coins = toSafeBigInt(utxo.lovelace, 'lovelace');
       }
       return { coins, assets: {} };
     }
@@ -300,6 +318,9 @@ export function getAssetQuantity(
   }
 
   const cleanPolicyId = policyId.trim().toLowerCase().replace(/^0x/, '');
+  if (!cleanPolicyId) {
+    throw new HydraBridgeError('Invalid policyId: must be a non-empty hex policy ID', 'ERR_INVALID_PARAMS', { policyId });
+  }
 
   // Chuẩn hóa assetName: nếu là Uint8Array -> chuyển hex; nếu là string -> chuẩn bị cả dạng raw hex và utf8 hex
   let assetNameHexCandidates: string[] = [];
@@ -324,6 +345,8 @@ export function getAssetQuantity(
         // bỏ qua nếu chuyển đổi utf8 thất bại
       }
     }
+  } else {
+    throw new HydraBridgeError('Invalid assetName: must be a string or Uint8Array', 'ERR_INVALID_PARAMS', { assetName });
   }
 
   let totalQuantity = 0n;
@@ -350,7 +373,7 @@ export function getAssetQuantity(
 
       // So khớp tên token
       const matches =
-        assetNameHexCandidates.length === 0 ||
+        assetNameHexCandidates.length > 0 &&
         assetNameHexCandidates.some((candidate) => candidate === keyName);
 
       if (matches) {

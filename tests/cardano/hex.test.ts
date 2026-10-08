@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { stringToHex, hexToString, hexToBytes, bytesToHex } from '../../src/cardano/hex';
+import { HydraBridgeError } from '../../src/core/errors';
 
 describe('Cardano Hex Utilities', () => {
   describe('stringToHex & hexToString', () => {
@@ -21,22 +22,34 @@ describe('Cardano Hex Utilities', () => {
       expect(hexToString('')).toBe('');
     });
 
-    it('hỗ trợ tiền tố 0x trong hexToString', () => {
+    it('hỗ trợ tiền tố 0x và 0X trong hexToString', () => {
       const hex = '0x4879647261'; // "Hydra"
       expect(hexToString(hex)).toBe('Hydra');
+      const hexUpper = '0X4879647261';
+      expect(hexToString(hexUpper)).toBe('Hydra');
     });
 
-    it('ném lỗi khi đầu vào stringToHex không phải string', () => {
-      expect(() => stringToHex(123 as unknown as string)).toThrow('Expected string input');
-      expect(() => stringToHex(null as unknown as string)).toThrow('Expected string input');
+    it('ném HydraBridgeError khi đầu vào stringToHex không phải string', () => {
+      expect(() => stringToHex(123 as unknown as string)).toThrow(HydraBridgeError);
+      expect(() => stringToHex(null as unknown as string)).toThrow(HydraBridgeError);
+      try {
+        stringToHex(123 as unknown as string);
+      } catch (err) {
+        expect((err as HydraBridgeError).code).toBe('ERR_INVALID_PARAMS');
+      }
     });
 
-    it('ném lỗi khi hexToString gặp chuỗi có độ dài lẻ', () => {
-      expect(() => hexToString('abc')).toThrow('must have an even number of characters');
+    it('ném HydraBridgeError khi hexToString gặp chuỗi có độ dài lẻ', () => {
+      expect(() => hexToString('abc')).toThrow(HydraBridgeError);
+      try {
+        hexToString('abc');
+      } catch (err) {
+        expect((err as HydraBridgeError).code).toBe('ERR_INVALID_PARAMS');
+      }
     });
 
-    it('ném lỗi khi hexToString chứa ký tự không phải hex', () => {
-      expect(() => hexToString('zzzz')).toThrow('contains non-hex characters');
+    it('ném HydraBridgeError khi hexToString chứa ký tự không phải hex', () => {
+      expect(() => hexToString('zzzz')).toThrow(HydraBridgeError);
     });
   });
 
@@ -50,13 +63,18 @@ describe('Cardano Hex Utilities', () => {
       expect(decodedBytes).toEqual(originalBytes);
     });
 
-    it('hỗ trợ tiền tố 0x trong hexToBytes', () => {
-      const bytes = hexToBytes('0x010203');
-      expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
+    it('hỗ trợ tiền tố 0x và 0X trong hexToBytes', () => {
+      expect(hexToBytes('0x010203')).toEqual(new Uint8Array([1, 2, 3]));
+      expect(hexToBytes('0X010203')).toEqual(new Uint8Array([1, 2, 3]));
     });
 
-    it('ném lỗi khi đầu vào hexToBytes không phải chuỗi', () => {
-      expect(() => hexToBytes(undefined as unknown as string)).toThrow('Expected hex string to convert to bytes');
+    it('ném HydraBridgeError khi đầu vào hexToBytes không phải chuỗi', () => {
+      expect(() => hexToBytes(undefined as unknown as string)).toThrow(HydraBridgeError);
+      try {
+        hexToBytes(undefined as unknown as string);
+      } catch (err) {
+        expect((err as HydraBridgeError).code).toBe('ERR_INVALID_PARAMS');
+      }
     });
   });
 });
