@@ -74,7 +74,11 @@ async function handleSignOut() {
 
 onMounted(() => {
   // Gắn Floating DevTools UI widget để test ví và Safari ITP trên localhost:3000
-  if (process.env.NODE_ENV !== 'production' || window.location.hostname === 'localhost') {
+  const isDev = typeof window !== 'undefined' && (
+    ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
+    (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')
+  );
+  if (isDev) {
     mountDevTools({ initialCollapsed: false });
   }
 });

@@ -58,16 +58,25 @@ class MainScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     connectButton.on('pointerdown', async () => {
-      buttonText.setText('Đang truy vấn...');
+      buttonText.setText('Đang kết nối...');
       try {
+        if (!this.client.isConnected) {
+          await this.client.connect();
+        }
         await this.updateWalletInfo();
+      } catch (err) {
+        this.statusText.setText('Không thể kết nối ví. Hãy thử mở panel DevTools!');
       } finally {
         buttonText.setText('Lấy số dư từ ví');
       }
     });
 
     // 3. Khởi chạy Floating DevTools widget trên localhost
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NODE_ENV !== 'production')) {
+    const isDev = typeof window !== 'undefined' && (
+      ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
+      (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')
+    );
+    if (isDev) {
       mountDevTools({ initialCollapsed: false });
     }
 
@@ -77,7 +86,7 @@ class MainScene extends Phaser.Scene {
 
   private async updateWalletInfo() {
     try {
-      const isConnected = await this.client.isConnected();
+      const isConnected = this.client.isConnected;
       if (!isConnected) {
         this.statusText.setText('Trạng thái: Chưa kết nối ví (dùng DevTools bên dưới)');
         this.balanceText.setText('Số dư: -- ADA');

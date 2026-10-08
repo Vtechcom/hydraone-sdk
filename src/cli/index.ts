@@ -3,7 +3,8 @@ import type { CliArgs, TemplateType, PackageManager } from './types';
 import { SUPPORTED_TEMPLATES, scaffoldProject, validateProjectName } from './scaffolder';
 import { askQuestion, createReadline, selectOption, style } from './prompts';
 
-export const CLI_VERSION = '0.1.0';
+import { CLI_VERSION } from './types';
+export { CLI_VERSION } from './types';
 
 export function parseCliArgs(argv: string[]): CliArgs {
   const args: CliArgs = {};
@@ -89,6 +90,13 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
   let template = args.template;
   let pm: PackageManager = args.packageManager || 'pnpm';
 
+  if (args.template && !SUPPORTED_TEMPLATES.includes(args.template)) {
+    console.error(
+      `\n${style('❌ Lỗi:', 'red')} Template "${args.template}" không hợp lệ. Các template hỗ trợ: ${SUPPORTED_TEMPLATES.join(', ')}\n`
+    );
+    process.exit(1);
+  }
+
   const isInteractive = !args.yes && (!projectName || !template);
 
   if (isInteractive) {
@@ -153,12 +161,15 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
     if (!projectName) {
       projectName = 'hydraone-game-starter';
     }
-    if (!template || !SUPPORTED_TEMPLATES.includes(template)) {
+    if (!template) {
       template = 'nuxt-3';
     }
   }
 
-  const targetDir = path.resolve(process.cwd(), projectName);
+  const targetDirName = projectName?.startsWith('@') && projectName.includes('/')
+    ? projectName.split('/')[1]
+    : projectName;
+  const targetDir = path.resolve(process.cwd(), targetDirName);
 
   console.log(`\n${style('⚙️  Đang khởi tạo dự án...', 'yellow')}`);
   console.log(`  • Thư mục:  ${style(projectName, 'bold')}`);

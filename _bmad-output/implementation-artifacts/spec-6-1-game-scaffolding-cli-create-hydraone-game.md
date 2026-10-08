@@ -85,6 +85,24 @@ context:
 - And project template có sẵn mã nguồn tích hợp `MockBridgeHost` và Floating DevTools UI từ `@hydraone/sdk/simulator`
 - And không đưa CLI code hay bất kỳ dependencies nào vào bundle core `dist/index.js` (duy trì NFR-1).
 
+### Review Findings
+
+- [x] [Review][Patch] Phaser 3 template gọi getter isConnected như hàm gây lỗi runtime [templates/phaser-3/src/main.ts:80]
+- [x] [Review][Patch] Phaser 3 template nút connect chưa gọi client.connect() [templates/phaser-3/src/main.ts:60-67]
+- [x] [Review][Patch] Next.js template thiếu ranh giới Client Component cho HydraOneProvider [templates/next-js/app/layout.tsx:17-19]
+- [x] [Review][Patch] Nuxt 3 và Phaser 3 template truy cập process.env không an toàn trên browser [templates/nuxt-3/app.vue:77, templates/phaser-3/src/main.ts:70]
+- [x] [Review][Patch] CLI âm thầm fallback về nuxt-3 khi tham số --template không hợp lệ [src/cli/index.ts:92, 156-158]
+- [x] [Review][Patch] Scoped package name bị cắt mất scope và tạo thư mục lồng nhau [src/cli/scaffolder.ts:130-132]
+- [x] [Review][Patch] Hàm copyTemplateDir xử lý sai chuỗi thay thế khi chứa ký tự $ [src/cli/scaffolder.ts:98, 115]
+- [x] [Review][Patch] Node ESM không hỗ trợ Windows absolute path trong bin script [bin/create-hydraone-game.js:8, 11]
+- [x] [Review][Patch] Template replacements hardcode SDK version '^0.1.0' thay vì dùng CLI_VERSION [src/cli/scaffolder.ts:163]
+- [x] [Review][Patch] Thiếu test coverage cho cờ template không hợp lệ và scoped package name [tests/cli/scaffolder.test.ts]
+
+#### Rejected
+- Reject: validateProjectName từ chối '.' — Tuân thủ đúng đặc tả spec mục I/O matrix (chỉ chấp nhận tên package npm hợp lệ, từ chối path traversal).
+- Reject: Kích thước core bundle dist/index.js vượt 12 KB — Vấn đề tồn tại từ Epic 5 do module diagnostics (epic-5-retro-item-1), không phát sinh bởi Story 6.1.
+
+
 ## Implementation Notes
 
 - Xây dựng module CLI độc lập tại `src/cli/` không phụ thuộc vào bất kỳ thư viện bên thứ ba nào, sử dụng 100% built-in modules của Node.js 18+ (`node:readline/promises`, `node:fs`, `node:path`, `node:child_process`).

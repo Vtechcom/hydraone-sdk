@@ -1,5 +1,5 @@
 import React from 'react';
-import { HydraOneProvider } from '@hydraone/sdk/react';
+import { Providers } from './providers';
 
 export const metadata = {
   title: '{{PROJECT_NAME}} - HydraOne Game',
@@ -14,9 +14,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body style={{ margin: 0, padding: 0, backgroundColor: '#0f172a', color: '#f8fafc' }}>
-        <HydraOneProvider>
+        <Providers>
           {children}
-        </HydraOneProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import {
   validateProjectName,
   checkTargetDir,
   scaffoldProject,
+  copyTemplateDir,
   SUPPORTED_TEMPLATES,
 } from '../../src/cli/scaffolder';
 import { parseCliArgs, CLI_VERSION } from '../../src/cli/index';
@@ -179,8 +180,11 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(pkgJson.dependencies['@hydraone/sdk']).toBeDefined();
 
       const layout = fs.readFileSync(path.join(targetDir, 'app/layout.tsx'), 'utf-8');
-      expect(layout).toContain('HydraOneProvider');
+      expect(layout).toContain('Providers');
       expect(layout).toContain('test-next-game');
+
+      const providers = fs.readFileSync(path.join(targetDir, 'app/providers.tsx'), 'utf-8');
+      expect(providers).toContain('HydraOneProvider');
 
       const page = fs.readFileSync(path.join(targetDir, 'app/page.tsx'), 'utf-8');
       expect(page).toContain('useWallet');
@@ -213,6 +217,35 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(mainTs).toContain('mountDevTools');
       expect(mainTs).toContain('test-phaser-game');
     });
+
+    it('giữ nguyên scoped package name trong package.json khi scaffold', async () => {
+      const targetDir = path.join(tempDir, 'test-scoped');
+      const result = await scaffoldProject({
+        projectName: '@hydra/cardano-game',
+        targetDir,
+        template: 'nuxt-3',
+      });
+
+      expect(result.template).toBe('nuxt-3');
+      const pkgJson = JSON.parse(
+        fs.readFileSync(path.join(targetDir, 'package.json'), 'utf-8')
+      );
+      expect(pkgJson.name).toBe('@hydra/cardano-game');
+    });
+
+    it('thay thế an toàn khi chuỗi replacement chứa ký tự đặc biệt ($)', async () => {
+      const srcDir = path.join(tempDir, 'src-dollar');
+      const dstDir = path.join(tempDir, 'dst-dollar');
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(path.join(srcDir, 'test.txt'), 'Value: {{TOKEN}}');
+
+      await copyTemplateDir(srcDir, dstDir, {
+        '{{TOKEN}}': 'special-$&-pattern-$1',
+      });
+
+      const result = fs.readFileSync(path.join(dstDir, 'test.txt'), 'utf-8');
+      expect(result).toBe('Value: special-$&-pattern-$1');
+    });
   });
 
   describe('5. CLI Binary Execution (bin/create-hydraone-game.js)', () => {
@@ -239,6 +272,15 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
 
       expect(fs.existsSync(path.join(targetDir, 'package.json'))).toBe(true);
       expect(fs.existsSync(path.join(targetDir, 'app.vue'))).toBe(true);
+    });
+
+    it('báo lỗi và dừng tiến trình khi truyền cờ --template không hợp lệ', () => {
+      expect(() => {
+        execSync(
+          `node "${binScript}" "${path.join(tempDir, 'invalid-tmpl')}" --template bogus-template --yes`,
+          { encoding: 'utf-8', stdio: 'pipe' }
+        );
+      }).toThrow();
     });
   });
 });

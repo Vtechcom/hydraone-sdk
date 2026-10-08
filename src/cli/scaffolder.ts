@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ScaffoldOptions, TemplateType } from './types';
+import { CLI_VERSION } from './types';
 
 export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt-3', 'next-js', 'phaser-3'];
 
@@ -95,7 +96,7 @@ export async function copyTemplateDir(
     // Thay thế tên file nếu có token
     let destFileName = entry.name;
     for (const [key, val] of Object.entries(replacements)) {
-      destFileName = destFileName.replaceAll(key, val);
+      destFileName = destFileName.replaceAll(key, () => val);
     }
     // Chuyển _gitignore thành .gitignore để tránh npm tự đổi tên khi publish package
     if (destFileName === '_gitignore') {
@@ -112,7 +113,7 @@ export async function copyTemplateDir(
       } else {
         let content = fs.readFileSync(srcPath, 'utf-8');
         for (const [key, val] of Object.entries(replacements)) {
-          content = content.replaceAll(key, val);
+          content = content.replaceAll(key, () => val);
         }
         fs.writeFileSync(destPath, content, 'utf-8');
       }
@@ -127,9 +128,14 @@ export async function scaffoldProject(
 
   // 1. Kiểm tra thư mục đích và tên dự án
   const resolvedTarget = path.resolve(process.cwd(), targetDir);
-  const actualProjectName = projectName && !projectName.includes('/') && !projectName.includes('\\')
-    ? projectName
-    : path.basename(resolvedTarget);
+  let actualProjectName = projectName;
+  if (projectName && /^@[a-z0-9-*~][a-z0-9-*._~]*\/[a-z0-9-~][a-z0-9-._~]*$/.test(projectName.trim())) {
+    actualProjectName = projectName.trim();
+  } else if (projectName && (projectName.includes('/') || projectName.includes('\\'))) {
+    actualProjectName = path.basename(resolvedTarget);
+  } else if (!projectName) {
+    actualProjectName = path.basename(resolvedTarget);
+  }
 
   const nameValidation = validateProjectName(actualProjectName);
   if (!nameValidation.valid) {
@@ -160,7 +166,7 @@ export async function scaffoldProject(
   // 5. Sao chép và thay thế placeholder
   const replacements: Record<string, string> = {
     '{{PROJECT_NAME}}': actualProjectName,
-    '{{SDK_VERSION}}': '^0.1.0',
+    '{{SDK_VERSION}}': `^${CLI_VERSION}`,
   };
 
   await copyTemplateDir(sourceTemplateDir, resolvedTarget, replacements);

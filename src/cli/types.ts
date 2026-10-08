@@ -2,6 +2,8 @@
  * Types and interfaces for create-hydraone-game CLI Scaffolder
  */
 
+export const CLI_VERSION = '0.1.0';
+
 export type TemplateType = 'nuxt-3' | 'next-js' | 'phaser-3';
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun';
