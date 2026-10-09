@@ -12,7 +12,7 @@ import type {
   DevShellWalletState,
 } from "./types";
 import { DevShellBridgeController } from "./shell-bridge";
-import { HYDRA_LOGO_SRC, ETERNL_LOGO_SRC, LACE_LOGO_SRC } from "./assets";
+import { HYDRA_LOGO_SRC } from "./assets";
 
 /** Helper rút gọn chuỗi address y hệt formatId() trong composables/useFormat.ts của hydraone-web-client */
 function formatId(id: string | null | undefined, begin = 6, last = 4): string {
@@ -463,7 +463,12 @@ html, body {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+  font-weight: 700;
 }
 
 .wallet-name {
@@ -699,7 +704,7 @@ export class HydraDevShellUI {
               <!-- Eternl -->
               <div class="wallet-item" id="modal-opt-eternl">
                 <div class="wallet-left">
-                  <img src="${ETERNL_LOGO_SRC}" class="wallet-logo" alt="Eternl" />
+                  <div class="wallet-logo" aria-hidden="true">E</div>
                   <div>
                     <div class="wallet-name">Eternl</div>
                     <div class="wallet-tag">Browser Extension</div>
@@ -711,7 +716,7 @@ export class HydraDevShellUI {
               <!-- Lace -->
               <div class="wallet-item" id="modal-opt-lace">
                 <div class="wallet-left">
-                  <img src="${LACE_LOGO_SRC}" class="wallet-logo" alt="Lace" />
+                  <div class="wallet-logo" aria-hidden="true">L</div>
                   <div>
                     <div class="wallet-name">Lace</div>
                     <div class="wallet-tag">Browser Extension</div>
