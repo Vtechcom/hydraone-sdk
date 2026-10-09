@@ -1,0 +1,63 @@
+name: Bug report
+description: Report something that does not work as documented
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Do not include wallet addresses, tokens or signatures.
+        For security problems, do not use this form: see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Steps or a link to a small repository or snippet that reproduces the problem.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: sdk-version
+    attributes:
+      label: '@hydraone/sdk version'
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where does it run?
+      options:
+        - Embedded in the HydraOne App Center iframe
+        - Standalone browser tab with a wallet extension
+        - Simulator (MockBridgeHost or dev shell)
+        - Server-side rendering or Node.js
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and version, OS, Node.js version, framework and version, wallet.
+      placeholder: Safari 17 on iOS 17, Next.js 15, Node 22
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Health check report (optional)
+      description: Output of checkBridgeHealth(client), with addresses and tokens removed.
+      render: json
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output (optional)
+      description: Include the error code (for example ERR_TIMEOUT). Remove sensitive data.
+      render: shell

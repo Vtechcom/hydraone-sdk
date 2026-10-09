@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest an improvement or a new capability
+title: 'feat: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe your use case first, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How could the API look? Include a short code sketch if you can.
+      render: ts
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you use today and other designs you thought about.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core client or transports
+        - Authentication
+        - Storage
+        - React adapter
+        - Vue adapter
+        - Cardano utilities
+        - Simulator
+        - Diagnostics
+        - CLI and templates
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to open a pull request for this.

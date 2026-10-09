@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Vtechcom/hydraone-sdk/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Documentation and troubleshooting
+    url: https://github.com/Vtechcom/hydraone-sdk/blob/main/docs/troubleshooting.md
+    about: Check the troubleshooting guide and FAQ before opening an issue.
