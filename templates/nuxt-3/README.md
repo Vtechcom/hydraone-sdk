@@ -1,17 +1,17 @@
 # {{PROJECT_NAME}}
 
-Dự án game Web3 khởi tạo nhanh bằng `create-hydraone-game` sử dụng **Nuxt 3** và **@hydraone/sdk**.
+A Web3 game scaffolded with `create-hydraone-game`, built with **Nuxt 3** and **@hydraone/sdk**.
 
-## Khởi động Môi trường Phát triển
+## Getting started
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Mở trình duyệt tại [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Tính năng Tích hợp Sẵn
+## What is included
 
-- **@hydraone/sdk/vue**: Composable reactive `useWalletBridgeClient` và `useGameAuth` hỗ trợ SSR-safe.
-- **@hydraone/sdk/simulator**: Widget Floating DevTools UI cho phép test ví giả lập 1,000 ADA, từ chối ký ví và mô phỏng lỗi Safari ITP trực tiếp trên localhost:3000.
+- **@hydraone/sdk/vue**: SSR-safe reactive composables `useWalletBridgeClient` and `useGameAuth`.
+- **@hydraone/sdk/simulator**: a floating DevTools widget to test with a simulated 1,000 ADA wallet, reject signing requests and simulate Safari ITP storage restrictions directly on localhost:3000.

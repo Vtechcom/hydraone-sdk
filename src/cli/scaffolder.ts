@@ -8,21 +8,21 @@ export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt-3', 'next-js', 'phaser
 
 export function validateProjectName(name: string): { valid: boolean; reason?: string } {
   if (!name || name.trim() === '') {
-    return { valid: false, reason: 'Tên dự án không được để trống.' };
+    return { valid: false, reason: 'Project name must not be empty.' };
   }
 
   const trimmed = name.trim();
-  // Không cho phép path traversal
+  // Reject path traversal so the project cannot be created outside the working directory
   if (trimmed === '..' || trimmed === '.' || trimmed.includes('../') || trimmed.includes('..\\')) {
-    return { valid: false, reason: 'Tên dự án không được chứa ký tự điều hướng thư mục (path traversal).' };
+    return { valid: false, reason: 'Project name must not contain path traversal sequences.' };
   }
 
-  // Regex hợp lệ cho npm package name (có thể có scope @org/pkg hoặc tên thông thường)
+  // The name becomes the package.json name, so it must be a valid npm package name (optionally scoped)
   const npmPackageRegex = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
   if (!npmPackageRegex.test(trimmed)) {
     return {
       valid: false,
-      reason: 'Tên dự án chỉ được chứa chữ cái thường, số, dấu gạch ngang (-), gạch dưới (_) hoặc dấu chấm (.), tuân thủ chuẩn npm.',
+      reason: 'Project name may only contain lowercase letters, digits, hyphens (-), underscores (_) and dots (.), following npm naming rules.',
     };
   }
 
@@ -39,14 +39,14 @@ export function checkTargetDir(
 
   const stat = fs.statSync(targetDir);
   if (!stat.isDirectory()) {
-    return { valid: false, reason: `Đường dẫn "${targetDir}" đã tồn tại nhưng không phải là thư mục.` };
+    return { valid: false, reason: `Path "${targetDir}" already exists but is not a directory.` };
   }
 
   const files = fs.readdirSync(targetDir);
   if (files.length > 0 && !force) {
     return {
       valid: false,
-      reason: `Thư mục đích "${targetDir}" đã tồn tại và không rỗng (${files.length} tệp/thư mục). Vui lòng chọn thư mục khác hoặc sử dụng --force.`,
+      reason: `Target directory "${targetDir}" already exists and is not empty (${files.length} entries). Choose another directory or use --force.`,
     };
   }
 
@@ -54,10 +54,10 @@ export function checkTargetDir(
 }
 
 export function resolveTemplatesDir(): string {
-  // Tìm kiếm templates/ ở các vị trí có thể có:
-  // 1. Khi chạy từ dist/cli/index.js -> ../../templates
-  // 2. Khi chạy từ src/cli/scaffolder.ts -> ../../templates
-  // 3. Fallback: process.cwd()/templates
+  // The templates folder sits at a different depth depending on how the CLI runs:
+  // 1. dist/cli/index.js -> ../../templates
+  // 2. src/cli/scaffolder.ts -> ../../templates
+  // 3. fallback: process.cwd()/templates
   let candidate = '';
   try {
     const currentDir = typeof __dirname !== 'undefined'
@@ -93,12 +93,12 @@ export async function copyTemplateDir(
 
   for (const entry of entries) {
     const srcPath = path.join(sourceDir, entry.name);
-    // Thay thế tên file nếu có token
+    // File names may contain placeholders too
     let destFileName = entry.name;
     for (const [key, val] of Object.entries(replacements)) {
       destFileName = destFileName.replaceAll(key, () => val);
     }
-    // Chuyển _gitignore thành .gitignore để tránh npm tự đổi tên khi publish package
+    // Templates ship as _gitignore because npm drops files named .gitignore when publishing
     if (destFileName === '_gitignore') {
       destFileName = '.gitignore';
     }
@@ -126,7 +126,7 @@ export async function scaffoldProject(
 ): Promise<{ projectDir: string; template: TemplateType }> {
   const { projectName, targetDir, template, force } = options;
 
-  // 1. Kiểm tra thư mục đích và tên dự án
+  // 1. Resolve the target directory and project name
   const resolvedTarget = path.resolve(process.cwd(), targetDir);
   let actualProjectName = projectName;
   if (projectName && /^@[a-z0-9-*~][a-z0-9-*._~]*\/[a-z0-9-~][a-z0-9-._~]*$/.test(projectName.trim())) {
@@ -142,28 +142,28 @@ export async function scaffoldProject(
     throw new Error(nameValidation.reason);
   }
 
-  // 2. Kiểm tra template được hỗ trợ
+  // 2. Validate the template
   if (!SUPPORTED_TEMPLATES.includes(template)) {
     throw new Error(
-      `Template "${template}" không được hỗ trợ. Các template hỗ trợ gồm: ${SUPPORTED_TEMPLATES.join(', ')}`
+      `Template "${template}" is not supported. Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}`
     );
   }
 
-  // 3. Kiểm tra thư mục đích
+  // 3. Validate the target directory
   const dirCheck = checkTargetDir(resolvedTarget, force);
   if (!dirCheck.valid) {
     throw new Error(dirCheck.reason);
   }
 
-  // 4. Tìm thư mục template nguồn
+  // 4. Locate the source template
   const templatesRoot = resolveTemplatesDir();
   const sourceTemplateDir = path.join(templatesRoot, template);
 
   if (!fs.existsSync(sourceTemplateDir)) {
-    throw new Error(`Không tìm thấy thư mục template tại: ${sourceTemplateDir}`);
+    throw new Error(`Template directory not found at: ${sourceTemplateDir}`);
   }
 
-  // 5. Sao chép và thay thế placeholder
+  // 5. Copy files and substitute placeholders
   const replacements: Record<string, string> = {
     '{{PROJECT_NAME}}': actualProjectName,
     '{{SDK_VERSION}}': `^${CLI_VERSION}`,

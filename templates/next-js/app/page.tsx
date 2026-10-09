@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     async function initDevShell() {
-      // 1. Kích hoạt Dev Host Shell chuẩn 100% HydraOne Web Client khi dev trên localhost
+      // In development, wrap the app in the dev host shell that mimics the HydraOne web client
       if (process.env.NODE_ENV !== 'production') {
         const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
         const isEmbed = initHydraDevShell({
@@ -20,11 +20,11 @@ export default function Home() {
           enableRealWallet: true,
         });
         if (!isEmbed) {
-          // Đã mount Host Shell ở Top-level Window, dừng để Iframe con render Game
+          // The host shell is mounted in the top-level window; the nested iframe renders the game
           return;
         }
 
-        // Trong iframe / standalone: dev vẫn có thể mở widget DevTools khi cần
+        // Inside the iframe or standalone, the DevTools widget is still available on demand
         mountDevTools({ defaultCollapsed: true });
       }
 
@@ -41,29 +41,29 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', background: '#0a0a1a', color: '#f8fafc' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', background: '#090d16', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#38bdf8' }}>🎮 {'{{PROJECT_NAME}}'}</div>
+        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#38bdf8' }}>{'{{PROJECT_NAME}}'}</div>
         <div style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, background: isConnected ? '#065f46' : '#334155', color: isConnected ? '#34d399' : '#f8fafc', fontFamily: 'monospace' }}>
-          {isConnected ? address : 'Chưa kết nối ví'}
+          {isConnected ? address : 'Wallet not connected'}
         </div>
       </header>
 
       <main style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', padding: '2.5rem', maxWidth: 600, width: '100%' }}>
           <h2 style={{ marginTop: 0, color: '#38bdf8' }}>Next.js Cardano Web3 Starter</h2>
-          <p>Dự án game Next.js tích hợp sẵn <strong>@hydraone/sdk/react</strong> và Dev Host Shell Iframe.</p>
+          <p>A Next.js game starter with <strong>@hydraone/sdk/react</strong> and the dev host shell iframe.</p>
 
           <div style={{ display: 'grid', gap: '0.75rem', background: '#0f172a', padding: '1rem', borderRadius: '0.5rem', margin: '1.5rem 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>Trạng thái kết nối:</span>
-              <span style={{ fontWeight: 600 }}>{isConnected ? 'Đã kết nối' : 'Ngắt kết nối'}</span>
+              <span style={{ color: '#94a3b8' }}>Connection status:</span>
+              <span style={{ fontWeight: 600 }}>{isConnected ? 'Connected' : 'Disconnected'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>Số dư ADA:</span>
+              <span style={{ color: '#94a3b8' }}>ADA balance:</span>
               <span style={{ fontWeight: 600 }}>{balanceADA || '0.000000'} ADA</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#94a3b8' }}>Phiên đăng nhập CIP-8:</span>
-              <span style={{ fontWeight: 600 }}>{isAuthenticated ? 'Đã đăng nhập' : 'Chưa đăng nhập'}</span>
+              <span style={{ color: '#94a3b8' }}>CIP-8 session:</span>
+              <span style={{ fontWeight: 600 }}>{isAuthenticated ? 'Signed in' : 'Signed out'}</span>
             </div>
           </div>
 
@@ -73,14 +73,14 @@ export default function Home() {
                 onClick={() => connect()}
                 style={{ padding: '0.65rem 1.25rem', borderRadius: '0.5rem', background: '#0284c7', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}
               >
-                Kết nối Ví
+                Connect wallet
               </button>
             ) : (
               <button
                 onClick={() => disconnect()}
                 style={{ padding: '0.65rem 1.25rem', borderRadius: '0.5rem', background: '#475569', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}
               >
-                Ngắt kết nối
+                Disconnect
               </button>
             )}
 
@@ -89,7 +89,7 @@ export default function Home() {
                 onClick={() => signIn({ challenge: 'HydraOne Game Login Challenge' })}
                 style={{ padding: '0.65rem 1.25rem', borderRadius: '0.5rem', background: '#10b981', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer' }}
               >
-                1-Click CIP-8 Đăng nhập
+                1-click CIP-8 sign in
               </button>
             )}
 
@@ -98,7 +98,7 @@ export default function Home() {
                 onClick={() => signOut()}
                 style={{ padding: '0.65rem 1.25rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid #64748b', color: '#e2e8f0', fontWeight: 600, cursor: 'pointer' }}
               >
-                Đăng xuất
+                Sign out
               </button>
             )}
           </div>

@@ -1,17 +1,17 @@
 # {{PROJECT_NAME}}
 
-Dự án game Web3 Canvas khởi tạo bằng `create-hydraone-game` sử dụng **Phaser 3**, **Vite** và **@hydraone/sdk**.
+A Web3 canvas game scaffolded with `create-hydraone-game`, built with **Phaser 3**, **Vite** and **@hydraone/sdk**.
 
-## Khởi động Môi trường Phát triển
+## Getting started
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Mở trình duyệt tại [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Tính năng Tích hợp Sẵn
+## What is included
 
-- **@hydraone/sdk**: Tích hợp trực tiếp `WalletBridgeClient` trong Phaser Scene lifecycle.
-- **@hydraone/sdk/simulator**: Widget Floating DevTools UI cho phép test ví giả lập 1,000 ADA, từ chối ký ví và mô phỏng lỗi Safari ITP trực tiếp trên localhost:3000.
+- **@hydraone/sdk**: uses `WalletBridgeClient` directly inside the Phaser scene lifecycle.
+- **@hydraone/sdk/simulator**: a floating DevTools widget to test with a simulated 1,000 ADA wallet, reject signing requests and simulate Safari ITP storage restrictions directly on localhost:3000.

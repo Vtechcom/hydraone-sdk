@@ -48,20 +48,20 @@ export function parseCliArgs(argv: string[]): CliArgs {
 export function printHelp(): void {
   console.log(`
 ${style('create-hydraone-game', 'cyan')} ${style(`v${CLI_VERSION}`, 'dim')}
-${style('Công cụ khởi tạo nhanh dự án game Web3 tích hợp HydraOne SDK trên Cardano', 'bold')}
+${style('Scaffold a Web3 game project with the HydraOne SDK on Cardano', 'bold')}
 
-${style('CÚ PHÁP:', 'yellow')}
-  $ npx create-hydraone-game [tên-dự-án] [options]
+${style('USAGE:', 'yellow')}
+  $ npx create-hydraone-game [project-name] [options]
 
-${style('CÁC OPTIONS:', 'yellow')}
-  -t, --template <name>   Chọn template sẵn có (${SUPPORTED_TEMPLATES.join(', ')})
-  --pm <package-manager>  Chọn package manager (pnpm, npm, yarn, bun)
-  --force                 Ghi đè hoặc sử dụng thư mục hiện có ngay cả khi có files
-  -y, --yes               Bỏ qua xác nhận prompt, sử dụng giá trị mặc định
-  -h, --help              Hiển thị bảng trợ giúp này
-  -v, --version           Hiển thị phiên bản CLI
+${style('OPTIONS:', 'yellow')}
+  -t, --template <name>   Select a template (${SUPPORTED_TEMPLATES.join(', ')})
+  --pm <package-manager>  Select a package manager (pnpm, npm, yarn, bun)
+  --force                 Use the target directory even if it is not empty
+  -y, --yes               Skip prompts and use default values
+  -h, --help              Show this help
+  -v, --version           Show the CLI version
 
-${style('VÍ DỤ:', 'yellow')}
+${style('EXAMPLES:', 'yellow')}
   $ npx create-hydraone-game my-hydra-game
   $ npx create-hydraone-game my-phaser-game --template phaser-3
   $ npx create-hydraone-game my-nuxt-app --template nuxt-3 --pm pnpm
@@ -82,8 +82,8 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   }
 
   console.log(`
-${style('🎮 HydraOne Game Scaffolder', 'cyan')} ${style(`(v${CLI_VERSION})`, 'dim')}
-${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools Simulator', 'dim')}
+${style('HydraOne Game Scaffolder', 'cyan')} ${style(`(v${CLI_VERSION})`, 'dim')}
+${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulator', 'dim')}
 `);
 
   let projectName = args.projectName;
@@ -92,7 +92,7 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
 
   if (args.template && !SUPPORTED_TEMPLATES.includes(args.template)) {
     console.error(
-      `\n${style('❌ Lỗi:', 'red')} Template "${args.template}" không hợp lệ. Các template hỗ trợ: ${SUPPORTED_TEMPLATES.join(', ')}\n`
+      `\n${style('Error:', 'red')} Invalid template "${args.template}". Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}\n`
     );
     process.exit(1);
   }
@@ -106,7 +106,7 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
         while (true) {
           const inputName = await askQuestion(
             rl,
-            'Tên thư mục dự án của bạn là gì?',
+            'What is your project directory name?',
             'hydraone-game-starter'
           );
           const validation = validateProjectName(inputName);
@@ -114,29 +114,29 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
             projectName = inputName;
             break;
           }
-          console.log(style(`❌ ${validation.reason}`, 'red'));
+          console.log(style(validation.reason ?? 'Invalid project name.', 'red'));
         }
       }
 
       if (!template || !SUPPORTED_TEMPLATES.includes(template)) {
         template = await selectOption<TemplateType>(
           rl,
-          'Chọn Framework / Game Engine template:',
+          'Select a framework / game engine template:',
           [
             {
               label: 'Nuxt 3 (Vue 3.5+ Headless Composables)',
               value: 'nuxt-3',
-              description: 'Tích hợp sẵn @hydraone/sdk/vue và SSR-safe setup',
+              description: 'Includes @hydraone/sdk/vue and an SSR-safe setup',
             },
             {
               label: 'Next.js (React 19+ Headless Hooks & Provider)',
               value: 'next-js',
-              description: 'Tích hợp sẵn @hydraone/sdk/react và HydraOneProvider',
+              description: 'Includes @hydraone/sdk/react and HydraOneProvider',
             },
             {
               label: 'Phaser 3 (Canvas Game Loop & EventEmitter)',
               value: 'phaser-3',
-              description: 'Tích hợp sẵn Phaser Scene và WalletBridgeClient',
+              description: 'Includes a Phaser scene and WalletBridgeClient',
             },
           ]
         );
@@ -145,9 +145,9 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
       if (!args.packageManager) {
         pm = await selectOption<PackageManager>(
           rl,
-          'Chọn Trình quản lý gói (Package Manager):',
+          'Select a package manager:',
           [
-            { label: 'pnpm (Khuyến nghị)', value: 'pnpm' },
+            { label: 'pnpm (recommended)', value: 'pnpm' },
             { label: 'npm', value: 'npm' },
             { label: 'yarn', value: 'yarn' },
             { label: 'bun', value: 'bun' },
@@ -171,10 +171,10 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
     : projectName;
   const targetDir = path.resolve(process.cwd(), targetDirName);
 
-  console.log(`\n${style('⚙️  Đang khởi tạo dự án...', 'yellow')}`);
-  console.log(`  • Thư mục:  ${style(projectName, 'bold')}`);
-  console.log(`  • Template: ${style(template, 'green')}`);
-  console.log(`  • PM:       ${style(pm, 'dim')}`);
+  console.log(`\n${style('Creating project...', 'yellow')}`);
+  console.log(`  - Directory: ${style(projectName, 'bold')}`);
+  console.log(`  - Template:  ${style(template, 'green')}`);
+  console.log(`  - PM:        ${style(pm, 'dim')}`);
 
   try {
     await scaffoldProject({
@@ -185,26 +185,26 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
       force: args.force,
     });
 
-    console.log(`\n${style('✨ Dự án game đã được tạo thành công!', 'green')}\n`);
-    console.log(style('Tiếp theo, hãy chạy các lệnh sau để bắt đầu phát triển:', 'bold'));
+    console.log(`\n${style('Project created successfully.', 'green')}\n`);
+    console.log(style('Next, run the following commands to start developing:', 'bold'));
     console.log(`  ${style(`cd ${projectName}`, 'cyan')}`);
     console.log(`  ${style(`${pm} install`, 'cyan')}`);
     console.log(`  ${style(`${pm} run dev`, 'cyan')}\n`);
     console.log(
       style(
-        '💡 Giao diện Host: Tự động nhúng 100% giao diện HydraOne Web Client (Header, CIP-30 & Viewport Frames) qua Iframe khi chạy dev!',
+        'Host shell: in dev mode the HydraOne host UI (header, CIP-30 wallet bridge and viewport frame) is embedded around your game via an iframe.',
         'green'
       )
     );
     console.log(
       style(
-        '🚀 Production Build: Khi chạy build, toàn bộ code Host Shell được loại bỏ 100%, chỉ xuất ra bundle Game thuần để cắm vào HydraOne thật.\n',
+        'Production build: the host shell code is stripped out; only the game bundle is emitted, ready to plug into the real HydraOne host.\n',
         'dim'
       )
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`\n${style('❌ Lỗi khởi tạo dự án:', 'red')} ${message}\n`);
+    console.error(`\n${style('Failed to create project:', 'red')} ${message}\n`);
     process.exit(1);
   }
 }

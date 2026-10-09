@@ -21,7 +21,7 @@ export function style(text: string, color: keyof typeof colors): string {
 export function createReadline(): readline.Interface {
   const rl = readline.createInterface({ input, output });
   rl.on('SIGINT', () => {
-    console.log(`\n${style('Đã hủy tiến trình.', 'yellow')}`);
+    console.log(`\n${style('Cancelled.', 'yellow')}`);
     process.exit(0);
   });
   return rl;
@@ -53,14 +53,14 @@ export async function selectOption<T extends string>(
 
   while (true) {
     const answer = await rl.question(
-      `${style('Chọn số [1-' + options.length + ']', 'yellow')}: `
+      `${style('Choose a number [1-' + options.length + ']', 'yellow')}: `
     );
     const chosenIndex = parseInt(answer.trim(), 10) - 1;
     if (chosenIndex >= 0 && chosenIndex < options.length) {
       return options[chosenIndex].value;
     }
     console.log(
-      style(`Lựa chọn không hợp lệ. Vui lòng nhập từ 1 đến ${options.length}.`, 'red')
+      style(`Invalid choice. Enter a number from 1 to ${options.length}.`, 'red')
     );
   }
 }

@@ -12,7 +12,7 @@ import {
 } from '../../src/cli/scaffolder';
 import { parseCliArgs, CLI_VERSION } from '../../src/cli/index';
 
-describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
+describe('create-hydraone-game CLI', () => {
   let tempDir: string;
 
   beforeEach(() => {
@@ -26,58 +26,58 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
   });
 
   describe('1. Project Name Validation (validateProjectName)', () => {
-    it('chấp nhận tên dự án hợp lệ theo chuẩn npm', () => {
+    it('accepts valid npm-style project names', () => {
       expect(validateProjectName('my-game').valid).toBe(true);
       expect(validateProjectName('cardano_quest').valid).toBe(true);
       expect(validateProjectName('hydra-game-2026').valid).toBe(true);
       expect(validateProjectName('@hydra/my-starter').valid).toBe(true);
     });
 
-    it('từ chối tên dự án trống hoặc toàn khoảng trắng', () => {
+    it('rejects empty or whitespace-only project names', () => {
       const res1 = validateProjectName('');
       expect(res1.valid).toBe(false);
-      expect(res1.reason).toContain('không được để trống');
+      expect(res1.reason).toContain('must not be empty');
 
       const res2 = validateProjectName('   ');
       expect(res2.valid).toBe(false);
     });
 
-    it('từ chối tên dự án chứa ký tự path traversal nguy hiểm', () => {
+    it('rejects project names with path traversal sequences', () => {
       expect(validateProjectName('../evil').valid).toBe(false);
       expect(validateProjectName('/absolute/path').valid).toBe(false);
       expect(validateProjectName('\\windows\\path').valid).toBe(false);
     });
 
-    it('từ chối tên dự án chứa chữ hoa hoặc ký tự không hợp lệ chuẩn npm', () => {
+    it('rejects uppercase or otherwise invalid npm package names', () => {
       const res = validateProjectName('MyGame');
       expect(res.valid).toBe(false);
-      expect(res.reason).toContain('chuẩn npm');
+      expect(res.reason).toContain('npm naming rules');
     });
   });
 
   describe('2. Target Directory Checking (checkTargetDir)', () => {
-    it('chấp nhận thư mục chưa tồn tại', () => {
+    it('accepts a directory that does not exist', () => {
       const notExisting = path.join(tempDir, 'sub-dir');
       expect(checkTargetDir(notExisting).valid).toBe(true);
     });
 
-    it('chấp nhận thư mục đã tồn tại nhưng rỗng', () => {
+    it('accepts an existing empty directory', () => {
       const emptyDir = path.join(tempDir, 'empty');
       fs.mkdirSync(emptyDir);
       expect(checkTargetDir(emptyDir).valid).toBe(true);
     });
 
-    it('từ chối thư mục đã tồn tại và không rỗng khi không dùng force', () => {
+    it('rejects a non-empty directory without force', () => {
       const nonEmptyDir = path.join(tempDir, 'non-empty');
       fs.mkdirSync(nonEmptyDir);
       fs.writeFileSync(path.join(nonEmptyDir, 'file.txt'), 'hello');
 
       const res = checkTargetDir(nonEmptyDir, false);
       expect(res.valid).toBe(false);
-      expect(res.reason).toContain('không rỗng');
+      expect(res.reason).toContain('not empty');
     });
 
-    it('chấp nhận thư mục không rỗng khi bật force = true', () => {
+    it('accepts a non-empty directory when force is true', () => {
       const nonEmptyDir = path.join(tempDir, 'non-empty-forced');
       fs.mkdirSync(nonEmptyDir);
       fs.writeFileSync(path.join(nonEmptyDir, 'file.txt'), 'hello');
@@ -88,14 +88,14 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
   });
 
   describe('3. CLI Argument Parser (parseCliArgs)', () => {
-    it('parse đúng tham số positional và options', () => {
+    it('parses positional arguments and options', () => {
       const args = parseCliArgs(['my-game', '--template', 'nuxt-3', '--pm', 'pnpm']);
       expect(args.projectName).toBe('my-game');
       expect(args.template).toBe('nuxt-3');
       expect(args.packageManager).toBe('pnpm');
     });
 
-    it('parse đúng cú pháp viết tắt -t và -pm với dấu =', () => {
+    it('parses the short -t form and --pm with = syntax', () => {
       const args = parseCliArgs(['test-app', '-t=next-js', '--pm=yarn', '--force', '-y']);
       expect(args.projectName).toBe('test-app');
       expect(args.template).toBe('next-js');
@@ -104,38 +104,38 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(args.yes).toBe(true);
     });
 
-    it('parse đúng cú pháp -t với khoảng trắng', () => {
+    it('parses -t with a space-separated value', () => {
       const args = parseCliArgs(['test-app', '-t', 'phaser-3']);
       expect(args.template).toBe('phaser-3');
     });
 
-    it('parse đúng cờ --help và -h', () => {
+    it('parses --help and -h', () => {
       expect(parseCliArgs(['--help']).help).toBe(true);
       expect(parseCliArgs(['-h']).help).toBe(true);
     });
 
-    it('parse đúng cờ --version và -v', () => {
+    it('parses --version and -v', () => {
       expect(parseCliArgs(['--version']).version).toBe(true);
       expect(parseCliArgs(['-v']).version).toBe(true);
     });
   });
 
   describe('4. Project Scaffolding Engine (scaffoldProject)', () => {
-    it('tất cả template khai báo đều nằm trong danh sách hỗ trợ', () => {
+    it('lists every shipped template as supported', () => {
       expect(SUPPORTED_TEMPLATES).toEqual(['nuxt-3', 'next-js', 'phaser-3']);
     });
 
-    it('ném ngoại lệ khi template không được hỗ trợ', async () => {
+    it('throws when the template is not supported', async () => {
       await expect(
         scaffoldProject({
           projectName: 'invalid-template-app',
           targetDir: path.join(tempDir, 'invalid'),
           template: 'angular-17' as any,
         })
-      ).rejects.toThrow('không được hỗ trợ');
+      ).rejects.toThrow('is not supported');
     });
 
-    it('khởi tạo thành công template Nuxt 3 với đầy đủ files và thay thế placeholder', async () => {
+    it('scaffolds the Nuxt 3 template and substitutes placeholders', async () => {
       const targetDir = path.join(tempDir, 'test-nuxt');
       const result = await scaffoldProject({
         projectName: 'test-nuxt-game',
@@ -163,7 +163,7 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(fs.existsSync(path.join(targetDir, '.gitignore'))).toBe(true);
     });
 
-    it('khởi tạo thành công template Next.js với đầy đủ files và thay thế placeholder', async () => {
+    it('scaffolds the Next.js template and substitutes placeholders', async () => {
       const targetDir = path.join(tempDir, 'test-next');
       const result = await scaffoldProject({
         projectName: 'test-next-game',
@@ -192,7 +192,7 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(page).toContain('mountDevTools');
     });
 
-    it('khởi tạo thành công template Phaser 3 với đầy đủ files và thay thế placeholder', async () => {
+    it('scaffolds the Phaser 3 template and substitutes placeholders', async () => {
       const targetDir = path.join(tempDir, 'test-phaser');
       const result = await scaffoldProject({
         projectName: 'test-phaser-game',
@@ -218,7 +218,7 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(mainTs).toContain('test-phaser-game');
     });
 
-    it('giữ nguyên scoped package name trong package.json khi scaffold', async () => {
+    it('keeps a scoped package name in package.json', async () => {
       const targetDir = path.join(tempDir, 'test-scoped');
       const result = await scaffoldProject({
         projectName: '@hydra/cardano-game',
@@ -233,7 +233,7 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(pkgJson.name).toBe('@hydra/cardano-game');
     });
 
-    it('thay thế an toàn khi chuỗi replacement chứa ký tự đặc biệt ($)', async () => {
+    it('substitutes safely when the replacement contains special characters ($)', async () => {
       const srcDir = path.join(tempDir, 'src-dollar');
       const dstDir = path.join(tempDir, 'dst-dollar');
       fs.mkdirSync(srcDir, { recursive: true });
@@ -251,19 +251,19 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
   describe('5. CLI Binary Execution (bin/create-hydraone-game.js)', () => {
     const binScript = path.resolve(__dirname, '../../bin/create-hydraone-game.js');
 
-    it('chạy thành công với cờ --help', () => {
+    it('runs with --help', () => {
       const output = execSync(`node "${binScript}" --help`, { encoding: 'utf-8' });
       expect(output).toContain('create-hydraone-game');
-      expect(output).toContain('CÚ PHÁP:');
+      expect(output).toContain('USAGE:');
       expect(output).toContain('--template');
     });
 
-    it('chạy thành công với cờ --version', () => {
+    it('runs with --version', () => {
       const output = execSync(`node "${binScript}" --version`, { encoding: 'utf-8' });
       expect(output.trim()).toBe(`v${CLI_VERSION}`);
     });
 
-    it('scaffold dự án không tương tác qua cờ --yes', () => {
+    it('scaffolds non-interactively with --yes', () => {
       const targetDir = path.join(tempDir, 'cli-auto-app');
       execSync(
         `node "${binScript}" "${targetDir}" --template nuxt-3 --pm pnpm --yes`,
@@ -274,7 +274,7 @@ describe('Story 6.1: Game Scaffolding CLI (create-hydraone-game)', () => {
       expect(fs.existsSync(path.join(targetDir, 'app.vue'))).toBe(true);
     });
 
-    it('báo lỗi và dừng tiến trình khi truyền cờ --template không hợp lệ', () => {
+    it('fails when --template is invalid', () => {
       expect(() => {
         execSync(
           `node "${binScript}" "${path.join(tempDir, 'invalid-tmpl')}" --template bogus-template --yes`,

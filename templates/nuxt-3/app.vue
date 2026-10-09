@@ -1,45 +1,45 @@
 <template>
   <div v-if="isReadyToRender" class="hydra-app">
     <header class="header">
-      <div class="logo">🎮 {{ projectName }}</div>
+      <div class="logo">{{ projectName }}</div>
       <div class="wallet-badge" :class="{ connected: isConnected }">
-        {{ isConnected ? address : 'Chưa kết nối ví' }}
+        {{ isConnected ? address : 'Wallet not connected' }}
       </div>
     </header>
 
     <main class="main">
       <section class="card">
         <h2>Web3 Cardano Gaming Starter</h2>
-        <p>Dự án được khởi tạo thành công với <strong>Nuxt 3</strong> và <strong>@hydraone/sdk</strong>.</p>
+        <p>A Nuxt 3 game starter with <strong>@hydraone/sdk</strong>.</p>
 
         <div class="status-grid">
           <div class="status-item">
-            <span class="label">Trạng thái ví:</span>
-            <span class="val">{{ isConnected ? 'Đã kết nối' : 'Đang ngắt kết nối' }}</span>
+            <span class="label">Wallet status:</span>
+            <span class="val">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
           </div>
           <div class="status-item">
-            <span class="label">Số dư ADA:</span>
+            <span class="label">ADA balance:</span>
             <span class="val">{{ balanceADA || '0.000000' }} ADA</span>
           </div>
           <div class="status-item">
-            <span class="label">Phiên Auth CIP-8:</span>
-            <span class="val">{{ isAuthenticated ? 'Đã xác thực' : 'Chưa đăng nhập' }}</span>
+            <span class="label">CIP-8 session:</span>
+            <span class="val">{{ isAuthenticated ? 'Signed in' : 'Signed out' }}</span>
           </div>
         </div>
 
         <div class="actions">
           <button v-if="!isConnected" class="btn primary" @click="handleConnect">
-            Kết nối Ví
+            Connect wallet
           </button>
           <button v-else class="btn secondary" @click="handleDisconnect">
-            Ngắt kết nối
+            Disconnect
           </button>
 
           <button v-if="isConnected && !isAuthenticated" class="btn accent" @click="handleSignIn">
-            1-Click CIP-8 Đăng nhập
+            1-click CIP-8 sign in
           </button>
           <button v-if="isAuthenticated" class="btn outline" @click="handleSignOut">
-            Đăng xuất
+            Sign out
           </button>
         </div>
       </section>
@@ -75,7 +75,7 @@ async function handleSignOut() {
 }
 
 onMounted(async () => {
-  // 1. Kích hoạt Dev Host Shell chuẩn 100% HydraOne Web Client khi dev trên localhost
+  // In development, wrap the app in the dev host shell that mimics the HydraOne web client
   if (import.meta.env.DEV) {
     const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
     const isEmbed = initHydraDevShell({
@@ -84,7 +84,7 @@ onMounted(async () => {
       enableRealWallet: true,
     });
     if (!isEmbed) {
-      // Đã mount Host Shell ở Top-level Window, dừng để Iframe con render Game
+      // The host shell is mounted in the top-level window; the nested iframe renders the game
       return;
     }
   }
