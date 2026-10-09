@@ -20,3 +20,6 @@ next-env.d.ts
 .claude/
 _bmad/
 _bmad-output/
+
+# Generated API reference (pnpm run docs)
+docs/api/
