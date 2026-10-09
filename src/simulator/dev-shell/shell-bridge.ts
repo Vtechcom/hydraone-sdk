@@ -39,7 +39,7 @@ interface WalletRequest {
 }
 
 /** Response or push event posted back to a game iframe. */
-interface BridgeEnvelope {
+export interface BridgeEnvelope {
   type: string;
   requestId?: string;
   [key: string]: unknown;

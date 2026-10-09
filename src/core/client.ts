@@ -841,8 +841,8 @@ export class WalletBridgeClient {
    * Asks the user to sign a Cardano transaction (witness set).
    * 
    * @param cbor Hex-encoded CBOR of the transaction to sign.
-   * @param partialSign Whether to sign only part of the transaction (default: false).
-   * @param options Signing options (timeoutMs, default 120,000 ms).
+   * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignOptions} object (default: `false`).
+   * @param options Signing options (timeoutMs, default 120,000 ms) when `partialSignOrOptions` is a boolean.
    * @returns Hex-encoded CBOR of the TransactionWitnessSet.
    * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
