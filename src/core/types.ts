@@ -2,7 +2,7 @@ import type { ITransport } from './ports/transport';
 import type { IStorage } from './ports/storage';
 
 /**
- * Các loại bản tin được hỗ trợ trong giao thức giao tiếp giữa Game và Host Shell
+ * Message types supported by the protocol between the game and the host shell.
  */
 export type BridgeMessageType =
   | 'CLIENT_READY'
@@ -30,12 +30,12 @@ export type BridgeMessageType =
   | 'RPC_ERROR';
 
 /**
- * Nguồn phát sinh bản tin
+ * Origin of a bridge message.
  */
 export type BridgeMessageSource = 'hydra-client' | 'hydra-host';
 
 /**
- * Cấu trúc chuẩn của một bản tin (Message Envelope)
+ * Standard message envelope exchanged over a transport.
  */
 export interface BridgeMessage<T = unknown> {
   id: string;
@@ -46,7 +46,7 @@ export interface BridgeMessage<T = unknown> {
 }
 
 /**
- * Payload chuẩn cho phản hồi RPC
+ * Payload of an RPC response.
  */
 export interface RpcResponsePayload<T = unknown> {
   requestId: string;
@@ -59,17 +59,17 @@ export interface RpcResponsePayload<T = unknown> {
 }
 
 /**
- * Hàm xử lý nhận bản tin
+ * Callback invoked for each incoming message.
  */
 export type MessageHandler<T = unknown> = (message: BridgeMessage<T>) => void;
 
 /**
- * Hàm hủy đăng ký lắng nghe bản tin
+ * Function that removes a subscription.
  */
 export type UnsubscribeFn = () => void;
 
 /**
- * Các trạng thái vòng đời của một yêu cầu RPC (FSM)
+ * Lifecycle states of an RPC request.
  */
 export type RequestState =
   | 'Pending'
@@ -80,7 +80,7 @@ export type RequestState =
   | 'TransportFailed';
 
 /**
- * Bản ghi theo dõi yêu cầu đang xử lý trong In-Flight Map
+ * Bookkeeping record for a request that is still in flight.
  */
 export interface InFlightEntry<T = unknown> {
   id: string;
@@ -92,14 +92,14 @@ export interface InFlightEntry<T = unknown> {
 }
 
 /**
- * Interface trừu tượng cho đối tượng cửa sổ gửi nhận postMessage
+ * Minimal window-like object that can receive postMessage calls.
  */
 export interface PostMessageTarget {
   postMessage(message: unknown, targetOrigin: string): void;
 }
 
 /**
- * Interface trừu tượng cho đối tượng lắng nghe sự kiện message
+ * Minimal window-like object that emits message events.
  */
 export interface MessageEventSource {
   addEventListener(type: 'message', listener: (event: any) => void): void;
@@ -108,44 +108,44 @@ export interface MessageEventSource {
 }
 
 /**
- * Cấu hình khởi tạo cho PostMessageTransport
+ * Options for PostMessageTransport.
  */
 export interface PostMessageTransportOptions {
-  /** Origin của App Center Host Shell (ví dụ: 'https://alpha.hydraone.app') */
+  /** Origin of the host shell (for example 'https://alpha.hydraone.app'). */
   appCenterOrigin: string;
-  /** Cửa sổ mục tiêu để gửi postMessage (mặc định là window.parent khi chạy trong iframe) */
+  /** Window that receives outgoing messages (defaults to window.parent inside an iframe). */
   targetWindow?: PostMessageTarget;
-  /** Cửa sổ nguồn để lắng nghe sự kiện message (mặc định là window trong browser) */
+  /** Window that emits incoming message events (defaults to window in a browser). */
   sourceWindow?: MessageEventSource;
-  /** Môi trường thực thi ('production' | 'development' | 'test'). Trong production cấm dùng wildcard '*' */
+  /** Runtime environment ('production' | 'development' | 'test'). A wildcard '*' origin is rejected in production. */
   env?: string;
-  /** Bật/tắt kiểm tra event.source === window.parent khi chạy trong iframe (mặc định: true) */
+  /** Verify event.source === window.parent when running in an iframe (default: true). */
   checkIframeSource?: boolean;
-  /** Thời gian chờ phản hồi mặc định (ms) cho các yêu cầu request() (mặc định: 15000ms) */
+  /** Default response timeout in ms for request() calls (default: 15000). */
   defaultTimeoutMs?: number;
 }
 
 /**
- * Hằng số cấu hình thời gian chờ phân tầng (Tiered Timeouts) theo mili-giây
+ * Tiered timeouts in milliseconds.
  */
 export const TIERED_TIMEOUTS = {
-  /** Thời gian chờ tối đa cho quá trình bắt tay handshake CLIENT_READY (3,000ms) */
+  /** Maximum wait for the CLIENT_READY handshake (3,000 ms). */
   HANDSHAKE: 3000,
-  /** Thời gian chờ tối đa cho bản tin kiểm tra độ trễ PING (3,000ms) */
+  /** Maximum wait for a PING latency probe (3,000 ms). */
   PING: 3000,
-  /** Thời gian chờ mặc định cho các truy vấn trạng thái ví CIP-30 (15,000ms) */
+  /** Default wait for CIP-30 wallet state queries (15,000 ms). */
   QUERY: 15000,
-  /** Thời gian chờ cho các tác vụ tương tác người dùng / ký ví CIP-30 & CIP-8 (120,000ms) */
+  /** Wait for operations that need user interaction, such as CIP-30 and CIP-8 signing (120,000 ms). */
   SIGNING: 120000,
 } as const;
 
 /**
- * Trạng thái kết nối của WalletBridgeClient
+ * Connection state of WalletBridgeClient.
  */
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 /**
- * Thông tin phân trang cho các truy vấn CIP-30 (UTxOs, Addresses)
+ * Pagination for CIP-30 queries (UTxOs, addresses).
  */
 export interface Paginate {
   page?: number;
@@ -153,14 +153,14 @@ export interface Paginate {
 }
 
 /**
- * Tùy chọn cho các cuộc gọi truy vấn trạng thái (cho phép override timeout per-request)
+ * Options for wallet state queries (allows a per-request timeout override).
  */
 export interface QueryOptions {
   timeoutMs?: number;
 }
 
 /**
- * Thông tin metadata của Host Shell nhận được trong phiên bắt tay
+ * Host shell metadata received during the handshake.
  */
 export interface HostInfo {
   hostVersion?: string;
@@ -172,7 +172,7 @@ export interface HostInfo {
 }
 
 /**
- * Dữ liệu payload của bản tin HOST_ACK
+ * Payload of the HOST_ACK message.
  */
 export interface HostAckPayload {
   requestId?: string;
@@ -181,53 +181,53 @@ export interface HostAckPayload {
 }
 
 /**
- * Cấu hình khởi tạo cho WalletBridgeClient
+ * Options for WalletBridgeClient.
  */
 export interface WalletBridgeClientOptions {
-  /** Adapter triển khai port ITransport để truyền thông (tùy chọn khi bật fallbackToExtension) */
+  /** Transport adapter implementing ITransport (optional when fallbackToExtension is enabled). */
   transport?: ITransport;
-  /** Thời gian chờ bắt tay handshake (ms), mặc định 3000ms */
+  /** Handshake timeout in ms (default: 3000). */
   handshakeTimeoutMs?: number;
-  /** Thời gian chờ tối đa cho bản tin PING kiểm tra độ trễ (ms), mặc định 3000ms */
+  /** PING latency probe timeout in ms (default: 3000). */
   pingTimeoutMs?: number;
-  /** Thời gian chờ mặc định cho các truy vấn trạng thái (ms), mặc định 15000ms */
+  /** Default timeout for state queries in ms (default: 15000). */
   queryTimeoutMs?: number;
-  /** Thời gian chờ mặc định cho các tác vụ ký ví và nộp giao dịch (ms), mặc định 120000ms */
+  /** Default timeout for signing and submitting transactions in ms (default: 120000). */
   signingTimeoutMs?: number;
-  /** Tự động bắt tay khi khởi tạo (mặc định: false) */
+  /** Run the handshake on construction (default: false). */
   autoConnect?: boolean;
-  /** Tự động fallback sang native extension (window.cardano) khi chạy ngoài iframe (mặc định: false) */
+  /** Fall back to the native wallet extension (window.cardano) when running outside an iframe (default: false). */
   fallbackToExtension?: boolean;
-  /** Tên ví ưu tiên sử dụng khi fallback (ví dụ: 'eternl', 'lace', 'nami') */
+  /** Preferred wallet when falling back (for example 'eternl', 'lace', 'nami'). */
   preferredWallet?: string;
-  /** Đối tượng window.cardano tùy biến (phục vụ testing hoặc custom injection) */
+  /** Custom window.cardano object (for tests or custom injection). */
   cardanoProvider?: Record<string, any>;
-  /** Hàm kiểm tra môi trường iframe tùy biến (phục vụ testing) */
+  /** Custom iframe detection function (for tests). */
   isIframeFn?: () => boolean;
-  /** Bật ghi log cảnh báo/debug (mặc định: false) */
+  /** Enable warning/debug logging (default: false). */
   debug?: boolean;
 }
 
 /**
- * Chữ ký dữ liệu theo chuẩn CIP-8 / CIP-30
+ * Data signature as defined by CIP-8 / CIP-30.
  */
 export interface DataSignature {
-  /** Chuỗi hex của COSE_Sign1 chứa chữ ký */
+  /** Hex-encoded COSE_Sign1 structure containing the signature. */
   signature: string;
-  /** Chuỗi hex của COSE_Key chứa khóa công khai */
+  /** Hex-encoded COSE_Key containing the public key. */
   key: string;
 }
 
 /**
- * Tùy chọn cho các cuộc gọi ký ví và nộp giao dịch
+ * Options for signing and submitting calls.
  */
 export interface SignOptions {
-  /** Thời gian chờ tối đa (ms) cho yêu cầu ký/nộp, ghi đè mặc định signingTimeoutMs */
+  /** Maximum wait in ms for a sign/submit request; overrides signingTimeoutMs. */
   timeoutMs?: number;
 }
 
 /**
- * Dữ liệu payload cho yêu cầu ký giao dịch SIGN_TX
+ * Payload of the SIGN_TX request.
  */
 export interface SignTxPayload {
   cbor: string;
@@ -236,7 +236,7 @@ export interface SignTxPayload {
 }
 
 /**
- * Dữ liệu payload cho yêu cầu nộp giao dịch SUBMIT_TX
+ * Payload of the SUBMIT_TX request.
  */
 export interface SubmitTxPayload {
   cbor: string;
@@ -244,7 +244,7 @@ export interface SubmitTxPayload {
 }
 
 /**
- * Dữ liệu payload cho yêu cầu ký dữ liệu xác thực CIP-8 SIGN_DATA
+ * Payload of the SIGN_DATA request (CIP-8 data signing).
  */
 export interface SignDataPayload {
   address: string;
@@ -253,7 +253,7 @@ export interface SignDataPayload {
 }
 
 /**
- * Interface đại diện cho đối tượng API CIP-30 do Cardano extension trả về khi enable()
+ * CIP-30 API object returned by a Cardano wallet extension after enable().
  */
 export interface CIP30Api {
   getNetworkId(): Promise<number>;
@@ -271,7 +271,7 @@ export interface CIP30Api {
 }
 
 /**
- * Interface đại diện cho extension Cardano cài đặt trên window.cardano[walletName]
+ * Cardano wallet extension injected at window.cardano[walletName].
  */
 export interface CardanoWalletExtension {
   name?: string;
@@ -282,30 +282,30 @@ export interface CardanoWalletExtension {
 }
 
 /**
- * Cấu hình khởi tạo cho DirectExtensionTransport
+ * Options for DirectExtensionTransport.
  */
 export interface DirectExtensionTransportOptions {
-  /** Tên ví extension (ví dụ: 'eternl', 'lace', 'nami') */
+  /** Wallet extension name (for example 'eternl', 'lace', 'nami'). */
   walletName?: string;
-  /** Đối tượng extension CIP-30 (window.cardano[walletName]) */
+  /** CIP-30 extension object (window.cardano[walletName]). */
   extension?: CardanoWalletExtension;
-  /** Hoặc trực tiếp truyền CIP30Api instance đã enable */
+  /** Or pass an already enabled CIP30Api instance directly. */
   api?: CIP30Api;
-  /** Đối tượng cardano provider (mặc định là window.cardano nếu có) */
+  /** Cardano provider object (defaults to window.cardano when present). */
   cardanoProvider?: Record<string, any>;
-  /** Thời gian chờ mặc định (ms) cho các RPC requests (mặc định: 15000ms) */
+  /** Default timeout in ms for RPC requests (default: 15000). */
   defaultTimeoutMs?: number;
 }
 
 /**
- * Payload cho yêu cầu đọc dữ liệu lưu trữ từ Host Shell
+ * Payload for reading a key from host storage.
  */
 export interface HostStorageGetPayload {
   key: string;
 }
 
 /**
- * Payload cho yêu cầu ghi dữ liệu lưu trữ lên Host Shell
+ * Payload for writing a key to host storage.
  */
 export interface HostStorageSetPayload {
   key: string;
@@ -313,21 +313,21 @@ export interface HostStorageSetPayload {
 }
 
 /**
- * Payload cho yêu cầu xóa một khóa lưu trữ khỏi Host Shell
+ * Payload for removing a key from host storage.
  */
 export interface HostStorageRemovePayload {
   key: string;
 }
 
 /**
- * Payload cho yêu cầu dọn dẹp các khóa lưu trữ khỏi Host Shell
+ * Payload for clearing keys from host storage.
  */
 export interface HostStorageClearPayload {
   prefix?: string;
 }
 
 /**
- * Payload chứa thông tin chữ ký xác thực CIP-8 đã được đóng gói
+ * Packaged CIP-8 authentication signature.
  */
 export interface AuthSignaturePayload {
   address: string;
@@ -338,7 +338,7 @@ export interface AuthSignaturePayload {
 }
 
 /**
- * Trạng thái phiên xác thực của người chơi
+ * Authentication state of the player session.
  */
 export interface AuthState {
   isAuthenticated: boolean;
@@ -349,7 +349,7 @@ export interface AuthState {
 }
 
 /**
- * Kết quả trả về của phiên đăng nhập thành công
+ * Result of a successful sign-in.
  */
 export interface AuthSession {
   address: string;
@@ -362,23 +362,23 @@ export interface AuthSession {
 }
 
 /**
- * Tham số đầu vào cho phương thức signIn() của GameAuthManager
+ * Parameters for GameAuthManager.signIn().
  */
 export interface SignInParams {
-  /** Chuỗi challenge / nonce từ backend xác thực */
+  /** Challenge / nonce issued by the auth backend. */
   challenge: string;
-  /** Địa chỉ ví dùng để ký (tùy chọn: nếu không truyền sẽ tự động lấy từ client) */
+  /** Address used to sign (optional; resolved from the client when omitted). */
   address?: string;
-  /** JWT token nếu đã có sẵn hoặc được cấp phát trước (tùy chọn) */
+  /** Existing JWT, if one was already issued (optional). */
   token?: string;
-  /** Hàm callback để gửi chữ ký lên auth backend và nhận JWT token (tùy chọn) */
+  /** Callback that sends the signature to the auth backend and returns a JWT (optional). */
   exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
-  /** Tùy chọn ký ví CIP-8 (ghi đè timeout...) */
+  /** CIP-8 signing options (for example a timeout override). */
   signOptions?: SignOptions;
 }
 
 /**
- * Interface tối thiểu của Wallet Client phục vụ AuthManager
+ * Minimal wallet client surface required by the auth manager.
  */
 export interface IAuthSignerClient {
   signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
@@ -388,28 +388,28 @@ export interface IAuthSignerClient {
 }
 
 /**
- * Cấu hình khởi tạo cho AuthManager
+ * Options for the auth manager.
  */
 export interface AuthManagerOptions {
-  /** WalletBridgeClient instance hoặc đối tượng triển khai IAuthSignerClient */
+  /** WalletBridgeClient instance or any object implementing IAuthSignerClient. */
   client: IAuthSignerClient;
-  /** IStorage adapter để lưu trữ token an toàn (ví dụ HostStorageRelayAdapter) */
+  /** Storage adapter that persists the token (for example HostStorageRelayAdapter). */
   storage: IStorage;
-  /** Khóa lưu trữ JWT token trong IStorage (mặc định: 'hydra:sdk:auth:token') */
+  /** Storage key for the JWT (default: 'hydra:sdk:auth:token'). */
   tokenStorageKey?: string;
-  /** Khóa lưu trữ địa chỉ ví người chơi / người dùng (mặc định: 'hydra:sdk:auth:address') */
+  /** Storage key for the player address (default: 'hydra:sdk:auth:address'). */
   addressStorageKey?: string;
-  /** Dung sai thời gian hết hạn JWT tính bằng giây (clock tolerance, mặc định: 0) */
+  /** Clock tolerance in seconds applied when checking JWT expiry (default: 0). */
   clockToleranceSeconds?: number;
-  /** Hàm callback mặc định để trao đổi chữ ký lấy JWT token khi signIn không truyền (tùy chọn) */
+  /** Default callback that exchanges a signature for a JWT when signIn does not receive one (optional). */
   exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
 }
 
-/** Alias tương thích ngược với tài liệu Game */
+/** Alias of AuthManagerOptions. */
 export type GameAuthManagerOptions = AuthManagerOptions;
 
 /**
- * Hàm lắng nghe thay đổi trạng thái xác thực
+ * Listener for authentication state changes.
  */
 export type AuthStateHandler = (state: AuthState) => void;
 
@@ -418,12 +418,12 @@ export type AuthStateHandler = (state: AuthState) => void;
 // ==========================================
 
 /**
- * Chế độ giao diện hiển thị (Theme mode)
+ * UI theme mode.
  */
 export type ThemeMode = 'dark' | 'light';
 
 /**
- * Payload cho sự kiện thay đổi trạng thái tắt tiếng âm thanh AUDIO_MUTED_CHANGED
+ * Payload of the AUDIO_MUTED_CHANGED event.
  */
 export interface AudioMutedPayload {
   muted: boolean;
@@ -431,7 +431,7 @@ export interface AudioMutedPayload {
 }
 
 /**
- * Payload cho sự kiện thay đổi chủ đề giao diện THEME_CHANGED
+ * Payload of the THEME_CHANGED event.
  */
 export interface ThemeChangedPayload {
   theme: ThemeMode;
@@ -439,17 +439,17 @@ export interface ThemeChangedPayload {
 }
 
 /**
- * Hàm lắng nghe sự kiện thay đổi trạng thái tắt tiếng âm thanh
+ * Listener for audio mute changes.
  */
 export type AudioMutedHandler = (muted: boolean) => void;
 
 /**
- * Hàm lắng nghe sự kiện thay đổi chủ đề giao diện
+ * Listener for theme changes.
  */
 export type ThemeChangedHandler = (theme: ThemeMode) => void;
 
 /**
- * Kiểu hướng màn hình khóa (Screen Orientation Lock)
+ * Screen orientation lock types.
  */
 export type OrientationLockType =
   | 'any'
@@ -462,7 +462,7 @@ export type OrientationLockType =
   | 'landscape-secondary';
 
 /**
- * Dữ liệu payload cho yêu cầu khóa hướng màn hình SET_ORIENTATION
+ * Payload of the SET_ORIENTATION request.
  */
 export interface SetOrientationPayload {
   orientation: OrientationLockType;
@@ -470,7 +470,7 @@ export interface SetOrientationPayload {
 }
 
 /**
- * Các loại preset phản hồi xúc giác (Haptic Feedback)
+ * Haptic feedback presets.
  */
 export type HapticFeedbackType =
   | 'light'
@@ -482,7 +482,7 @@ export type HapticFeedbackType =
   | 'error';
 
 /**
- * Bảng ánh xạ các mẫu rung chuẩn (tính bằng mili-giây) theo preset xúc giác
+ * Vibration patterns in milliseconds for each haptic preset.
  */
 export const HAPTIC_PATTERNS: Record<HapticFeedbackType, readonly number[]> = {
   light: [15],
@@ -495,7 +495,7 @@ export const HAPTIC_PATTERNS: Record<HapticFeedbackType, readonly number[]> = {
 } as const;
 
 /**
- * Dữ liệu payload cho yêu cầu rung phản hồi xúc giác TRIGGER_HAPTIC
+ * Payload of the TRIGGER_HAPTIC request.
  */
 export interface TriggerHapticPayload {
   type?: HapticFeedbackType;
@@ -504,39 +504,36 @@ export interface TriggerHapticPayload {
 }
 
 // ==========================================
-// Host Modal Overlay & Player Profile Relay Types (Story 3.3)
+// Host Modal Overlay & Player Profile Relay Types
 // ==========================================
 
 /**
- * Tùy chọn cấu hình khi yêu cầu hiển thị modal nạp tiền / swap token trên Host Shell
+ * Options for asking the host shell to show a deposit / token swap modal.
  */
 export interface DepositModalOptions {
-  /** Loại token muốn nạp (ví dụ: 'ADA', 'DJED', 'iUSD', ...) */
+  /** Token to deposit (for example 'ADA', 'DJED', 'iUSD'). */
   token?: string;
-  /** Số lượng nạp tối thiểu được yêu cầu */
+  /** Minimum amount requested. */
   minAmount?: number | bigint | string;
   [key: string]: unknown;
 }
 
 /**
- * Payload bản tin yêu cầu mở modal nạp tiền REQUEST_DEPOSIT_MODAL
+ * Payload of the REQUEST_DEPOSIT_MODAL request.
  */
 export type DepositModalPayload = DepositModalOptions;
 
 /**
- * Thông tin hồ sơ người chơi được trả về từ Host Shell
+ * Player profile returned by the host shell.
  */
 export interface PlayerProfile {
-  /** Biệt danh / Nickname của người chơi */
+  /** Player nickname. */
   nickname?: string;
-  /** URL ảnh đại diện */
+  /** Avatar image URL. */
   avatarUrl?: string;
-  /** Cấp bậc VIP trong hệ thống App Center */
+  /** VIP tier in the App Center. */
   vipLevel?: number;
-  /** Cardano ADA Handle (ví dụ: '$player1') */
+  /** Cardano ADA Handle (for example '$player1'). */
   adaHandle?: string;
   [key: string]: unknown;
 }
-
-
-

@@ -1,31 +1,31 @@
 /**
- * Port IStorage - Trừu tượng hóa việc lưu trữ cặp khóa - giá trị (Key-Value)
- * hỗ trợ các adapter như SafeLocalStorage, InMemoryStorage và HostStorageRelay.
+ * Asynchronous key-value storage port implemented by the SafeLocalStorage,
+ * InMemoryStorage and HostStorageRelay adapters.
  */
 export interface IStorage {
   /**
-   * Lấy giá trị chuỗi ứng với key đã cho
-   * @param key Khóa cần truy vấn
-   * @returns Giá trị chuỗi nếu tồn tại, ngược lại trả về null
+   * Reads the string stored under a key.
+   * @param key Key to look up.
+   * @returns The stored string, or null when the key does not exist.
    */
   getItem(key: string): Promise<string | null>;
 
   /**
-   * Lưu trữ cặp khóa - giá trị
-   * @param key Khóa lưu trữ
-   * @param value Giá trị chuỗi cần lưu
+   * Stores a key-value pair.
+   * @param key Key to write.
+   * @param value String value to store.
    */
   setItem(key: string, value: string): Promise<void>;
 
   /**
-   * Xóa một key cụ thể khỏi bộ nhớ lưu trữ
-   * @param key Khóa cần xóa
+   * Removes a single key.
+   * @param key Key to remove.
    */
   removeItem(key: string): Promise<void>;
 
   /**
-   * Dọn dẹp các khóa thuộc quyền quản lý của SDK (chỉ xóa tiền tố `hydra:sdk:*`,
-   * tuyệt đối không xóa dữ liệu riêng của game).
+   * Removes only SDK-owned keys (the `hydra:sdk:*` prefix) and never touches
+   * data that belongs to the game.
    */
   clear(): Promise<void>;
 }

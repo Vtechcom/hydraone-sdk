@@ -1,5 +1,5 @@
 /**
- * Định nghĩa mã định danh lỗi chuẩn hóa cho toàn bộ SDK
+ * Stable error codes shared by every error the SDK throws.
  */
 export const ERROR_CODES = {
   ERR_TIMEOUT: 'ERR_TIMEOUT',
@@ -15,7 +15,7 @@ export const ERROR_CODES = {
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES] | (string & {});
 
 /**
- * Lớp lỗi cơ sở của HydraBridge SDK
+ * Base class for all errors thrown by the HydraOne SDK.
  */
 export class HydraBridgeError extends Error {
   public override readonly name: string = 'HydraBridgeError';
@@ -28,7 +28,7 @@ export class HydraBridgeError extends Error {
     this.code = code;
     this.details = details;
 
-    // Giữ nguyên prototype chain cho instanceof
+    // Restore the prototype chain so instanceof works when targeting ES5-style subclassing.
     Object.setPrototypeOf(this, new.target.prototype);
 
     const errorConstructor = Error as unknown as {
@@ -40,7 +40,7 @@ export class HydraBridgeError extends Error {
   }
 
   /**
-   * Chuyển đổi đối tượng lỗi sang dạng JSON chuẩn hóa để gửi qua transport
+   * Serializes the error to a plain object so it can cross a transport boundary.
    */
   toJSON() {
     return {
@@ -54,7 +54,7 @@ export class HydraBridgeError extends Error {
 }
 
 /**
- * Lỗi phát sinh khi một yêu cầu RPC hoặc handshake bị quá thời gian chờ (timeout)
+ * Thrown when an RPC request or the handshake exceeds its timeout.
  */
 export class HydraTimeoutError extends HydraBridgeError {
   public override readonly name: string = 'HydraTimeoutError';
@@ -66,7 +66,7 @@ export class HydraTimeoutError extends HydraBridgeError {
 }
 
 /**
- * Lỗi phát sinh khi người dùng từ chối ký ví hoặc hủy tác vụ
+ * Thrown when the user rejects a wallet prompt or cancels the operation.
  */
 export class HydraUserRejectedError extends HydraBridgeError {
   public override readonly name: string = 'HydraUserRejectedError';
@@ -78,7 +78,7 @@ export class HydraUserRejectedError extends HydraBridgeError {
 }
 
 /**
- * Lỗi phát sinh từ tầng truyền thông Transport (không tìm thấy Host, mất kết nối, lỗi iframe)
+ * Thrown by the transport layer (host not found, connection lost, iframe problems).
  */
 export class HydraTransportError extends HydraBridgeError {
   public override readonly name: string = 'HydraTransportError';
@@ -103,7 +103,7 @@ export class HydraTransportError extends HydraBridgeError {
 }
 
 /**
- * Lỗi bảo mật phát sinh khi bản tin không vượt qua kiểm tra Zero-Trust Origin
+ * Thrown when a message fails the zero-trust origin check.
  */
 export class HydraSecurityError extends HydraBridgeError {
   public override readonly name: string = 'HydraSecurityError';
@@ -115,7 +115,7 @@ export class HydraSecurityError extends HydraBridgeError {
 }
 
 /**
- * Lỗi xác thực Web3 hoặc phiên làm việc JWT hết hạn
+ * Thrown when Web3 authentication fails or the JWT session has expired.
  */
 export class HydraAuthError extends HydraBridgeError {
   public override readonly name: string = 'HydraAuthError';
@@ -127,7 +127,7 @@ export class HydraAuthError extends HydraBridgeError {
 }
 
 /**
- * Lỗi tầng lưu trữ (Storage bị chặn, không có bộ nhớ khả dụng)
+ * Thrown when no storage is available or storage access is blocked.
  */
 export class HydraStorageError extends HydraBridgeError {
   public override readonly name: string = 'HydraStorageError';

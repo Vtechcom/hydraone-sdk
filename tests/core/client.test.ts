@@ -13,7 +13,7 @@ import {
 import type { ITransport, BridgeMessage, MessageHandler, UnsubscribeFn } from '../../src';
 
 /**
- * Mock Transport đơn giản triển khai chuẩn Port ITransport
+ * Minimal ITransport implementation that records outgoing messages.
  */
 class SimpleMockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
@@ -54,14 +54,14 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Constructor & Configuration', () => {
-    it('ném lỗi nếu không cung cấp transport', () => {
+    it('throws when no transport is provided', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
       expect(() => new WalletBridgeClient({} as any)).toThrow(
         'Transport must be provided'
       );
     });
 
-    it('khởi tạo với các giá trị timeout mặc định chuẩn', () => {
+    it('initializes with the default timeout values', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -71,7 +71,7 @@ describe('WalletBridgeClient', () => {
       expect(client.connectionState).toBe('disconnected');
     });
 
-    it('cho phép cấu hình tùy biến handshake và query timeout', () => {
+    it('allows customizing the handshake and query timeouts', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({
         transport,
@@ -85,7 +85,7 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Handshake & Lifecycle (CLIENT_READY ⇄ HOST_ACK)', () => {
-    it('thực hiện handshake thành công và chuyển trạng thái sang connected', async () => {
+    it('completes the handshake and moves to the connected state', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -96,7 +96,7 @@ describe('WalletBridgeClient', () => {
       const readyMsg = transport.sentMessages[0];
       expect(readyMsg.type).toBe('CLIENT_READY');
 
-      // Giả lập Host gửi HOST_ACK phản hồi
+      // Simulate the host replying with HOST_ACK
       transport.simulateIncoming({
         id: 'host-msg-1',
         type: 'HOST_ACK',
@@ -122,14 +122,14 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    it('thất bại khi handshake quá thời gian chờ (3000ms mặc định)', async () => {
+    it('fails when the handshake times out (3000ms default)', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
       const initPromise = client.init();
       expect(client.connectionState).toBe('connecting');
 
-      // Kích hoạt timeout 3000ms
+      // Trigger the 3000ms timeout
       vi.advanceTimersByTime(3000);
 
       await expect(initPromise).rejects.toThrow(HydraTimeoutError);
@@ -140,7 +140,7 @@ describe('WalletBridgeClient', () => {
       expect(client.connectionState).toBe('disconnected');
     });
 
-    it('trả về cùng Promise nếu gọi init() nhiều lần đồng thời', async () => {
+    it('returns the same Promise when init() is called concurrently', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -162,7 +162,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(true);
     });
 
-    it('gọi init() khi đã kết nối sẽ resolve ngay lập tức', async () => {
+    it('resolves immediately when init() is called while already connected', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -177,12 +177,12 @@ describe('WalletBridgeClient', () => {
       });
       await initPromise;
 
-      // Gọi lại init lần 2
+      // Call init a second time
       await client.init();
-      expect(transport.sentMessages.length).toBe(1); // không gửi thêm bản tin
+      expect(transport.sentMessages.length).toBe(1); // no additional message is sent
     });
 
-    it('tự động kết nối khi bật autoConnect: true', async () => {
+    it('connects automatically when autoConnect is true', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport, autoConnect: true });
 
@@ -202,7 +202,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(true);
     });
 
-    it('tiếp nhận bản tin HOST_ACK phát độc lập không qua requestId', () => {
+    it('accepts an unsolicited HOST_ACK without a requestId', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -231,7 +231,7 @@ describe('WalletBridgeClient', () => {
       transport = new SimpleMockTransport();
       client = new WalletBridgeClient({ transport });
 
-      // Kết nối trước cho các test case query
+      // Connect first for the query test cases
       const p = client.init();
       transport.simulateIncoming({
         id: 'ack',
@@ -243,7 +243,7 @@ describe('WalletBridgeClient', () => {
       await p;
     });
 
-    it('từ chối gọi query khi chưa kết nối với mã lỗi ERR_NOT_CONNECTED', async () => {
+    it('rejects queries made before connecting with ERR_NOT_CONNECTED', async () => {
       const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
       await expect(disconnectedClient.getUsedAddresses()).rejects.toThrow(
@@ -257,7 +257,7 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    it('thực hiện getUsedAddresses() thành công', async () => {
+    it('getUsedAddresses() succeeds', async () => {
       const promise = client.getUsedAddresses({ page: 0, limit: 10 });
       expect(transport.sentMessages.length).toBe(2);
 
@@ -280,7 +280,7 @@ describe('WalletBridgeClient', () => {
       expect(addresses).toEqual(['addr_test1qqqq...']);
     });
 
-    it('thực hiện getUtxos() thành công và trả về danh sách UTxO hex', async () => {
+    it('getUtxos() succeeds and returns a list of hex UTxOs', async () => {
       const promise = client.getUtxos('1000000', { page: 1, limit: 5 });
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_UTXOS');
@@ -301,7 +301,7 @@ describe('WalletBridgeClient', () => {
       expect(utxos).toEqual(['82825820...']);
     });
 
-    it('thực hiện getBalance() thành công và trả về CBOR hex string', async () => {
+    it('getBalance() succeeds and returns a CBOR hex string', async () => {
       const promise = client.getBalance();
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_BALANCE');
@@ -321,7 +321,7 @@ describe('WalletBridgeClient', () => {
       expect(balance).toBe('1a004c4b40');
     });
 
-    it('thực hiện getCollateral() thành công', async () => {
+    it('getCollateral() succeeds', async () => {
       const promise = client.getCollateral({ amount: '5000000' });
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_COLLATERAL');
@@ -341,7 +341,7 @@ describe('WalletBridgeClient', () => {
       expect(collateral).toEqual(['collateral_utxo_hex']);
     });
 
-    it('thực hiện các queries phụ trợ CIP-30 (unused, change, reward, networkId)', async () => {
+    it('runs the auxiliary CIP-30 queries (unused, change, reward, networkId)', async () => {
       const p1 = client.getUnusedAddresses();
       const p2 = client.getChangeAddress();
       const p3 = client.getRewardAddresses();
@@ -392,7 +392,7 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Tiered Timeouts & Silent Drop', () => {
-    it('truy vấn quá thời gian chờ mặc định (15,000ms) sẽ ném HydraTimeoutError', async () => {
+    it('a query exceeding the default timeout (15,000ms) throws HydraTimeoutError', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -409,10 +409,10 @@ describe('WalletBridgeClient', () => {
       const queryPromise = client.getBalance();
       const queryId = transport.sentMessages[1].id;
 
-      // Chưa đủ 15,000ms
+      // Not yet at 15,000ms
       vi.advanceTimersByTime(14000);
 
-      // Đạt 15,000ms
+      // Reached 15,000ms
       vi.advanceTimersByTime(1000);
 
       await expect(queryPromise).rejects.toThrow(HydraTimeoutError);
@@ -420,7 +420,7 @@ describe('WalletBridgeClient', () => {
         code: ERROR_CODES.ERR_TIMEOUT,
       });
 
-      // Phản hồi muộn tới sau khi timeout -> Bỏ qua trong im lặng (silent drop)
+      // A late response arriving after the timeout is silently dropped
       expect(() => {
         transport.simulateIncoming({
           id: 'late-res',
@@ -432,7 +432,7 @@ describe('WalletBridgeClient', () => {
       }).not.toThrow();
     });
 
-    it('cho phép ghi đè timeout per-request thông qua QueryOptions', async () => {
+    it('allows overriding the timeout per request through QueryOptions', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -457,7 +457,7 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Error Handling & Host Errors', () => {
-    it('ánh xạ lỗi RPC_ERROR với code ERR_USER_REJECTED sang HydraUserRejectedError', async () => {
+    it('maps an RPC_ERROR with code ERR_USER_REJECTED to HydraUserRejectedError', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -491,7 +491,7 @@ describe('WalletBridgeClient', () => {
       await expect(queryPromise).rejects.toThrow(HydraUserRejectedError);
     });
 
-    it('ánh xạ lỗi RPC_ERROR tổng quát sang HydraBridgeError với đúng code', async () => {
+    it('maps a generic RPC_ERROR to HydraBridgeError with the matching code', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -532,7 +532,7 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Host Event Listeners & Destruction Lifecycle', () => {
-    it('đăng ký và kích hoạt callback khi nhận host events', async () => {
+    it('registers a callback and fires it when host events arrive', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -549,7 +549,7 @@ describe('WalletBridgeClient', () => {
 
       expect(audioCallback).toHaveBeenCalledWith({ muted: true });
 
-      // Hủy lắng nghe
+      // Unsubscribe
       unsubscribe();
       transport.simulateIncoming({
         id: 'ev-2',
@@ -561,7 +561,7 @@ describe('WalletBridgeClient', () => {
       expect(audioCallback).toHaveBeenCalledTimes(1);
     });
 
-    it('xử lý an toàn khi onHostEvent nhận tham số không hợp lệ', () => {
+    it('handles invalid onHostEvent arguments safely', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -574,7 +574,7 @@ describe('WalletBridgeClient', () => {
       expect(() => unsub2()).not.toThrow();
     });
 
-    it('disconnect() hủy các pending request và chuyển trạng thái về disconnected', async () => {
+    it('disconnect() cancels pending requests and returns to the disconnected state', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -598,7 +598,7 @@ describe('WalletBridgeClient', () => {
       await expect(queryPromise).rejects.toThrow('Client has been disconnected');
     });
 
-    it('destroy() gọi dọn dẹp và hủy transport', () => {
+    it('destroy() cleans up and destroys the transport', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -608,8 +608,8 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Tích hợp trực tiếp với PostMessageTransport', () => {
-    it('hoạt động trơn tru với PostMessageTransport trong môi trường Iframe giả lập', async () => {
+  describe('Integration with PostMessageTransport', () => {
+    it('works with PostMessageTransport in a simulated iframe environment', async () => {
       const targetWindow = { postMessage: vi.fn() };
       const sourceWindow = {
         addEventListener: vi.fn(),
@@ -633,7 +633,7 @@ describe('WalletBridgeClient', () => {
       const sentEnvelope = targetWindow.postMessage.mock.calls[0][0];
       expect(sentEnvelope.type).toBe('CLIENT_READY');
 
-      // Giả lập Host Shell gửi message event trả về
+      // Simulate the host shell sending a message event back
       pmTransport.handleMessageEvent({
         origin: 'https://alpha.hydraone.app',
         data: {
@@ -652,7 +652,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(true);
       expect(client.hostInfo).toEqual({ walletName: 'Lace' });
 
-      // Gọi getUsedAddresses qua PostMessageTransport
+      // Call getUsedAddresses through PostMessageTransport
       const addrPromise = client.getUsedAddresses();
       const addrEnvelope = targetWindow.postMessage.mock.calls[1][0];
       expect(addrEnvelope.type).toBe('GET_USED_ADDRESSES');
@@ -684,7 +684,7 @@ describe('WalletBridgeClient', () => {
       transport = new SimpleMockTransport();
       client = new WalletBridgeClient({ transport });
 
-      // Handshake kết nối trước mỗi test
+      // Complete the handshake before each test
       const initPromise = client.init();
       const readyMsg = transport.sentMessages[0];
       transport.simulateIncoming({
@@ -702,7 +702,7 @@ describe('WalletBridgeClient', () => {
       expect(client.signingTimeoutMs).toBe(TIERED_TIMEOUTS.SIGNING); // 120,000ms
     });
 
-    it('sử dụng signingTimeoutMs tùy chỉnh từ constructor options', async () => {
+    it('uses a custom signingTimeoutMs from the constructor options', async () => {
       const customTransport = new SimpleMockTransport();
       const customClient = new WalletBridgeClient({
         transport: customTransport,
@@ -721,7 +721,7 @@ describe('WalletBridgeClient', () => {
 
       expect(customClient.signingTimeoutMs).toBe(40000);
 
-      // Kiểm tra timeout thực tế kích hoạt ở 40s thay vì 120s
+      // Verify the timeout fires at 40s instead of 120s
       const signPromise = customClient.signTx('84a300818258200101...');
       vi.advanceTimersByTime(39999);
       vi.advanceTimersByTime(1);
@@ -729,7 +729,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('signTx', () => {
-      it('gửi yêu cầu SIGN_TX và nhận witness set CBOR hex', async () => {
+      it('sends SIGN_TX and receives the witness set CBOR hex', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor, false);
 
@@ -741,7 +741,7 @@ describe('WalletBridgeClient', () => {
           partialSign: false,
         });
 
-        // Giả lập Host Shell trả về witness set
+        // Simulate the host shell returning a witness set
         const witnessCbor = 'a10081825820...';
         transport.simulateIncoming({
           id: 'host-res-sign',
@@ -758,7 +758,7 @@ describe('WalletBridgeClient', () => {
         expect(result).toBe(witnessCbor);
       });
 
-      it('hỗ trợ partialSign: true', async () => {
+      it('supports partialSign: true', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor, true);
 
@@ -783,7 +783,7 @@ describe('WalletBridgeClient', () => {
         expect(res).toBe('witness_partial');
       });
 
-      it('ném HydraUserRejectedError khi người dùng từ chối ký ví', async () => {
+      it('throws HydraUserRejectedError when the user rejects signing in the wallet', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor);
 
@@ -810,15 +810,15 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('hết hạn timeout sau 120,000ms mặc định', async () => {
+      it('times out after the default 120,000ms', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor);
 
-        // Chưa timeout ở 119s
+        // Not timed out yet at 119s
         vi.advanceTimersByTime(119000);
         expect(transport.sentMessages.length).toBe(2);
 
-        // Đạt 120s
+        // Reached 120s
         vi.advanceTimersByTime(1000);
 
         await expect(signPromise).rejects.toThrow(HydraTimeoutError);
@@ -827,7 +827,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('cho phép ghi đè timeout tùy biến qua options.timeoutMs', async () => {
+      it('allows overriding the timeout through options.timeoutMs', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor, false, { timeoutMs: 30000 });
 
@@ -839,7 +839,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('cho phép truyền trực tiếp SignOptions ở vị trí tham số thứ 2 khi bỏ qua partialSign', async () => {
+      it('accepts SignOptions as the second argument when partialSign is omitted', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor, { timeoutMs: 25000 });
 
@@ -854,17 +854,17 @@ describe('WalletBridgeClient', () => {
         await expect(signPromise).rejects.toThrow(HydraTimeoutError);
       });
 
-      it('loại bỏ âm thầm phản hồi trễ của Host sau khi signTx đã timeout', async () => {
+      it('silently drops a late host response after signTx has timed out', async () => {
         const txCbor = '84a300818258200101...';
         const signPromise = client.signTx(txCbor);
 
-        // Chờ timeout
+        // Wait for the timeout
         vi.advanceTimersByTime(120000);
         await expect(signPromise).rejects.toThrow(HydraTimeoutError);
 
         const signMsg = transport.sentMessages[1];
 
-        // Host gửi phản hồi muộn
+        // Host sends a late response
         expect(() => {
           transport.simulateIncoming({
             id: 'late-host-reply',
@@ -879,7 +879,7 @@ describe('WalletBridgeClient', () => {
         }).not.toThrow();
       });
 
-      it('ném ERR_INVALID_PARAMS nếu cbor rỗng hoặc không phải string', async () => {
+      it('throws ERR_INVALID_PARAMS when cbor is empty or not a string', async () => {
         await expect(client.signTx('')).rejects.toThrow(HydraBridgeError);
         await expect(client.signTx(null as any)).rejects.toMatchObject({
           code: 'ERR_INVALID_PARAMS',
@@ -888,7 +888,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('submitTx', () => {
-      it('gửi yêu cầu SUBMIT_TX và trả về chuỗi hash giao dịch', async () => {
+      it('sends SUBMIT_TX and returns the transaction hash', async () => {
         const txCbor = '84a300818258200101...';
         const submitPromise = client.submitTx(txCbor);
 
@@ -914,7 +914,7 @@ describe('WalletBridgeClient', () => {
         expect(res).toBe(txHash);
       });
 
-      it('ném HydraUserRejectedError khi người dùng từ chối nộp giao dịch trên ví', async () => {
+      it('throws HydraUserRejectedError when the user rejects submission in the wallet', async () => {
         const txCbor = '84a300818258200101...';
         const submitPromise = client.submitTx(txCbor);
 
@@ -941,7 +941,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('hết hạn timeout sau 120,000ms nếu Host không phản hồi submitTx', async () => {
+      it('times out after 120,000ms when the host does not answer submitTx', async () => {
         const txCbor = '84a300818258200101...';
         const submitPromise = client.submitTx(txCbor);
 
@@ -953,7 +953,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('cho phép ghi đè timeout tùy biến qua options.timeoutMs', async () => {
+      it('allows overriding the timeout through options.timeoutMs', async () => {
         const txCbor = '84a300818258200101...';
         const submitPromise = client.submitTx(txCbor, { timeoutMs: 35000 });
 
@@ -965,7 +965,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi nếu CBOR giao dịch không hợp lệ', async () => {
+      it('throws when the transaction CBOR is invalid', async () => {
         await expect(client.submitTx('')).rejects.toMatchObject({
           code: 'ERR_INVALID_PARAMS',
         });
@@ -973,7 +973,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('signData', () => {
-      it('gửi yêu cầu SIGN_DATA và trả về DataSignature ({ signature, key })', async () => {
+      it('sends SIGN_DATA and returns a DataSignature ({ signature, key })', async () => {
         const address = 'addr_test1qp...';
         const payloadHex = '68656c6c6f20776f726c64'; // 'hello world' hex
         const signDataPromise = client.signData(address, payloadHex);
@@ -1005,7 +1005,7 @@ describe('WalletBridgeClient', () => {
         expect(result).toEqual(expectedSig);
       });
 
-      it('ném HydraUserRejectedError khi người dùng từ chối signData', async () => {
+      it('throws HydraUserRejectedError when the user rejects signData', async () => {
         const address = 'addr_test1qp...';
         const payloadHex = '68656c6c6f20776f726c64';
         const signDataPromise = client.signData(address, payloadHex);
@@ -1031,7 +1031,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném ERR_INVALID_PARAMS khi address hoặc payloadHex không hợp lệ', async () => {
+      it('throws ERR_INVALID_PARAMS when address or payloadHex is invalid', async () => {
         await expect(client.signData('', '1234')).rejects.toMatchObject({
           code: 'ERR_INVALID_PARAMS',
         });
@@ -1041,8 +1041,8 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    describe('Kiểm tra trạng thái chưa kết nối (ERR_NOT_CONNECTED)', () => {
-      it('ném ERR_NOT_CONNECTED khi gọi signTx, submitTx, signData trước khi init', async () => {
+    describe('Not-connected state (ERR_NOT_CONNECTED)', () => {
+      it('throws ERR_NOT_CONNECTED when signTx, submitTx and signData are called before init', async () => {
         const uninitClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(uninitClient.signTx('1234')).rejects.toThrow(HydraBridgeError);
@@ -1060,8 +1060,8 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    describe('Tích hợp cùng PostMessageTransport', () => {
-      it('xử lý signTx và ánh xạ HydraUserRejectedError qua PostMessageTransport', async () => {
+    describe('Integration with PostMessageTransport', () => {
+      it('handles signTx and maps HydraUserRejectedError through PostMessageTransport', async () => {
         const targetWindow = { postMessage: vi.fn() };
         const sourceWindow = {
           addEventListener: vi.fn(),
@@ -1093,13 +1093,13 @@ describe('WalletBridgeClient', () => {
         });
         await initPromise;
 
-        // Gọi signTx
+        // Call signTx
         const signPromise = pmClient.signTx('deadbeef');
         expect(targetWindow.postMessage).toHaveBeenCalledTimes(2);
         const signEnvelope = targetWindow.postMessage.mock.calls[1][0];
         expect(signEnvelope.type).toBe('SIGN_TX');
 
-        // Host Shell phản hồi lỗi người dùng từ chối
+        // Host shell replies with a user-rejected error
         pmTransport.handleMessageEvent({
           origin: 'https://alpha.hydraone.app',
           data: {
@@ -1125,7 +1125,7 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Standalone Direct Extension Fallback (Story 1.5)', () => {
+  describe('Standalone Direct Extension Fallback', () => {
     let mockApi: any;
     let mockExtension: any;
     let mockProvider: Record<string, any>;
@@ -1162,10 +1162,10 @@ describe('WalletBridgeClient', () => {
       };
     });
 
-    it('tự động detect và fallback sang DirectExtensionTransport khi fallbackToExtension: true và chạy ngoài iframe', async () => {
+    it('detects standalone mode and falls back to DirectExtensionTransport when fallbackToExtension is true outside an iframe', async () => {
       const client = new WalletBridgeClient({
         fallbackToExtension: true,
-        isIframeFn: () => false, // Giả lập chạy ngoài iframe (standalone)
+        isIframeFn: () => false, // Simulate running outside an iframe (standalone)
         cardanoProvider: mockProvider,
       });
 
@@ -1182,28 +1182,28 @@ describe('WalletBridgeClient', () => {
         walletName: 'eternl',
       });
 
-      // Kiểm tra thực hiện truy vấn CIP-30 qua fallback
+      // Verify CIP-30 queries through the fallback
       const addresses = await client.getUsedAddresses();
       expect(addresses).toEqual(['addr_1']);
       expect(mockApi.getUsedAddresses).toHaveBeenCalled();
 
-      // Kiểm tra ký giao dịch qua fallback
+      // Verify transaction signing through the fallback
       const signed = await client.signTx('tx_cbor');
       expect(signed).toBe('signed_witness');
       expect(mockApi.signTx).toHaveBeenCalledWith('tx_cbor', false);
 
-      // Kiểm tra nộp giao dịch qua fallback
+      // Verify transaction submission through the fallback
       const txHash = await client.submitTx('signed_tx');
       expect(txHash).toBe('tx_hash_standalone');
       expect(mockApi.submitTx).toHaveBeenCalledWith('signed_tx');
 
-      // Kiểm tra ký dữ liệu CIP-8 qua fallback
+      // Verify CIP-8 data signing through the fallback
       const dataSig = await client.signData('addr_1', 'deadbeef');
       expect(dataSig).toEqual({ signature: 'sig', key: 'key' });
       expect(mockApi.signData).toHaveBeenCalledWith('addr_1', 'deadbeef');
     });
 
-    it('ưu tiên preferredWallet khi provider có nhiều extension', async () => {
+    it('prefers preferredWallet when the provider exposes several extensions', async () => {
       const client = new WalletBridgeClient({
         fallbackToExtension: true,
         preferredWallet: 'nami',
@@ -1220,11 +1220,11 @@ describe('WalletBridgeClient', () => {
       expect(mockExtension.enable).not.toHaveBeenCalled();
     });
 
-    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi fallbackToExtension: true nhưng không tìm thấy extension nào', async () => {
+    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when fallbackToExtension is true but no extension is found', async () => {
       const client = new WalletBridgeClient({
         fallbackToExtension: true,
         isIframeFn: () => false,
-        cardanoProvider: {}, // Rỗng
+        cardanoProvider: {}, // Empty
       });
 
       await expect(client.init()).rejects.toThrow(HydraTransportError);
@@ -1234,7 +1234,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(false);
     });
 
-    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi chạy ngoài iframe và fallbackToExtension: false', async () => {
+    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when running outside an iframe with fallbackToExtension: false', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({
         transport,
@@ -1249,7 +1249,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(false);
     });
 
-    it('ném lỗi ERR_INVALID_OPTIONS khi không truyền transport và không bật fallbackToExtension', () => {
+    it('throws ERR_INVALID_OPTIONS when no transport is given and fallbackToExtension is off', () => {
       expect(() => {
         new WalletBridgeClient({} as any);
       }).toThrow(HydraBridgeError);
@@ -1261,10 +1261,10 @@ describe('WalletBridgeClient', () => {
       }
     });
 
-    it('ném HydraBridgeError khi chạy trong iframe nhưng không truyền transport', async () => {
+    it('throws HydraBridgeError when running inside an iframe without a transport', async () => {
       const client = new WalletBridgeClient({
         fallbackToExtension: true,
-        isIframeFn: () => true, // Đang chạy trong iframe!
+        isIframeFn: () => true, // Running inside an iframe
       });
 
       await expect(client.init()).rejects.toThrow(HydraBridgeError);
@@ -1273,7 +1273,7 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    it('gọi oldTransport.destroy() khi fallback sang DirectExtensionTransport', async () => {
+    it('calls oldTransport.destroy() when falling back to DirectExtensionTransport', async () => {
       const mockDestroy = vi.fn();
       const initialTransport: ITransport = {
         send: vi.fn().mockResolvedValue(undefined),
@@ -1296,7 +1296,7 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Host Event Bus Sync (Audio & Theme) (Story 3.1)', () => {
+  describe('Host Event Bus Sync (Audio & Theme)', () => {
     let mockTransport: ITransport;
     let messageCallback: ((msg: any) => void) | undefined;
     let client: WalletBridgeClient;
@@ -1327,7 +1327,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('AUDIO_MUTED_CHANGED', () => {
-      it('kích hoạt onAudioMutedChanged khi Host Shell broadcast payload { muted: true }', () => {
+      it('fires onAudioMutedChanged when the host shell broadcasts { muted: true }', () => {
         const audioSpy = vi.fn();
         const unsub = client.onAudioMutedChanged(audioSpy);
 
@@ -1348,7 +1348,7 @@ describe('WalletBridgeClient', () => {
         unsub();
       });
 
-      it('kích hoạt onAudioMutedChanged khi Host Shell broadcast payload { muted: false }', () => {
+      it('fires onAudioMutedChanged when the host shell broadcasts { muted: false }', () => {
         const audioSpy = vi.fn();
         client.onAudioMutedChanged(audioSpy);
 
@@ -1364,7 +1364,7 @@ describe('WalletBridgeClient', () => {
         expect(client.isAudioMuted).toBe(false);
       });
 
-      it('xử lý an toàn khi Host Shell truyền boolean trực tiếp trong payload', () => {
+      it('handles a boolean sent directly as the payload', () => {
         const audioSpy = vi.fn();
         client.onAudioMutedChanged(audioSpy);
 
@@ -1391,7 +1391,7 @@ describe('WalletBridgeClient', () => {
         expect(client.isAudioMuted).toBe(false);
       });
 
-      it('cho phép đăng ký nhiều listener và gỡ bỏ chính xác qua unsubscribe', () => {
+      it('supports multiple listeners and removes them correctly through unsubscribe', () => {
         const listenerA = vi.fn();
         const listenerB = vi.fn();
 
@@ -1409,7 +1409,7 @@ describe('WalletBridgeClient', () => {
         expect(listenerA).toHaveBeenCalledTimes(1);
         expect(listenerB).toHaveBeenCalledTimes(1);
 
-        // Hủy đăng ký listenerA
+        // Unsubscribe listenerA
         unsubA();
 
         messageCallback?.({
@@ -1420,14 +1420,14 @@ describe('WalletBridgeClient', () => {
           source: 'hydra-host',
         });
 
-        expect(listenerA).toHaveBeenCalledTimes(1); // Không nhận thêm
-        expect(listenerB).toHaveBeenCalledTimes(2); // Vẫn tiếp tục nhận
+        expect(listenerA).toHaveBeenCalledTimes(1); // receives nothing more
+        expect(listenerB).toHaveBeenCalledTimes(2); // keeps receiving
         expect(listenerB).toHaveBeenLastCalledWith(false);
 
         unsubB();
       });
 
-      it('bắt lỗi an toàn khi listener ném ngoại lệ mà không làm crash các listener khác', () => {
+      it('catches listener exceptions without crashing the other listeners', () => {
         const faultyListener = vi.fn().mockImplementation(() => {
           throw new Error('Game sound manager exploded');
         });
@@ -1451,13 +1451,13 @@ describe('WalletBridgeClient', () => {
         expect(healthyListener).toHaveBeenCalledWith(true);
       });
 
-      it('trả về hàm no-op khi đăng ký handler không phải function', () => {
+      it('returns a no-op function when the handler is not a function', () => {
         const unsub = client.onAudioMutedChanged(null as any);
         expect(typeof unsub).toBe('function');
         expect(() => unsub()).not.toThrow();
       });
 
-      it('không ném lỗi khi payload rỗng hoặc null', () => {
+      it('does not throw on an empty or null payload', () => {
         const audioSpy = vi.fn();
         client.onAudioMutedChanged(audioSpy);
 
@@ -1474,9 +1474,9 @@ describe('WalletBridgeClient', () => {
         expect(audioSpy).not.toHaveBeenCalled();
       });
 
-      it('không gọi listener nếu bị unsubscribe hoặc destroy trong lúc listener trước đang chạy', () => {
+      it('does not call a listener that was unsubscribed or destroyed while an earlier listener was running', () => {
         const listenerA = vi.fn().mockImplementation(() => {
-          // Listener A hủy đăng ký Listener B trong khi sự kiện đang được phân phối
+          // Listener A unsubscribes Listener B while the event is being dispatched
           unsubB();
         });
         const listenerB = vi.fn();
@@ -1496,7 +1496,7 @@ describe('WalletBridgeClient', () => {
         expect(listenerB).not.toHaveBeenCalled();
       });
 
-      it('ngăn chặn các listener tiếp theo chạy nếu listener trước gọi client.destroy()', () => {
+      it('stops later listeners from running when an earlier listener calls client.destroy()', () => {
         const listenerA = vi.fn().mockImplementation(() => {
           client.destroy();
         });
@@ -1519,7 +1519,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('THEME_CHANGED', () => {
-      it('kích hoạt onThemeChanged khi Host Shell broadcast payload { theme: "dark" }', () => {
+      it('fires onThemeChanged when the host shell broadcasts { theme: "dark" }', () => {
         const themeSpy = vi.fn();
         const unsub = client.onThemeChanged(themeSpy);
 
@@ -1540,7 +1540,7 @@ describe('WalletBridgeClient', () => {
         unsub();
       });
 
-      it('kích hoạt onThemeChanged khi Host Shell broadcast payload { theme: "light" }', () => {
+      it('fires onThemeChanged when the host shell broadcasts { theme: "light" }', () => {
         const themeSpy = vi.fn();
         client.onThemeChanged(themeSpy);
 
@@ -1556,7 +1556,7 @@ describe('WalletBridgeClient', () => {
         expect(client.theme).toBe('light');
       });
 
-      it('xử lý an toàn khi Host Shell truyền string "dark" / "light" trực tiếp', () => {
+      it('handles the string "dark" / "light" sent directly as the payload', () => {
         const themeSpy = vi.fn();
         client.onThemeChanged(themeSpy);
 
@@ -1583,7 +1583,7 @@ describe('WalletBridgeClient', () => {
         expect(client.theme).toBe('light');
       });
 
-      it('cho phép đăng ký nhiều listener và gỡ bỏ chính xác qua unsubscribe', () => {
+      it('supports multiple listeners and removes them correctly through unsubscribe', () => {
         const listenerA = vi.fn();
         const listenerB = vi.fn();
 
@@ -1618,7 +1618,7 @@ describe('WalletBridgeClient', () => {
         unsubB();
       });
 
-      it('bắt lỗi an toàn khi listener theme ném ngoại lệ', () => {
+      it('catches exceptions thrown by theme listeners safely', () => {
         const faultyListener = vi.fn().mockImplementation(() => {
           throw new Error('Theme DOM render error');
         });
@@ -1642,7 +1642,7 @@ describe('WalletBridgeClient', () => {
         expect(healthyListener).toHaveBeenCalledWith('dark');
       });
 
-      it('bỏ qua giá trị theme không hợp lệ', () => {
+      it('ignores invalid theme values', () => {
         const themeSpy = vi.fn();
         client.onThemeChanged(themeSpy);
 
@@ -1658,7 +1658,7 @@ describe('WalletBridgeClient', () => {
         expect(client.theme).toBeUndefined();
       });
 
-      it('chuẩn hóa chữ hoa/thường và khoảng trắng thừa của theme', () => {
+      it('normalizes theme casing and surrounding whitespace', () => {
         const themeSpy = vi.fn();
         client.onThemeChanged(themeSpy);
 
@@ -1674,15 +1674,15 @@ describe('WalletBridgeClient', () => {
         expect(client.theme).toBe('dark');
       });
 
-      it('trả về hàm no-op khi đăng ký handler không phải function', () => {
+      it('returns a no-op function when the handler is not a function', () => {
         const unsub = client.onThemeChanged(undefined as any);
         expect(typeof unsub).toBe('function');
         expect(() => unsub()).not.toThrow();
       });
     });
 
-    describe('Đồng bộ trạng thái từ Handshake và Dọn dẹp Lifecycle', () => {
-      it('khởi tạo isAudioMuted và theme từ metadata handshake HOST_ACK', async () => {
+    describe('State sync from the handshake and lifecycle cleanup', () => {
+      it('initializes isAudioMuted and theme from the HOST_ACK handshake metadata', async () => {
         const transport = new SimpleMockTransport();
         const testClient = new WalletBridgeClient({ transport });
 
@@ -1713,7 +1713,7 @@ describe('WalletBridgeClient', () => {
         testClient.destroy();
       });
 
-      it('chuẩn hóa theme viết hoa và khoảng trắng thừa từ metadata handshake HOST_ACK', async () => {
+      it('normalizes uppercase and padded theme from the HOST_ACK handshake metadata', async () => {
         const transport = new SimpleMockTransport();
         const testClient = new WalletBridgeClient({ transport });
 
@@ -1743,7 +1743,7 @@ describe('WalletBridgeClient', () => {
         testClient.destroy();
       });
 
-      it('chuẩn hóa theme viết hoa và khoảng trắng thừa từ unsolicited HOST_ACK', () => {
+      it('normalizes uppercase and padded theme from an unsolicited HOST_ACK', () => {
         messageCallback?.({
           id: 'unsolicited-ack-case',
           type: 'HOST_ACK',
@@ -1762,7 +1762,7 @@ describe('WalletBridgeClient', () => {
         expect(client.isAudioMuted).toBe(false);
       });
 
-      it('cập nhật isAudioMuted và theme khi nhận unsolicited HOST_ACK', () => {
+      it('updates isAudioMuted and theme on an unsolicited HOST_ACK', () => {
         messageCallback?.({
           id: 'unsolicited-ack',
           type: 'HOST_ACK',
@@ -1781,7 +1781,7 @@ describe('WalletBridgeClient', () => {
         expect(client.isAudioMuted).toBe(false);
       });
 
-      it('reset isAudioMuted và theme khi disconnect', () => {
+      it('resets isAudioMuted and theme on disconnect', () => {
         messageCallback?.({
           id: 'evt-audio',
           type: 'AUDIO_MUTED_CHANGED',
@@ -1806,7 +1806,7 @@ describe('WalletBridgeClient', () => {
         expect(client.theme).toBeUndefined();
       });
 
-      it('destroy gỡ bỏ toàn bộ listeners và giải phóng tài nguyên', () => {
+      it('destroy removes all listeners and releases resources', () => {
         const audioSpy = vi.fn();
         const themeSpy = vi.fn();
 
@@ -1815,7 +1815,7 @@ describe('WalletBridgeClient', () => {
 
         client.destroy();
 
-        // Giả lập gửi message sau khi destroy
+        // Simulate a message arriving after destroy
         messageCallback?.({
           id: 'evt-audio-late',
           type: 'AUDIO_MUTED_CHANGED',
@@ -1830,7 +1830,7 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Mobile Device Controls (Orientation & Haptics) - Story 3.2', () => {
+  describe('Mobile Device Controls (Orientation & Haptics)', () => {
     let transport: SimpleMockTransport;
     let client: WalletBridgeClient;
 
@@ -1838,7 +1838,7 @@ describe('WalletBridgeClient', () => {
       transport = new SimpleMockTransport();
       client = new WalletBridgeClient({ transport });
 
-      // Kết nối handshake để sẵn sàng gọi API
+      // Complete the handshake so the API is ready
       const p = client.init();
       transport.simulateIncoming({
         id: 'ack-init',
@@ -1855,7 +1855,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('setOrientation & unlockOrientation', () => {
-      it('gửi bản tin SET_ORIENTATION với payload { orientation: "landscape" } khi gọi setOrientation("landscape")', async () => {
+      it('sends SET_ORIENTATION with payload { orientation: "landscape" } on setOrientation("landscape")', async () => {
         await client.setOrientation('landscape');
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1864,7 +1864,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ orientation: 'landscape' });
       });
 
-      it('gửi bản tin SET_ORIENTATION với payload { orientation: "portrait" } khi gọi setOrientation("portrait")', async () => {
+      it('sends SET_ORIENTATION with payload { orientation: "portrait" } on setOrientation("portrait")', async () => {
         await client.setOrientation('portrait');
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1872,14 +1872,14 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ orientation: 'portrait' });
       });
 
-      it('chuẩn hóa chữ hoa và khoảng trắng thừa trong tham số orientation', async () => {
+      it('normalizes uppercase and surrounding whitespace in the orientation argument', async () => {
         await client.setOrientation('  LANDSCAPE  ' as any);
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
         expect(lastMessage.payload).toEqual({ orientation: 'landscape' });
       });
 
-      it('hỗ trợ đầy đủ các orientation chuẩn: portrait-primary, portrait-secondary, landscape-primary, landscape-secondary, natural, any', async () => {
+      it('supports every standard orientation: portrait-primary, portrait-secondary, landscape-primary, landscape-secondary, natural, any', async () => {
         const standardModes = [
           'portrait-primary',
           'portrait-secondary',
@@ -1896,7 +1896,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('gửi bản tin SET_ORIENTATION với payload { orientation: "any" } khi gọi unlockOrientation()', async () => {
+      it('sends SET_ORIENTATION with payload { orientation: "any" } on unlockOrientation()', async () => {
         await client.unlockOrientation();
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1904,7 +1904,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ orientation: 'any' });
       });
 
-      it('ném lỗi ERR_NOT_CONNECTED khi gọi setOrientation lúc client chưa kết nối', async () => {
+      it('throws ERR_NOT_CONNECTED when setOrientation is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.setOrientation('landscape')).rejects.toThrow(HydraBridgeError);
@@ -1915,7 +1915,7 @@ describe('WalletBridgeClient', () => {
         disconnectedClient.destroy();
       });
 
-      it('ném lỗi ERR_NOT_CONNECTED khi gọi unlockOrientation lúc client chưa kết nối', async () => {
+      it('throws ERR_NOT_CONNECTED when unlockOrientation is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.unlockOrientation()).rejects.toThrow(HydraBridgeError);
@@ -1926,14 +1926,14 @@ describe('WalletBridgeClient', () => {
         disconnectedClient.destroy();
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền orientation không hợp lệ', async () => {
+      it('throws ERR_INVALID_PARAMS for an invalid orientation', async () => {
         await expect(client.setOrientation('upside-down' as any)).rejects.toThrow(HydraBridgeError);
         await expect(client.setOrientation('upside-down' as any)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền orientation rỗng hoặc không phải chuỗi', async () => {
+      it('throws ERR_INVALID_PARAMS for an empty or non-string orientation', async () => {
         await expect(client.setOrientation('' as any)).rejects.toThrow(HydraBridgeError);
         await expect(client.setOrientation(null as any)).rejects.toThrow(HydraBridgeError);
         await expect(client.setOrientation(undefined as any)).rejects.toThrow(HydraBridgeError);
@@ -1944,7 +1944,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('triggerHaptic', () => {
-      it('gửi bản tin TRIGGER_HAPTIC với preset mặc định "medium" và pattern [40] khi gọi không tham số', async () => {
+      it('sends TRIGGER_HAPTIC with the default "medium" preset and pattern [40] when called without arguments', async () => {
         await client.triggerHaptic();
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1956,7 +1956,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('gửi bản tin TRIGGER_HAPTIC với preset "medium" khi truyền "medium"', async () => {
+      it('sends TRIGGER_HAPTIC with the "medium" preset when "medium" is passed', async () => {
         await client.triggerHaptic('medium');
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1966,7 +1966,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('gửi bản tin TRIGGER_HAPTIC cho tất cả các preset chuẩn', async () => {
+      it('sends TRIGGER_HAPTIC for every standard preset', async () => {
         const presets = [
           { type: 'light', expectedPattern: [15] },
           { type: 'heavy', expectedPattern: [80] },
@@ -1986,7 +1986,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('chuẩn hóa chữ hoa và khoảng trắng của preset rung (" LIGHT " -> "light")', async () => {
+      it('normalizes casing and whitespace of the haptic preset (" LIGHT " -> "light")', async () => {
         await client.triggerHaptic('  LIGHT  ' as any);
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -1996,7 +1996,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('gửi bản tin TRIGGER_HAPTIC với duration ms khi truyền số (ví dụ 100ms)', async () => {
+      it('sends TRIGGER_HAPTIC with a duration in ms when a number is passed (e.g. 100ms)', async () => {
         await client.triggerHaptic(100);
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -2005,7 +2005,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('gửi bản tin TRIGGER_HAPTIC với pattern mảng khi truyền array [50, 100, 50]', async () => {
+      it('sends TRIGGER_HAPTIC with an array pattern when [50, 100, 50] is passed', async () => {
         await client.triggerHaptic([50, 100, 50]);
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -2014,7 +2014,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_NOT_CONNECTED khi gọi triggerHaptic lúc client chưa kết nối', async () => {
+      it('throws ERR_NOT_CONNECTED when triggerHaptic is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.triggerHaptic('medium')).rejects.toThrow(HydraBridgeError);
@@ -2025,14 +2025,14 @@ describe('WalletBridgeClient', () => {
         disconnectedClient.destroy();
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền preset rung không hợp lệ', async () => {
+      it('throws ERR_INVALID_PARAMS for an invalid haptic preset', async () => {
         await expect(client.triggerHaptic('buzz' as any)).rejects.toThrow(HydraBridgeError);
         await expect(client.triggerHaptic('buzz' as any)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền thời lượng số âm hoặc vô hạn', async () => {
+      it('throws ERR_INVALID_PARAMS for a negative or infinite duration', async () => {
         await expect(client.triggerHaptic(-10)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2041,7 +2041,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền mảng rỗng hoặc chứa phần tử âm/không hợp lệ', async () => {
+      it('throws ERR_INVALID_PARAMS for an empty array or one with negative/invalid elements', async () => {
         await expect(client.triggerHaptic([])).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2053,7 +2053,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền kiểu dữ liệu không hợp lệ (object, boolean)', async () => {
+      it('throws ERR_INVALID_PARAMS for invalid data types (object, boolean)', async () => {
         await expect(client.triggerHaptic({} as any)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2062,7 +2062,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('từ chối thuộc tính prototype như "constructor" với mã lỗi ERR_INVALID_PARAMS', async () => {
+      it('rejects prototype properties such as "constructor" with ERR_INVALID_PARAMS', async () => {
         await expect(client.triggerHaptic('constructor' as any)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2070,7 +2070,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('Standalone Fallback', () => {
-      it('khi chạy độc lập ngoài iframe, triggerHaptic gọi navigator.vibrate trực tiếp', async () => {
+      it('in standalone mode outside an iframe, triggerHaptic calls navigator.vibrate directly', async () => {
         const mockVibrate = vi.fn().mockReturnValue(true);
         const originalVibrate = (globalThis.navigator as any)?.vibrate;
         Object.defineProperty(globalThis.navigator, 'vibrate', {
@@ -2094,7 +2094,7 @@ describe('WalletBridgeClient', () => {
         });
         await p;
 
-        // Chuyển sang môi trường standalone ngoài iframe
+        // Switch to a standalone environment outside an iframe
         isIframe = false;
 
         await standaloneClient.triggerHaptic('medium');
@@ -2115,7 +2115,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('khi chạy độc lập ngoài iframe, triggerHaptic bắt lỗi an toàn nếu navigator.vibrate ném lỗi', async () => {
+      it('in standalone mode outside an iframe, triggerHaptic safely catches errors thrown by navigator.vibrate', async () => {
         const mockVibrate = vi.fn().mockImplementation(() => {
           throw new Error('Vibration permission denied');
         });
@@ -2159,7 +2159,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('khi chạy độc lập ngoài iframe, setOrientation gọi screen.orientation.lock trực tiếp', async () => {
+      it('in standalone mode outside an iframe, setOrientation calls screen.orientation.lock directly', async () => {
         const mockLock = vi.fn().mockResolvedValue(undefined);
         const originalScreen = (globalThis as any).screen;
         Object.defineProperty(globalThis, 'screen', {
@@ -2205,7 +2205,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('khi chạy độc lập ngoài iframe, unlockOrientation gọi screen.orientation.unlock trực tiếp', async () => {
+      it('in standalone mode outside an iframe, unlockOrientation calls screen.orientation.unlock directly', async () => {
         const mockLock = vi.fn().mockResolvedValue(undefined);
         const mockUnlock = vi.fn();
         const originalScreen = (globalThis as any).screen;
@@ -2255,7 +2255,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('khi chạy độc lập ngoài iframe, bắt lỗi an toàn nếu screen.orientation ném lỗi', async () => {
+      it('in standalone mode outside an iframe, safely catches errors thrown by screen.orientation', async () => {
         const mockLock = vi.fn().mockRejectedValue(new Error('NotSupportedError'));
         const originalScreen = (globalThis as any).screen;
         Object.defineProperty(globalThis, 'screen', {
@@ -2301,7 +2301,7 @@ describe('WalletBridgeClient', () => {
         }
       });
 
-      it('cho phép gọi setOrientation và triggerHaptic ở chế độ standalone ngay cả khi client chưa kết nối (disconnected)', async () => {
+      it('allows setOrientation and triggerHaptic in standalone mode even when the client is disconnected', async () => {
         const mockVibrate = vi.fn().mockReturnValue(true);
         const mockLock = vi.fn().mockResolvedValue(undefined);
         const originalVibrate = (globalThis.navigator as any)?.vibrate;
@@ -2318,7 +2318,7 @@ describe('WalletBridgeClient', () => {
           writable: true,
         });
 
-        // Client chạy standalone ngoài iframe và KHÔNG gọi init()
+        // Client runs standalone outside an iframe and does NOT call init()
         const standaloneClient = new WalletBridgeClient({
           transport: new SimpleMockTransport(),
           isIframeFn: () => false,
@@ -2356,7 +2356,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('Exported Constants & Presets', () => {
-      it('HAPTIC_PATTERNS chứa đầy đủ các preset xúc giác chuẩn và giá trị mẫu rung', () => {
+      it('HAPTIC_PATTERNS contains every standard haptic preset with its vibration pattern', () => {
         expect(HAPTIC_PATTERNS).toBeDefined();
         expect(HAPTIC_PATTERNS.light).toEqual([15]);
         expect(HAPTIC_PATTERNS.medium).toEqual([40]);
@@ -2367,7 +2367,7 @@ describe('WalletBridgeClient', () => {
         expect(HAPTIC_PATTERNS.error).toEqual([50, 100, 50, 100, 50]);
       });
 
-      it('bảo vệ tính bất biến của HAPTIC_PATTERNS khi triggerHaptic được gọi', async () => {
+      it('keeps HAPTIC_PATTERNS immutable when triggerHaptic is called', async () => {
         const originalMedium = [...HAPTIC_PATTERNS.medium];
         await client.triggerHaptic('medium');
         expect(HAPTIC_PATTERNS.medium).toEqual(originalMedium);
@@ -2375,7 +2375,7 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('In-Game Host Modal Overlay & Player Profile Relay - Story 3.3', () => {
+  describe('In-Game Host Modal Overlay & Player Profile Relay', () => {
     let transport: SimpleMockTransport;
     let client: WalletBridgeClient;
 
@@ -2383,7 +2383,7 @@ describe('WalletBridgeClient', () => {
       transport = new SimpleMockTransport();
       client = new WalletBridgeClient({ transport });
 
-      // Kết nối handshake để sẵn sàng gọi API
+      // Complete the handshake so the API is ready
       const p = client.init();
       transport.simulateIncoming({
         id: 'ack-init-s33',
@@ -2400,7 +2400,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('requestDepositModal', () => {
-      it('gửi bản tin REQUEST_DEPOSIT_MODAL với payload rỗng khi gọi không tham số', async () => {
+      it('sends REQUEST_DEPOSIT_MODAL with an empty payload when called without arguments', async () => {
         await client.requestDepositModal();
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -2409,7 +2409,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({});
       });
 
-      it('gửi bản tin REQUEST_DEPOSIT_MODAL với options { token: "ADA", minAmount: 10 }', async () => {
+      it('sends REQUEST_DEPOSIT_MODAL with options { token: "ADA", minAmount: 10 }', async () => {
         await client.requestDepositModal({ token: 'ADA', minAmount: 10 });
 
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
@@ -2418,7 +2418,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ token: 'ADA', minAmount: 10 });
       });
 
-      it('hỗ trợ minAmount dạng bigint và string số dương (tự động cắt khoảng trắng)', async () => {
+      it('supports minAmount as a bigint and as a positive numeric string (whitespace is trimmed)', async () => {
         await client.requestDepositModal({ token: 'DJED', minAmount: 5000000n });
         let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
         expect(lastMessage.payload).toEqual({ token: 'DJED', minAmount: 5000000n });
@@ -2428,7 +2428,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ token: 'iUSD', minAmount: '25.5' });
       });
 
-      it('ném lỗi ERR_NOT_CONNECTED khi gọi requestDepositModal lúc client chưa kết nối', async () => {
+      it('throws ERR_NOT_CONNECTED when requestDepositModal is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.requestDepositModal()).rejects.toThrow(HydraBridgeError);
@@ -2439,7 +2439,7 @@ describe('WalletBridgeClient', () => {
         disconnectedClient.destroy();
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi truyền options không phải object', async () => {
+      it('throws ERR_INVALID_PARAMS when options is not an object', async () => {
         await expect(client.requestDepositModal('invalid' as any)).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2451,7 +2451,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi token rỗng hoặc không phải chuỗi', async () => {
+      it('throws ERR_INVALID_PARAMS when token is empty or not a string', async () => {
         await expect(client.requestDepositModal({ token: '' })).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2463,7 +2463,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_INVALID_PARAMS khi minAmount âm, 0, NaN hoặc không hợp lệ', async () => {
+      it('throws ERR_INVALID_PARAMS when minAmount is negative, 0, NaN or otherwise invalid', async () => {
         await expect(client.requestDepositModal({ minAmount: -5 })).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
@@ -2484,7 +2484,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('ném lỗi ERR_NOT_IN_IFRAME khi gọi requestDepositModal ở chế độ standalone ngoài iframe', async () => {
+      it('throws ERR_NOT_IN_IFRAME when requestDepositModal is called in standalone mode outside an iframe', async () => {
         const standaloneClient = new WalletBridgeClient({
           transport: new SimpleMockTransport(),
           isIframeFn: () => false,
@@ -2500,7 +2500,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('getPlayerProfile', () => {
-      it('gửi RPC GET_PLAYER_PROFILE và trả về đối tượng PlayerProfile từ Host Shell', async () => {
+      it('sends the GET_PLAYER_PROFILE RPC and returns the PlayerProfile from the host shell', async () => {
         const expectedProfile = {
           nickname: 'CardanoGamer',
           avatarUrl: 'https://hydraone.app/avatars/gamer1.png',
@@ -2514,7 +2514,7 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.type).toBe('GET_PLAYER_PROFILE');
         expect(lastMessage.source).toBe('hydra-client');
 
-        // Host phản hồi kết quả RPC
+        // Host replies with the RPC result
         transport.simulateIncoming({
           id: 'rpc-res-profile',
           type: 'RPC_RESPONSE',
@@ -2530,7 +2530,7 @@ describe('WalletBridgeClient', () => {
         expect(profile).toEqual(expectedProfile);
       });
 
-      it('trả về đối tượng rỗng nếu Host trả về payload trống, non-object hoặc mảng', async () => {
+      it('returns an empty object when the host returns an empty, non-object or array payload', async () => {
         const profilePromise = client.getPlayerProfile();
         let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
 
@@ -2548,7 +2548,7 @@ describe('WalletBridgeClient', () => {
         const profile = await profilePromise;
         expect(profile).toEqual({});
 
-        // Host trả về mảng thay vì đối tượng
+        // Host returns an array instead of an object
         const profilePromiseArray = client.getPlayerProfile();
         lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
 
@@ -2567,7 +2567,7 @@ describe('WalletBridgeClient', () => {
         expect(profileArray).toEqual({});
       });
 
-      it('ném lỗi ERR_NOT_CONNECTED khi gọi getPlayerProfile lúc client chưa kết nối', async () => {
+      it('throws ERR_NOT_CONNECTED when getPlayerProfile is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.getPlayerProfile()).rejects.toThrow(HydraBridgeError);
@@ -2578,7 +2578,7 @@ describe('WalletBridgeClient', () => {
         disconnectedClient.destroy();
       });
 
-      it('ném lỗi ERR_NOT_IN_IFRAME khi gọi getPlayerProfile ở chế độ standalone ngoài iframe', async () => {
+      it('throws ERR_NOT_IN_IFRAME when getPlayerProfile is called in standalone mode outside an iframe', async () => {
         const standaloneClient = new WalletBridgeClient({
           transport: new SimpleMockTransport(),
           isIframeFn: () => false,
@@ -2592,7 +2592,7 @@ describe('WalletBridgeClient', () => {
         standaloneClient.destroy();
       });
 
-      it('ném lỗi ERR_TIMEOUT khi Host không phản hồi sau thời gian query timeout quy định (15s)', async () => {
+      it('throws ERR_TIMEOUT when the host does not answer within the query timeout (15s)', async () => {
         const profilePromise = client.getPlayerProfile();
 
         vi.advanceTimersByTime(TIERED_TIMEOUTS.QUERY + 100);
@@ -2603,25 +2603,25 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('hỗ trợ tùy chỉnh timeout per-request thông qua options.timeoutMs', async () => {
+      it('supports a per-request timeout through options.timeoutMs', async () => {
         const profilePromise = client.getPlayerProfile({ timeoutMs: 5000 });
 
         vi.advanceTimersByTime(4999);
-        // Chưa quá 5000ms thì chưa timeout
+        // Not timed out before 5000ms
 
         vi.advanceTimersByTime(100);
-        // Quá 5000ms thì timeout
+        // Timed out after 5000ms
         await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
       });
 
-      it('bỏ qua trong im lặng (silent drop) phản hồi trễ của GET_PLAYER_PROFILE đến sau khi timeout', async () => {
+      it('silently drops a late GET_PLAYER_PROFILE response that arrives after the timeout', async () => {
         const profilePromise = client.getPlayerProfile({ timeoutMs: 2000 });
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
 
         vi.advanceTimersByTime(2100);
         await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
 
-        // Phản hồi muộn tới sau khi timeout
+        // Late response arriving after the timeout
         expect(() => {
           transport.simulateIncoming({
             id: 'rpc-res-late-profile',
@@ -2636,7 +2636,7 @@ describe('WalletBridgeClient', () => {
         }).not.toThrow();
       });
 
-      it('chuyển tiếp lỗi RPC từ Host Shell (RPC_ERROR)', async () => {
+      it('forwards RPC errors (RPC_ERROR) from the host shell', async () => {
         const profilePromise = client.getPlayerProfile();
         const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
 
@@ -2664,18 +2664,18 @@ describe('WalletBridgeClient', () => {
   });
 
   describe('Code Review Patches & Invariant Hardening', () => {
-    it('khắc phục race condition: disconnect() trong khi init() đang chờ không để client chuyển thành connected', async () => {
+    it('fixes a race: disconnect() while init() is pending must not leave the client connected', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
       const initPromise = client.init();
       expect(client.connectionState).toBe('connecting');
 
-      // Người dùng gọi disconnect ngay trong khi đang chờ phản hồi handshake
+      // The user calls disconnect while the handshake response is pending
       client.disconnect();
       expect(client.connectionState).toBe('disconnected');
 
-      // Host Shell gửi bản tin HOST_ACK muộn
+      // Host shell sends a late HOST_ACK
       const readyMsg = transport.sentMessages[0];
       transport.simulateIncoming({
         id: 'host-ack-late',
@@ -2688,14 +2688,14 @@ describe('WalletBridgeClient', () => {
         source: 'hydra-host',
       });
 
-      // Khi disconnect() được gọi, handshake request đang pending bị hủy với lỗi ERR_NOT_CONNECTED
+      // On disconnect(), the pending handshake request is rejected with ERR_NOT_CONNECTED
       await expect(initPromise).rejects.toThrow('Client has been disconnected');
-      // Trạng thái vẫn phải giữ nguyên là disconnected, không bị ghi đè thành connected
+      // State must remain disconnected and not be overwritten with connected
       expect(client.connectionState).toBe('disconnected');
       expect(client.isConnected).toBe(false);
     });
 
-    it('activeWalletName fallback về hostInfo.walletName khi chạy trong iframe', async () => {
+    it('activeWalletName falls back to hostInfo.walletName when running inside an iframe', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -2716,7 +2716,7 @@ describe('WalletBridgeClient', () => {
       expect(client.activeWalletName).toBe('Eternl');
     });
 
-    it('phát sự kiện CONNECTION_STATE_CHANGED khi chuyển đổi trạng thái kết nối', async () => {
+    it('emits CONNECTION_STATE_CHANGED when the connection state changes', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
       const states: string[] = [];
@@ -2746,7 +2746,7 @@ describe('WalletBridgeClient', () => {
       expect(states).toContain('disconnected');
     });
 
-    it('phát sự kiện HOST_ACK khi dùng generic ITransport có pendingRequests', async () => {
+    it('emits the HOST_ACK event when using a generic ITransport with pendingRequests', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
       let hostAckFired = false;
@@ -2773,7 +2773,7 @@ describe('WalletBridgeClient', () => {
       expect(hostAckFired).toBe(true);
     });
 
-    it('bảo vệ cờ isDestroyed và chặn gọi init/truy vấn sau khi destroy()', async () => {
+    it('guards the isDestroyed flag and blocks init/queries after destroy()', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -2785,7 +2785,7 @@ describe('WalletBridgeClient', () => {
       await expect(client.getBalance()).rejects.toThrow('WalletBridgeClient has been destroyed');
     });
 
-    it('extractAudioMuted hỗ trợ cả hai trường audioMuted và muted trong payload', async () => {
+    it('extractAudioMuted supports both the audioMuted and muted payload fields', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -2805,7 +2805,7 @@ describe('WalletBridgeClient', () => {
         mutedVal = muted;
       });
 
-      // Gửi dạng audioMuted
+      // Send the audioMuted form
       transport.simulateIncoming({
         id: 'ev-audio-1',
         type: 'AUDIO_MUTED_CHANGED',
@@ -2816,7 +2816,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isAudioMuted).toBe(true);
       expect(mutedVal).toBe(true);
 
-      // Gửi dạng muted
+      // Send the muted form
       transport.simulateIncoming({
         id: 'ev-audio-2',
         type: 'AUDIO_MUTED_CHANGED',
@@ -2828,7 +2828,7 @@ describe('WalletBridgeClient', () => {
       expect(mutedVal).toBe(false);
     });
 
-    it('ném ERR_INVALID_PARAMS khi truyền chuỗi trắng cho signTx, submitTx và signData', async () => {
+    it('throws ERR_INVALID_PARAMS for blank strings in signTx, submitTx and signData', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 

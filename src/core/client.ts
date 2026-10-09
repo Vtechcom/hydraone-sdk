@@ -41,7 +41,7 @@ import { checkBridgeHealth } from '../diagnostics/health-check';
 import type { BridgeHealthReport, CheckHealthOptions } from '../diagnostics/types';
 
 /**
- * Sinh ID duy nhất cho mỗi yêu cầu RPC ngẫu nhiên và an toàn
+ * Generates a unique, unpredictable ID for each RPC request.
  */
 function generateId(): string {
   if (
@@ -55,7 +55,7 @@ function generateId(): string {
 }
 
 /**
- * Entry theo dõi yêu cầu RPC đang chờ trong Client
+ * Tracks an RPC request that is waiting for a response.
  */
 interface PendingRequest<T = unknown> {
   id: string;
@@ -66,11 +66,11 @@ interface PendingRequest<T = unknown> {
 }
 
 /**
- * Lớp WalletBridgeClient - Cốt lõi giao tiếp Web3 giữa Game và Host Shell
+ * WalletBridgeClient - the game-side entry point for talking to the host shell and the wallet.
  * 
- * Quản lý vòng đời kết nối (handshake hai chiều CLIENT_READY ⇄ HOST_ACK),
- * điều phối RPC qua port ITransport, phân tầng thời gian chờ (tiered timeouts)
- * và thực hiện các truy vấn trạng thái ví theo chuẩn CIP-30.
+ * Manages the connection lifecycle (CLIENT_READY ⇄ HOST_ACK handshake),
+ * dispatches RPC calls over an ITransport port, applies tiered timeouts
+ * and runs CIP-30 wallet state queries.
  */
 export class WalletBridgeClient {
   public transport?: ITransport;
@@ -114,12 +114,12 @@ export class WalletBridgeClient {
     this.isIframeFn = options.isIframeFn;
     this.debug = options.debug ?? false;
 
-    // Lắng nghe bản tin từ transport nếu đã có sẵn
+    // Listen for transport messages when a transport is already available.
     if (this.transport) {
       this.setupTransportListener();
     }
 
-    // Tự động kết nối nếu được cấu hình
+    // Connect immediately when autoConnect is set.
     if (options.autoConnect) {
       this.init().catch((err) => {
         if (this.debug) {
@@ -130,7 +130,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Cập nhật trạng thái kết nối và phát sự kiện CONNECTION_STATE_CHANGED
+   * Updates the connection state and emits CONNECTION_STATE_CHANGED.
    */
   private setConnectionState(newState: ConnectionState): void {
     if (this._connectionState === newState) {
@@ -141,7 +141,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Phân phối sự kiện nội bộ tới các listeners đã đăng ký qua onHostEvent
+   * Dispatches an internal event to listeners registered through onHostEvent.
    */
   private emitHostEvent<T = any>(type: string, payload: T): void {
     const handlers = this.eventListeners.get(type);
@@ -163,7 +163,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Kiểm tra xem SDK có đang chạy ngoài iframe trong tab trình duyệt độc lập không
+   * Whether the SDK is running outside an iframe, in a standalone browser tab.
    */
   public isStandaloneBrowser(): boolean {
     if (this.isIframeFn) {
@@ -173,7 +173,7 @@ export class WalletBridgeClient {
       try {
         return window.self === window.top;
       } catch {
-        // Lỗi cross-origin frame access nghĩa là đang nằm trong iframe
+        // A cross-origin frame access error means we are inside an iframe.
         return false;
       }
     }
@@ -181,14 +181,14 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Kiểm tra xem client đã bị giải phóng hoàn toàn qua destroy() hay chưa
+   * Whether the client was fully released through destroy().
    */
   public get isDestroyed(): boolean {
     return this._isDestroyed;
   }
 
   /**
-   * Tên ví Cardano đang được sử dụng nếu kết nối qua DirectExtensionTransport hoặc Host Shell
+   * Cardano wallet in use when connected through DirectExtensionTransport or the host shell.
    */
   public get activeWalletName(): string | undefined {
     if (this.transport instanceof DirectExtensionTransport) {
@@ -198,42 +198,42 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Trạng thái kết nối hiện tại của Client
+   * Current connection state of the client.
    */
   public get connectionState(): ConnectionState {
     return this._connectionState;
   }
 
   /**
-   * Kiểm tra client đã bắt tay thành công với Host Shell hay chưa
+   * Whether the handshake with the host shell has completed.
    */
   public get isConnected(): boolean {
     return this._connectionState === 'connected';
   }
 
   /**
-   * Thông tin metadata của Host Shell sau khi hoàn tất handshake
+   * Host shell metadata received during the handshake.
    */
   public get hostInfo(): HostInfo | undefined {
     return this._hostInfo;
   }
 
   /**
-   * Trạng thái tắt tiếng âm thanh hiện tại do Host Shell đồng bộ
+   * Current audio mute state, synced from the host shell.
    */
   public get isAudioMuted(): boolean | undefined {
     return this._isAudioMuted;
   }
 
   /**
-   * Chủ đề giao diện hiện tại do Host Shell đồng bộ ('dark' | 'light')
+   * Current UI theme ('dark' | 'light'), synced from the host shell.
    */
   public get theme(): ThemeMode | undefined {
     return this._theme;
   }
 
   /**
-   * Thiết lập listener nhận bản tin từ Transport
+   * Subscribes to incoming transport messages.
    */
   private setupTransportListener(): void {
     if (this.transportUnsubscribe) {
@@ -249,7 +249,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Trích xuất và chuẩn hóa giá trị tắt tiếng từ payload
+   * Extracts and normalizes the mute flag from a payload.
    */
   private extractAudioMuted(payload: unknown): boolean | undefined {
     if (typeof payload === 'boolean') {
@@ -268,7 +268,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Trích xuất và chuẩn hóa chủ đề giao diện ('dark' | 'light') từ payload
+   * Extracts and normalizes the theme ('dark' | 'light') from a payload.
    */
   private extractTheme(payload: unknown): ThemeMode | undefined {
     const raw =
@@ -288,14 +288,14 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Xử lý bản tin nhận được từ Host Shell
+   * Handles a message received from the host shell.
    */
   private handleIncomingMessage(message: BridgeMessage): void {
     if (!message || typeof message !== 'object') {
       return;
     }
 
-    // 1. Xử lý phản hồi RPC hoặc HOST_ACK theo correlation ID
+    // 1. RPC responses and HOST_ACK, matched by correlation ID.
     let correlationId = message.id;
     const rpcPayload =
       typeof message.payload === 'object' && message.payload !== null
@@ -306,7 +306,7 @@ export class WalletBridgeClient {
       correlationId = rpcPayload.requestId;
     }
 
-    // Nếu yêu cầu đã bị timeout trước đó, bỏ qua trong im lặng (silent drop)
+    // Silently drop responses for requests that already timed out.
     if (this.expiredRequestIds.has(correlationId)) {
       if (this.debug) {
         console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
@@ -331,7 +331,7 @@ export class WalletBridgeClient {
       }
       this.pendingRequests.delete(correlationId);
 
-      // Kiểm tra lỗi từ Host
+      // Surface errors reported by the host.
       if (message.type === 'RPC_ERROR' || (rpcPayload && rpcPayload.error)) {
         const errInfo = rpcPayload?.error;
         const errCode = errInfo?.code || 'ERR_RPC_FAILED';
@@ -350,7 +350,7 @@ export class WalletBridgeClient {
         return;
       }
 
-      // Resolve kết quả thành công
+      // Resolve with the successful result.
       if (message.type === 'HOST_ACK') {
         const ackPayload = message.payload as HostAckPayload | undefined;
         const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
@@ -375,7 +375,7 @@ export class WalletBridgeClient {
       return;
     }
 
-    // 2. Xử lý bản tin HOST_ACK phát độc lập (unsolicited)
+    // 2. Unsolicited HOST_ACK.
     if (message.type === 'HOST_ACK') {
       const ackPayload = message.payload as HostAckPayload | undefined;
       const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
@@ -392,7 +392,7 @@ export class WalletBridgeClient {
       this.setConnectionState('connected');
     }
 
-    // 3. Xử lý sự kiện đồng bộ âm thanh AUDIO_MUTED_CHANGED
+    // 3. AUDIO_MUTED_CHANGED sync event.
     if (message.type === 'AUDIO_MUTED_CHANGED') {
       const muted = this.extractAudioMuted(message.payload);
       if (muted !== undefined) {
@@ -400,7 +400,7 @@ export class WalletBridgeClient {
       }
     }
 
-    // 4. Xử lý sự kiện đồng bộ giao diện THEME_CHANGED
+    // 4. THEME_CHANGED sync event.
     if (message.type === 'THEME_CHANGED') {
       const theme = this.extractTheme(message.payload);
       if (theme !== undefined) {
@@ -408,14 +408,14 @@ export class WalletBridgeClient {
       }
     }
 
-    // 5. Phân phối sự kiện đến các listeners đã đăng ký qua onHostEvent
+    // 5. Fan out to listeners registered through onHostEvent.
     this.emitHostEvent(message.type, message.payload);
   }
 
   /**
-   * Khởi tạo và thực hiện handshake hai chiều với Host Shell
+   * Starts the two-way handshake with the host shell.
    * 
-   * Gửi bản tin CLIENT_READY và đợi HOST_ACK trong thời gian timeout quy định (mặc định 3,000ms).
+   * Sends CLIENT_READY and waits for HOST_ACK within the configured timeout (default 3,000 ms).
    */
   public init(): Promise<void> {
     if (this._isDestroyed) {
@@ -436,7 +436,7 @@ export class WalletBridgeClient {
 
     this.handshakePromise = (async () => {
       try {
-        // Kiểm tra môi trường standalone ngoài iframe
+        // Detect standalone mode outside an iframe.
         if (this.isStandaloneBrowser()) {
           if (!this.fallbackToExtension) {
             throw new HydraTransportError(
@@ -535,14 +535,14 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Alias cho init() để dễ nhớ khi sử dụng
+   * Alias for init().
    */
   public connect(): Promise<void> {
     return this.init();
   }
 
   /**
-   * Gửi một yêu cầu RPC qua Transport và đợi kết quả với thời gian chờ kiểm soát
+   * Sends an RPC request over the transport and waits for the result with a bounded timeout.
    */
   private async executeRpc<T = unknown>(
     message: BridgeMessage,
@@ -554,7 +554,7 @@ export class WalletBridgeClient {
         'ERR_TRANSPORT_UNAVAILABLE'
       );
     }
-    // Nếu transport có sẵn phương thức request (như PostMessageTransport), ưu tiên sử dụng
+    // Prefer the transport own request() when it has one (e.g. PostMessageTransport).
     const maybeRequestTransport = this.transport as unknown as {
       request?: <R = unknown>(msg: Partial<BridgeMessage>, tMs?: number) => Promise<BridgeMessage<R>>;
     };
@@ -588,7 +588,7 @@ export class WalletBridgeClient {
       }
     }
 
-    // Cơ chế Dispatcher nội bộ cho bất kỳ ITransport nào chỉ có send() và onMessage()
+    // Built-in dispatcher for any ITransport that only implements send() and onMessage().
     const transport = this.transport;
     return new Promise<T>((resolve, reject) => {
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
@@ -639,7 +639,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Đảm bảo client đã kết nối trước khi thực hiện truy vấn trạng thái
+   * Ensures the client is connected before running a state query.
    */
   private assertConnected(): void {
     if (this._isDestroyed) {
@@ -661,11 +661,11 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Lấy danh sách địa chỉ ví đã sử dụng (Used Addresses) của người chơi
+   * Gets the wallet used addresses.
    * 
-   * @param paginate Tùy chọn phân trang { page, limit }
-   * @param options Tùy chọn truy vấn (timeoutMs)
-   * @returns Danh sách các địa chỉ ví (chuỗi CBOR Hex)
+   * @param paginate Optional pagination { page, limit }.
+   * @param options Query options (timeoutMs).
+   * @returns Addresses as CBOR hex strings.
    */
   public async getUsedAddresses(
     paginate?: Paginate,
@@ -686,12 +686,12 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy danh sách UTxO hiện có của ví
+   * Gets the wallet UTxOs.
    * 
-   * @param amount Giá trị CBOR Hex của lượng tài sản cần lọc (tùy chọn)
-   * @param paginate Tùy chọn phân trang { page, limit }
-   * @param options Tùy chọn truy vấn (timeoutMs)
-   * @returns Danh sách UTxO dạng CBOR Hex hoặc null nếu không có
+   * @param amount Optional CBOR hex value used to filter by amount.
+   * @param paginate Optional pagination { page, limit }.
+   * @param options Query options (timeoutMs).
+   * @returns UTxOs as CBOR hex strings, or null when there are none.
    */
   public async getUtxos(
     amount?: string,
@@ -713,10 +713,10 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy tổng số dư hiện tại của ví (CBOR Value chứa Lovelace và Multi-assets)
+   * Gets the wallet total balance (a CBOR Value with lovelace and multi-assets).
    * 
-   * @param options Tùy chọn truy vấn (timeoutMs)
-   * @returns Chuỗi Hex CBOR biểu diễn Value
+   * @param options Query options (timeoutMs).
+   * @returns Hex-encoded CBOR Value.
    */
   public async getBalance(options?: QueryOptions): Promise<string> {
     this.assertConnected();
@@ -733,11 +733,11 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy danh sách UTxO làm tài sản thế chấp (Collateral)
+   * Gets the UTxOs reserved as collateral.
    * 
-   * @param params Tham số yêu cầu thế chấp, ví dụ { amount?: string }
-   * @param options Tùy chọn truy vấn (timeoutMs)
-   * @returns Danh sách UTxO thế chấp dạng CBOR Hex hoặc null
+   * @param params Collateral request, for example { amount?: string }.
+   * @param options Query options (timeoutMs).
+   * @returns Collateral UTxOs as CBOR hex strings, or null.
    */
   public async getCollateral(
     params?: { amount?: string },
@@ -758,9 +758,9 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy danh sách địa chỉ ví chưa sử dụng (Unused Addresses)
+   * Gets the wallet unused addresses.
    * 
-   * @param options Tùy chọn truy vấn (timeoutMs)
+   * @param options Query options (timeoutMs).
    */
   public async getUnusedAddresses(options?: QueryOptions): Promise<string[]> {
     this.assertConnected();
@@ -778,9 +778,9 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy địa chỉ trả tiền thừa (Change Address)
+   * Gets the change address.
    * 
-   * @param options Tùy chọn truy vấn (timeoutMs)
+   * @param options Query options (timeoutMs).
    */
   public async getChangeAddress(options?: QueryOptions): Promise<string> {
     this.assertConnected();
@@ -797,9 +797,9 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy danh sách địa chỉ nhận phần thưởng staking (Reward Addresses)
+   * Gets the staking reward addresses.
    * 
-   * @param options Tùy chọn truy vấn (timeoutMs)
+   * @param options Query options (timeoutMs).
    */
   public async getRewardAddresses(options?: QueryOptions): Promise<string[]> {
     this.assertConnected();
@@ -817,9 +817,9 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Lấy Network ID của ví đang kết nối (0: Testnet, 1: Mainnet)
+   * Gets the network ID of the connected wallet (0: testnet, 1: mainnet).
    * 
-   * @param options Tùy chọn truy vấn (timeoutMs)
+   * @param options Query options (timeoutMs).
    */
   public async getNetworkId(options?: QueryOptions): Promise<number> {
     this.assertConnected();
@@ -840,14 +840,14 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Yêu cầu người dùng ký giao dịch Cardano (Transaction Witness Set)
+   * Asks the user to sign a Cardano transaction (witness set).
    * 
-   * @param cbor Chuỗi hex CBOR của Transaction cần ký
-   * @param partialSign Cờ chỉ định ký một phần (mặc định: false)
-   * @param options Tùy chọn ký (timeoutMs, mặc định 120,000ms)
-   * @returns Chuỗi hex CBOR của TransactionWitnessSet
-   * @throws {HydraUserRejectedError} Khi người dùng từ chối ký trên ví
-   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   * @param cbor Hex-encoded CBOR of the transaction to sign.
+   * @param partialSign Whether to sign only part of the transaction (default: false).
+   * @param options Signing options (timeoutMs, default 120,000 ms).
+   * @returns Hex-encoded CBOR of the TransactionWitnessSet.
+   * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
+   * @throws {HydraTimeoutError} When the request times out (default 120 s).
    */
   public async signTx(
     cbor: string,
@@ -884,12 +884,12 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Nộp giao dịch đã ký hoàn chỉnh lên mạng lưới Cardano thông qua Host Shell
+   * Submits a fully signed transaction to the Cardano network through the host shell.
    * 
-   * @param cbor Chuỗi hex CBOR của Transaction hoàn chỉnh
-   * @param options Tùy chọn nộp (timeoutMs, mặc định 120,000ms)
-   * @returns Chuỗi Transaction Hash (32 bytes hex)
-   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   * @param cbor Hex-encoded CBOR of the complete transaction.
+   * @param options Submit options (timeoutMs, default 120,000 ms).
+   * @returns Transaction hash (32 bytes, hex).
+   * @throws {HydraTimeoutError} When the request times out (default 120 s).
    */
   public async submitTx(
     cbor: string,
@@ -915,14 +915,14 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Ký xác thực chuỗi dữ liệu bất kỳ theo chuẩn CIP-8 / CIP-30
+   * Signs arbitrary data as defined by CIP-8 / CIP-30.
    * 
-   * @param address Địa chỉ ví (Bech32 hoặc CBOR hex) dùng để ký
-   * @param payloadHex Chuỗi hex của dữ liệu cần ký
-   * @param options Tùy chọn ký (timeoutMs, mặc định 120,000ms)
-   * @returns Chữ ký dữ liệu DataSignature { signature, key }
-   * @throws {HydraUserRejectedError} Khi người dùng từ chối ký trên ví
-   * @throws {HydraTimeoutError} Khi quá thời gian chờ (mặc định 120s)
+   * @param address Address (Bech32 or CBOR hex) used to sign.
+   * @param payloadHex Hex-encoded data to sign.
+   * @param options Signing options (timeoutMs, default 120,000 ms).
+   * @returns The DataSignature { signature, key }.
+   * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
+   * @throws {HydraTimeoutError} When the request times out (default 120 s).
    */
   public async signData(
     address: string,
@@ -957,11 +957,11 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Đăng ký lắng nghe sự kiện từ Host Shell (như AUDIO_MUTED_CHANGED, THEME_CHANGED...)
+   * Subscribes to events from the host shell (such as AUDIO_MUTED_CHANGED or THEME_CHANGED).
    * 
-   * @param type Tên sự kiện bản tin
-   * @param handler Hàm callback khi nhận sự kiện
-   * @returns Hàm hủy lắng nghe (unsubscribe)
+   * @param type Event message type.
+   * @param handler Callback invoked when the event arrives.
+   * @returns A function that removes the subscription.
    */
   public onHostEvent<T = any>(
     type: string,
@@ -987,7 +987,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Alias ngắn gọn cho onHostEvent
+   * Short alias for onHostEvent.
    */
   public on<T = any>(
     type: string,
@@ -997,10 +997,10 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Đăng ký lắng nghe sự kiện thay đổi trạng thái tắt tiếng âm thanh từ Host Shell
+   * Subscribes to audio mute changes coming from the host shell.
    * 
-   * @param handler Hàm callback nhận giá trị boolean (true nếu tắt tiếng, false nếu bật tiếng)
-   * @returns Hàm hủy đăng ký lắng nghe (unsubscribe)
+   * @param handler Callback receiving a boolean (true when muted).
+   * @returns A function that removes the subscription.
    */
   public onAudioMutedChanged(handler: AudioMutedHandler): UnsubscribeFn {
     if (typeof handler !== 'function') {
@@ -1018,10 +1018,10 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Đăng ký lắng nghe sự kiện thay đổi chủ đề giao diện (Dark/Light) từ Host Shell
+   * Subscribes to theme (dark/light) changes coming from the host shell.
    * 
-   * @param handler Hàm callback nhận giá trị 'dark' | 'light'
-   * @returns Hàm hủy đăng ký lắng nghe (unsubscribe)
+   * @param handler Callback receiving 'dark' | 'light'.
+   * @returns A function that removes the subscription.
    */
   public onThemeChanged(handler: ThemeChangedHandler): UnsubscribeFn {
     if (typeof handler !== 'function') {
@@ -1054,7 +1054,7 @@ export class WalletBridgeClient {
   ]);
 
   /**
-   * Xác thực và chuẩn hóa giá trị hướng màn hình
+   * Validates and normalizes an orientation value.
    */
   private validateOrientation(orientation: OrientationLockType): OrientationLockType {
     if (!orientation || typeof orientation !== 'string') {
@@ -1074,7 +1074,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Xử lý và chuẩn hóa tham số rung xúc giác
+   * Validates and normalizes haptic parameters.
    */
   private resolveHapticParams(
     typeOrPattern?: HapticFeedbackType | number | number[]
@@ -1134,11 +1134,11 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Yêu cầu khóa hướng màn hình thiết bị di động
+   * Locks the screen orientation on mobile devices.
    * 
-   * Gửi bản tin SET_ORIENTATION tới Host Shell hoặc fallback ScreenOrientation API ở chế độ standalone.
+   * Sends SET_ORIENTATION to the host shell, or falls back to the ScreenOrientation API in standalone mode.
    * 
-   * @param orientation Hướng màn hình cần khóa ('landscape', 'portrait', 'any', ...)
+   * @param orientation Orientation to lock ('landscape', 'portrait', 'any', ...).
    */
   public async setOrientation(orientation: OrientationLockType): Promise<void> {
     const validOrientation = this.validateOrientation(orientation);
@@ -1185,18 +1185,18 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Mở khóa hướng màn hình (cho phép tự do xoay hướng thiết bị)
+   * Unlocks the screen orientation so the device can rotate freely.
    */
   public async unlockOrientation(): Promise<void> {
     return this.setOrientation('any');
   }
 
   /**
-   * Kích hoạt rung phản hồi xúc giác (Haptic Vibration) trên thiết bị di động
+   * Triggers haptic feedback (vibration) on mobile devices.
    * 
-   * Gửi bản tin TRIGGER_HAPTIC tới Host Shell kèm pattern rung, hoặc gọi trực tiếp navigator.vibrate khi chạy độc lập.
+   * Sends TRIGGER_HAPTIC with a vibration pattern to the host shell, or calls navigator.vibrate directly in standalone mode.
    * 
-   * @param typeOrPattern Tùy chọn preset ('light', 'medium', 'heavy', 'selection', 'success', 'warning', 'error') hoặc thời lượng rung (ms) hoặc mảng pattern [rung, nghỉ, rung]
+   * @param typeOrPattern A preset ('light', 'medium', 'heavy', 'selection', 'success', 'warning', 'error'), a duration in ms, or a [vibrate, pause, vibrate] pattern array.
    */
   public async triggerHaptic(
     typeOrPattern?: HapticFeedbackType | number | number[]
@@ -1249,11 +1249,11 @@ export class WalletBridgeClient {
   }
 
   // ==========================================
-  // In-Game Host Modal Overlay & Player Profile Relay (Story 3.3)
+  // In-Game Host Modal Overlay & Player Profile Relay
   // ==========================================
 
   /**
-   * Xác thực và chuẩn hóa tùy chọn mở modal nạp tiền
+   * Validates and normalizes deposit modal options.
    */
   private validateDepositModalOptions(options?: DepositModalOptions): DepositModalOptions {
     if (options === undefined) {
@@ -1316,11 +1316,11 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Yêu cầu Host Shell hiển thị popup modal nạp tiền hoặc swap token phía trên iframe game
+   * Asks the host shell to show a deposit or token swap modal on top of the game iframe.
    * 
-   * Gửi bản tin REQUEST_DEPOSIT_MODAL tới Host Shell qua ITransport.
+   * Sends REQUEST_DEPOSIT_MODAL to the host shell over the ITransport.
    * 
-   * @param options Tùy chọn nạp tiền { token, minAmount, ... }
+   * @param options Deposit options { token, minAmount, ... }.
    */
   public async requestDepositModal(options?: DepositModalOptions): Promise<void> {
     const validatedOptions = this.validateDepositModalOptions(options);
@@ -1346,12 +1346,12 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Truy vấn thông tin hồ sơ người chơi từ Host Shell (nickname, avatar, VIP level, ADA handle)
+   * Fetches the player profile from the host shell (nickname, avatar, VIP level, ADA handle).
    * 
-   * Thực hiện yêu cầu RPC GET_PLAYER_PROFILE tới Host Shell với cơ chế Tiered Timeout (mặc định 15s).
+   * Runs the GET_PLAYER_PROFILE RPC with the query timeout (default 15 s).
    * 
-   * @param options Tùy chọn truy vấn { timeoutMs }
-   * @returns Thông tin hồ sơ người chơi dạng PlayerProfile
+   * @param options Query options { timeoutMs }.
+   * @returns The PlayerProfile.
    */
   public async getPlayerProfile(options?: QueryOptions): Promise<PlayerProfile> {
     if (this.isStandaloneBrowser()) {
@@ -1380,14 +1380,14 @@ export class WalletBridgeClient {
   }
 
   // ==========================================
-  // Bridge Health Diagnostics Suite (Story 5.3)
+  // Bridge Health Diagnostics Suite
   // ==========================================
 
   /**
-   * Gửi bản tin PING tới Host Shell và đợi phản hồi để đo lường độ trễ roundtrip
+   * Sends PING to the host shell and waits for the reply to measure round-trip latency.
    * 
-   * @param options Tùy chọn truy vấn { timeoutMs }
-   * @returns Thông tin phản hồi pong và timestamp
+   * @param options Query options { timeoutMs }.
+   * @returns The pong response and its timestamp.
    */
   public async ping(options?: QueryOptions): Promise<{ pong: boolean; timestamp: number }> {
     if (this.isStandaloneBrowser()) {
@@ -1416,22 +1416,22 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Tự kiểm tra và chẩn đoán toàn diện sức khỏe kết nối cầu nối HydraOne
+   * Runs a full self-diagnosis of the HydraOne bridge connection.
    * 
-   * Kiểm tra tự động 3 hạng mục:
-   * 1. Thuộc tính quyền sandbox của iframe (`allow-scripts`, `allow-same-origin`)
-   * 2. Độ trễ 2 chiều postMessage (ping-pong roundtrip latency)
-   * 3. Tính sẵn sàng đọc/ghi của Storage (Local Storage & Host Storage Relay)
+   * Runs three automatic checks:
+   * 1. iframe sandbox permissions (`allow-scripts`, `allow-same-origin`)
+   * 2. postMessage round-trip latency (ping-pong)
+   * 3. Storage read/write availability (Local Storage and Host Storage Relay)
    * 
-   * @param options Tùy chọn cấu hình kiểm tra
-   * @returns Báo cáo chẩn đoán chi tiết BridgeHealthReport
+   * @param options Health check options.
+   * @returns The detailed BridgeHealthReport.
    */
   public async checkHealth(options?: CheckHealthOptions): Promise<BridgeHealthReport> {
     return checkBridgeHealth(this, options);
   }
 
   /**
-   * Ngắt kết nối client và dọn dẹp các yêu cầu đang chờ
+   * Disconnects the client and cleans up pending requests.
    */
   public disconnect(): void {
     this.setConnectionState('disconnected');
@@ -1440,7 +1440,7 @@ export class WalletBridgeClient {
     this._theme = undefined;
     this.handshakePromise = null;
 
-    // Hủy và dọn dẹp toàn bộ pending requests
+    // Reject and clear all pending requests.
     for (const pending of this.pendingRequests.values()) {
       if (pending.timeoutTimer) {
         clearTimeout(pending.timeoutTimer);
@@ -1458,7 +1458,7 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Hủy bỏ hoàn toàn client và giải phóng tài nguyên transport listener
+   * Fully releases the client and the transport listeners.
    */
   public destroy(): void {
     if (this._isDestroyed) {

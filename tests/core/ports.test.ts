@@ -8,7 +8,7 @@ import type {
 } from '../../src';
 
 /**
- * Mock implementation của ITransport phục vụ việc kiểm thử giao diện Port
+ * Mock ITransport used to exercise the port contract.
  */
 class MockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
@@ -25,7 +25,7 @@ class MockTransport implements ITransport {
     };
   }
 
-  // Phương thức helper để kích hoạt nhận bản tin từ ngoài vào
+  // Test helper that simulates a message arriving from the host.
   simulateIncomingMessage(message: BridgeMessage): void {
     for (const handler of this.handlers) {
       handler(message);
@@ -34,7 +34,7 @@ class MockTransport implements ITransport {
 }
 
 /**
- * Mock implementation của IStorage phục vụ việc kiểm thử giao diện Port
+ * Mock IStorage used to exercise the port contract.
  */
 class MockStorage implements IStorage {
   private map = new Map<string, string>();
