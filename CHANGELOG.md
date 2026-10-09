@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `signIn` option `challengeEncoding` (`'auto' | 'utf8' | 'hex'`) to state how the challenge becomes the signed bytes.
+- `getAssetQuantity` fourth parameter `encoding` (`'auto' | 'hex' | 'utf8'`) to state how a string asset name is read.
+
+### Fixed
+
+- `DirectExtensionTransport` (standalone mode) now answers `GET_CHANGE_ADDRESS`, `GET_UNUSED_ADDRESSES`, `GET_REWARD_ADDRESSES` and `GET_NETWORK_ID`; before, `getChangeAddress()`, `getUnusedAddresses()`, `getRewardAddresses()` and `getNetworkId()` failed with `ERR_UNSUPPORTED_METHOD`, which also broke the change-address fallback of `signIn`.
+- `DirectExtensionTransport` no longer reports wallet or node failures as `HydraUserRejectedError`. CIP-30 error codes are now read per operation (`signTx` 2, `signData` 3, `enable` -3 mean "user declined"), and a bare "rejected" or "refused" in a message no longer counts.
+- `SafeLocalStorageAdapter` no longer returns a value that `removeItem` or `clear` could not delete from the browser storage, so a signed-out JWT cannot come back after a failed removal.
+- `getAssetQuantity` no longer adds the quantities of two different tokens when a name is valid hex and also meant as text (for example `face`).
+- `signIn` chooses hex or UTF-8 from the content of the challenge, not its length. A hex-looking challenge without a `0x` prefix is now signed as UTF-8 text (before, one of at least 32 hex digits and even length was signed as raw bytes); pass `challengeEncoding: 'hex'` to keep signing raw bytes.
+
 ## [0.1.0] - first public release (date to be set when published)
 
 First public release of `@hydraone/sdk`.

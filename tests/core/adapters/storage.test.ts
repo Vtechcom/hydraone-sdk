@@ -428,6 +428,47 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
     });
 
+    it('should not resurrect a removed key when the native removeItem throws', async () => {
+      const mockStorage = new MockBrowserStorage();
+      const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
+
+      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      mockStorage.throwOnRemoveItem = new Error('SecurityError');
+
+      await adapter.removeItem('hydra:sdk:auth:token');
+
+      expect(adapter.isUsingFallback).toBe(true);
+      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBe('old_jwt');
+      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+    });
+
+    it('should serve a value written after a failed removal', async () => {
+      const mockStorage = new MockBrowserStorage();
+      const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
+
+      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      mockStorage.throwOnRemoveItem = new Error('SecurityError');
+      await adapter.removeItem('hydra:sdk:auth:token');
+
+      await adapter.setItem('hydra:sdk:auth:token', 'new_jwt');
+
+      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('new_jwt');
+    });
+
+    it('should not resurrect SDK keys that clear() could not delete', async () => {
+      const mockStorage = new MockBrowserStorage();
+      const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
+
+      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      mockStorage.setItem('game_gold', '500');
+      mockStorage.throwOnRemoveItem = new Error('SecurityError');
+
+      await adapter.clear();
+
+      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('game_gold')).toBe('500');
+    });
+
     it('should clear underlyingStorage SDK keys even in fallback mode while keeping game keys untouched', async () => {
       const mockStorage = new MockBrowserStorage();
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });

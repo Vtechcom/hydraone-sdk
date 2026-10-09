@@ -30,6 +30,10 @@ export class SafeLocalStorageAdapter implements IStorage {
   private readonly fallbackStorage: IStorage;
   private readonly onFallback?: (error: unknown) => void;
   private _isUsingFallback: boolean = false;
+  // Keys the caller removed but the native storage refused to delete; never read them back from native.
+  private readonly removedKeys = new Set<string>();
+  // Set when clear() could not enumerate or delete native SDK keys; native SDK reads are then untrusted.
+  private nativeSdkKeysUntrusted = false;
 
   constructor(options: SafeLocalStorageAdapterOptions = {}) {
     this.fallbackStorage = options.fallbackStorage ?? new InMemoryStorageAdapter();
@@ -95,6 +99,13 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
+   * Whether a native value must be ignored because the caller already deleted the key
+   */
+  private isNativeReadBlocked(key: string): boolean {
+    return this.removedKeys.has(key) || (this.nativeSdkKeysUntrusted && isSdkStorageKey(key));
+  }
+
+  /**
    * Checks that the Storage supports read/write
    */
   private probeStorage(): void {
@@ -122,8 +133,9 @@ export class SafeLocalStorageAdapter implements IStorage {
         return fallbackVal;
       }
 
-      // Not in memory yet: try the underlying storage (it may only be write-blocked by quota)
-      if (this.storage) {
+      // Not in memory yet: try the underlying storage (it may only be write-blocked by quota),
+      // unless the key was deleted and native storage could not honour the deletion.
+      if (this.storage && !this.isNativeReadBlocked(key)) {
         try {
           return this.storage.getItem(key);
         } catch {
@@ -146,6 +158,9 @@ export class SafeLocalStorageAdapter implements IStorage {
    * Stores a key-value pair
    */
   async setItem(key: string, value: string): Promise<void> {
+    // The fallback store now holds the freshest value, so it takes precedence over any tombstone.
+    this.removedKeys.delete(key);
+
     if (this._isUsingFallback || !this.storage) {
       await this.fallbackStorage.setItem(key, value);
       return;
@@ -167,7 +182,9 @@ export class SafeLocalStorageAdapter implements IStorage {
     if (this.storage) {
       try {
         this.storage.removeItem(key);
+        this.removedKeys.delete(key);
       } catch (err) {
+        this.removedKeys.add(key);
         this.activateFallback(err);
       }
     }
@@ -194,9 +211,16 @@ export class SafeLocalStorageAdapter implements IStorage {
         }
 
         for (const k of keysToRemove) {
-          this.storage.removeItem(k);
+          try {
+            this.storage.removeItem(k);
+            this.removedKeys.delete(k);
+          } catch (err) {
+            this.removedKeys.add(k);
+            this.activateFallback(err);
+          }
         }
       } catch (err) {
+        this.nativeSdkKeysUntrusted = true;
         this.activateFallback(err);
       }
     }

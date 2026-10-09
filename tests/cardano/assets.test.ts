@@ -253,6 +253,51 @@ describe('Cardano Assets & Precision BigInt Math', () => {
       expect(getAssetQuantity(utxos, policyA, tokenNameA)).toBe(hugeTokenSupply);
     });
 
+    it('never adds two different tokens when a text name is also valid hex', () => {
+      const asText = `${policyA}${stringToHex('face')}`;
+      const asHex = `${policyA}face`;
+      const utxos = [
+        {
+          amount: [
+            { unit: asText, quantity: '9' },
+            { unit: asHex, quantity: '3' },
+          ],
+        },
+      ];
+
+      expect(getAssetQuantity(utxos, policyA, 'face', 'utf8')).toBe(9n);
+      expect(getAssetQuantity(utxos, policyA, 'face', 'hex')).toBe(3n);
+      expect(getAssetQuantity(utxos, policyA, 'face')).toBe(3n);
+    });
+
+    it('reads a non-hex name as UTF-8 in auto mode and rejects a bad hex name in hex mode', () => {
+      const utxos = [{ amount: [{ unit: fullAssetUnitA, quantity: '4' }] }];
+
+      expect(getAssetQuantity(utxos, policyA, tokenNameA)).toBe(4n);
+      expect(() => getAssetQuantity(utxos, policyA, tokenNameA, 'hex')).toThrow(HydraBridgeError);
+    });
+
+    it('matches the exact name, not longer names that share its prefix', () => {
+      const utxos = [
+        {
+          amount: [
+            { unit: `${policyA}41`, quantity: '5' },
+            { unit: `${policyA}4142`, quantity: '7' },
+            { unit: policyA, quantity: '11' },
+          ],
+        },
+      ];
+
+      expect(getAssetQuantity(utxos, policyA, '41', 'hex')).toBe(5n);
+      expect(getAssetQuantity(utxos, policyA, '')).toBe(11n);
+    });
+
+    it('throws on an unknown encoding', () => {
+      expect(() => getAssetQuantity([], policyA, 'a', 'base64' as unknown as 'hex')).toThrow(
+        HydraBridgeError,
+      );
+    });
+
     it('throws when policyId is invalid or contains only 0x', () => {
       expect(() => getAssetQuantity([], '')).toThrow(HydraBridgeError);
       expect(() => getAssetQuantity([], '   ')).toThrow(HydraBridgeError);

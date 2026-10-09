@@ -91,10 +91,13 @@ export async function logout() {
 
 ## `signIn`
 
-`signIn({ challenge, address?, token?, exchangeToken?, signOptions? })`:
+`signIn({ challenge, challengeEncoding?, address?, token?, exchangeToken?, signOptions? })`:
 
 1. Xác định địa chỉ: dùng `address` nếu được truyền, nếu không thì dùng used address đầu tiên, nếu không nữa thì dùng change address. Nếu không có địa chỉ nào, nó ném `ERR_NOT_CONNECTED`.
-2. Mã hóa hex cho challenge. Challenge đã là hex (có hoặc không có `0x`) thì được dùng nguyên.
+2. Mã hóa hex cho challenge theo `challengeEncoding`:
+   - `'auto'` (mặc định): tiền tố `0x` theo sau là số chẵn chữ số hex thì được ký như các byte đó; mọi trường hợp khác được ký theo byte UTF-8. Cách chọn không bao giờ phụ thuộc vào độ dài challenge.
+   - `'utf8'`: luôn dùng byte UTF-8 của chuỗi. Dùng khi backend xác minh nonce dưới dạng văn bản.
+   - `'hex'`: chuỗi là hex (có thể có `0x`) và các byte của nó được ký; chuỗi khác sẽ ném `ERR_INVALID_PARAMS`. Dùng khi backend xác minh nonce dạng byte thô.
 3. Gọi `client.signData` và nhận `{ signature, key }`.
 4. Lấy JWT: dùng `token` bạn truyền vào, nếu không thì dùng kết quả của `exchangeToken` (theo từng lần gọi, sau đó đến hàm từ constructor).
 5. Kiểm tra JWT (chưa hết hạn, giải mã được), lưu lại và phát trạng thái mới.

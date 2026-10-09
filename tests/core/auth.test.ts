@@ -562,6 +562,62 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
+  it('signIn encodes a challenge by its content, never by its length', async () => {
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+
+    const evenHex = 'deadbeef'.repeat(4);
+    const oddHex = `${evenHex}1`;
+
+    await authManager.signIn({ challenge: evenHex });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(
+      expect.any(String),
+      stringToHex(evenHex),
+      undefined,
+    );
+
+    await authManager.signIn({ challenge: oddHex });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(
+      expect.any(String),
+      stringToHex(oddHex),
+      undefined,
+    );
+  });
+
+  it('signIn honours challengeEncoding "hex" and "utf8"', async () => {
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+    const nonce = 'deadbeef'.repeat(4);
+
+    await authManager.signIn({ challenge: nonce, challengeEncoding: 'hex' });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(expect.any(String), nonce, undefined);
+
+    await authManager.signIn({ challenge: `0x${nonce}`, challengeEncoding: 'hex' });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(expect.any(String), nonce, undefined);
+
+    await authManager.signIn({ challenge: `0x${nonce}`, challengeEncoding: 'utf8' });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(
+      expect.any(String),
+      stringToHex(`0x${nonce}`),
+      undefined,
+    );
+  });
+
+  it('signIn rejects a non-hex challenge when challengeEncoding is "hex"', async () => {
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+
+    await expect(
+      authManager.signIn({ challenge: 'not hex', challengeEncoding: 'hex' }),
+    ).rejects.toThrow(HydraBridgeError);
+    await expect(
+      authManager.signIn({ challenge: 'abc', challengeEncoding: 'hex' }),
+    ).rejects.toThrow(HydraBridgeError);
+    await expect(
+      authManager.signIn({
+        challenge: 'abcd',
+        challengeEncoding: 'base64' as unknown as 'hex',
+      }),
+    ).rejects.toThrow(HydraBridgeError);
+  });
+
   it('signOut always clears in-memory auth state even when storage.removeItem fails', async () => {
     const errorStorage = {
       getItem: vi.fn().mockResolvedValue(null),

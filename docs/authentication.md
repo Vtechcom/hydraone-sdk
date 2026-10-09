@@ -89,10 +89,13 @@ export async function logout() {
 
 ## `signIn`
 
-`signIn({ challenge, address?, token?, exchangeToken?, signOptions? })`:
+`signIn({ challenge, challengeEncoding?, address?, token?, exchangeToken?, signOptions? })`:
 
 1. Resolves the address: `address` if given, otherwise the first used address, otherwise the change address. If none is available it throws `ERR_NOT_CONNECTED`.
-2. Hex-encodes the challenge. A challenge that is already hex (with or without `0x`) is used as is.
+2. Hex-encodes the challenge according to `challengeEncoding`:
+   - `'auto'` (default): a `0x` prefix followed by an even number of hex digits is signed as those bytes; anything else is signed as its UTF-8 bytes. The choice never depends on the challenge length.
+   - `'utf8'`: always the UTF-8 bytes of the string. Use this when your backend verifies the nonce as text.
+   - `'hex'`: the string is hex (an optional `0x` is removed) and its bytes are signed; anything else throws `ERR_INVALID_PARAMS`. Use this when your backend verifies raw nonce bytes.
 3. Calls `client.signData` and gets `{ signature, key }`.
 4. Gets a JWT: the `token` you passed, else the result of `exchangeToken` (per call, then the one from the constructor).
 5. Validates the JWT (not expired, decodable), stores it, and emits the new state.

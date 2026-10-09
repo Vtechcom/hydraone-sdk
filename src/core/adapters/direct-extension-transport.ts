@@ -46,47 +46,70 @@ function generateId(): string {
   return `hydra_ext_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
+/** CIP-30 operations whose error codes have different meanings. */
+type RejectionContext = 'enable' | 'signTx' | 'signData' | 'submitTx' | 'other';
+
 /**
- * Whether an error was caused by the user declining (CIP-30 UserDeclined, code 2)
+ * CIP-30 error code meaning "the user declined", per operation:
+ * APIError.Refused = -3 (enable), TxSignError.UserDeclined = 2, DataSignError.UserDeclined = 3.
+ * TxSendError (submitTx) has no user-decline code: Refused = 1 and Failure = 2 come from the node.
  */
-function isUserRejectionError(err: unknown): boolean {
+const USER_DECLINED_CODES: Record<RejectionContext, readonly number[]> = {
+  enable: [-3],
+  signTx: [2],
+  signData: [3],
+  submitTx: [],
+  other: [],
+};
+
+const USER_DECLINED_PHRASE =
+  /\buser\s*(?:declin|reject|den(?:y|ied)|cancel|refus|abort)|\b(?:declined|rejected|cancell?ed|denied)\s+by\s+(?:the\s+)?user\b/i;
+
+function rejectionContextFor(messageType: string | undefined): RejectionContext {
+  switch (messageType) {
+    case 'CLIENT_READY':
+      return 'enable';
+    case 'SIGN_TX':
+      return 'signTx';
+    case 'SIGN_DATA':
+      return 'signData';
+    case 'SUBMIT_TX':
+      return 'submitTx';
+    default:
+      return 'other';
+  }
+}
+
+/**
+ * Whether an error was caused by the user declining the wallet prompt.
+ *
+ * A numeric CIP-30 code is interpreted for the operation that raised it, because the same code
+ * means different things (signTx 2 = UserDeclined, signData 2 = AddressNotPK, submitTx 2 = Failure).
+ * Wallets that throw without a matching code are recognised by an explicit "user declined/rejected/
+ * cancelled" phrase; a bare "rejected" or "refused" is not enough, since nodes use those words too.
+ */
+function isUserRejectionError(err: unknown, context: RejectionContext = 'other'): boolean {
   if (!err) {
     return false;
   }
 
   if (typeof err === 'string') {
-    const s = err.toLowerCase();
-    return (
-      s.includes('user decline') ||
-      s.includes('user reject') ||
-      s.includes('declined') ||
-      s.includes('rejected') ||
-      s.includes('refused') ||
-      s.includes('cancelled') ||
-      s.includes('canceled')
-    );
+    return USER_DECLINED_PHRASE.test(err);
   }
 
   if (typeof err !== 'object') {
     return false;
   }
 
-  // CIP-30 uses code 2 for PaginateError / UserDeclined
   const code = errorCode(err);
-  if (code === 2 || code === 'ERR_USER_REJECTED') {
+  if (code === 'ERR_USER_REJECTED') {
+    return true;
+  }
+  if (typeof code === 'number' && USER_DECLINED_CODES[context].includes(code)) {
     return true;
   }
 
-  const message = (errorMessage(err) || errorInfo(err) || '').toLowerCase();
-  return (
-    message.includes('user decline') ||
-    message.includes('user reject') ||
-    message.includes('declined') ||
-    message.includes('rejected') ||
-    message.includes('refused') ||
-    message.includes('cancelled') ||
-    message.includes('canceled')
-  );
+  return USER_DECLINED_PHRASE.test(`${errorMessage(err)} ${errorInfo(err) ?? ''}`);
 }
 
 /**
@@ -214,7 +237,10 @@ export class DirectExtensionTransport implements ITransport {
         this.api = api;
         return this.api;
       } catch (err) {
-        if (isUserRejectionError(err)) {
+        if (err instanceof HydraBridgeError) {
+          throw err;
+        }
+        if (isUserRejectionError(err, 'enable')) {
           throw new HydraUserRejectedError(
             errorInfo(err) ||
               errorMessage(err) ||
@@ -311,18 +337,20 @@ export class DirectExtensionTransport implements ITransport {
         const result = await this.handleMessageInternally(message);
         return result as BridgeMessage<T>;
       } catch (err) {
-        if (isUserRejectionError(err)) {
+        if (err instanceof HydraBridgeError) {
+          throw err;
+        }
+        if (isUserRejectionError(err, rejectionContextFor(message.type))) {
           throw new HydraUserRejectedError(
             errorInfo(err) || errorMessage(err) || 'User rejected the operation',
             err,
           );
         }
-        if (err instanceof HydraBridgeError) {
-          throw err;
-        }
         throw new HydraBridgeError(
-          errorMessage(err) || `Direct extension operation failed for [${message.type}]`,
-          String(errorCode(err) || 'ERR_RPC_FAILED'),
+          errorMessage(err) ||
+            errorInfo(err) ||
+            `Direct extension operation failed for [${message.type}]`,
+          String(errorCode(err) ?? 'ERR_RPC_FAILED'),
           err,
         );
       }
@@ -401,6 +429,22 @@ export class DirectExtensionTransport implements ITransport {
           result = await api.getBalance();
           break;
         }
+        case 'GET_UNUSED_ADDRESSES': {
+          result = await api.getUnusedAddresses();
+          break;
+        }
+        case 'GET_CHANGE_ADDRESS': {
+          result = await api.getChangeAddress();
+          break;
+        }
+        case 'GET_REWARD_ADDRESSES': {
+          result = await api.getRewardAddresses();
+          break;
+        }
+        case 'GET_NETWORK_ID': {
+          result = await api.getNetworkId();
+          break;
+        }
         case 'GET_COLLATERAL': {
           if (typeof api.getCollateral === 'function') {
             const collateralRes = await api.getCollateral(
@@ -460,7 +504,10 @@ export class DirectExtensionTransport implements ITransport {
 
       return rpcResponse;
     } catch (err) {
-      if (isUserRejectionError(err)) {
+      if (err instanceof HydraBridgeError) {
+        throw err;
+      }
+      if (isUserRejectionError(err, rejectionContextFor(message.type))) {
         throw new HydraUserRejectedError(
           errorInfo(err) || errorMessage(err) || 'User rejected the wallet operation',
           err,

@@ -326,12 +326,17 @@ export function getAdaBalance(
  * @param utxos UTxOs
  * @param policyId Token policy ID (56-character hex string)
  * @param assetName Token name (hex string, UTF-8 string or Uint8Array)
+ * @param encoding How to read a string `assetName`: `'hex'`, `'utf8'`, or `'auto'` (default).
+ *   `'auto'` reads an even-length all-hex string as hex and anything else as UTF-8. A name that is
+ *   valid hex but meant as text (for example "face") is therefore ambiguous: pass `'utf8'` for it.
+ *   Exactly one reading is used, so two different tokens are never added together.
  * @returns Total quantity as a native bigint (0n if not found)
  */
 export function getAssetQuantity(
   utxos: CardanoUtxoInput[] | null | undefined,
   policyId: string,
   assetName: string | Uint8Array = '',
+  encoding: 'auto' | 'hex' | 'utf8' = 'auto',
 ): bigint {
   if (utxos === null || utxos === undefined) {
     return 0n;
@@ -358,28 +363,39 @@ export function getAssetQuantity(
     );
   }
 
-  // Normalize assetName: a Uint8Array becomes hex; a string yields both raw-hex and UTF-8-hex candidates
-  const assetNameHexCandidates: string[] = [];
+  if (encoding !== 'auto' && encoding !== 'hex' && encoding !== 'utf8') {
+    throw new HydraBridgeError(
+      "Invalid encoding: must be 'auto', 'hex' or 'utf8'",
+      'ERR_INVALID_PARAMS',
+      { encoding },
+    );
+  }
+
+  // Normalize assetName to the single hex form that is compared against the asset keys
+  let targetNameHex: string;
 
   if (assetName instanceof Uint8Array) {
-    assetNameHexCandidates.push(bytesToHex(assetName).toLowerCase());
+    targetNameHex = bytesToHex(assetName).toLowerCase();
   } else if (typeof assetName === 'string') {
     const trimmedName = assetName.trim();
+    const cleanName = trimmedName.toLowerCase().replace(/^0x/, '');
+    const looksLikeHex = /^[0-9a-f]*$/.test(cleanName) && cleanName.length % 2 === 0;
+
     if (trimmedName === '') {
-      assetNameHexCandidates.push('');
+      targetNameHex = '';
+    } else if (encoding === 'hex') {
+      if (!looksLikeHex) {
+        throw new HydraBridgeError(
+          'Invalid assetName: not an even-length hex string',
+          'ERR_INVALID_PARAMS',
+          { assetName },
+        );
+      }
+      targetNameHex = cleanName;
+    } else if (encoding === 'utf8') {
+      targetNameHex = stringToHex(trimmedName).toLowerCase();
     } else {
-      const cleanName = trimmedName.toLowerCase().replace(/^0x/, '');
-      if (/^[0-9a-fA-F]*$/.test(cleanName) && cleanName.length % 2 === 0) {
-        assetNameHexCandidates.push(cleanName);
-      }
-      try {
-        const utf8Hex = stringToHex(trimmedName).toLowerCase();
-        if (!assetNameHexCandidates.includes(utf8Hex)) {
-          assetNameHexCandidates.push(utf8Hex);
-        }
-      } catch {
-        // Skip when UTF-8 conversion fails
-      }
+      targetNameHex = looksLikeHex ? cleanName : stringToHex(trimmedName).toLowerCase();
     }
   } else {
     throw new HydraBridgeError(
@@ -404,19 +420,11 @@ export function getAssetQuantity(
       }
 
       // Extract the asset name part from the key
-      let keyName = '';
-      if (cleanKey.startsWith(`${cleanPolicyId}.`)) {
-        keyName = cleanKey.slice(cleanPolicyId.length + 1);
-      } else {
-        keyName = cleanKey.slice(cleanPolicyId.length);
-      }
+      const keyName = cleanKey.startsWith(`${cleanPolicyId}.`)
+        ? cleanKey.slice(cleanPolicyId.length + 1)
+        : cleanKey.slice(cleanPolicyId.length);
 
-      // Match the asset name
-      const matches =
-        assetNameHexCandidates.length > 0 &&
-        assetNameHexCandidates.some((candidate) => candidate === keyName);
-
-      if (matches) {
+      if (keyName === targetNameHex) {
         totalQuantity += qty;
       }
     }

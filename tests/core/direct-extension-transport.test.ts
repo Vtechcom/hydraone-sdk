@@ -284,6 +284,24 @@ describe('DirectExtensionTransport', () => {
 
       expect(res.payload.result).toBeNull();
     });
+
+    it.each([
+      ['GET_CHANGE_ADDRESS', 'getChangeAddress', 'change_addr'],
+      ['GET_UNUSED_ADDRESSES', 'getUnusedAddresses', []],
+      ['GET_REWARD_ADDRESSES', 'getRewardAddresses', []],
+      ['GET_NETWORK_ID', 'getNetworkId', 1],
+    ] as const)('handles %s', async (type, apiMethod, expected) => {
+      const res = await transport.request<any>({
+        id: `req_${type}`,
+        type,
+        payload: {},
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+      expect((mockApi as any)[apiMethod]).toHaveBeenCalledTimes(1);
+      expect(res.payload.result).toEqual(expected);
+    });
   });
 
   describe('CIP-30 / CIP-8 Signing & Submission qua request()', () => {
@@ -347,6 +365,61 @@ describe('DirectExtensionTransport', () => {
           source: 'hydra-client',
         }),
       ).rejects.toThrowError(HydraUserRejectedError);
+    });
+
+    const call = (type: string, payload: Record<string, unknown>) =>
+      transport.request({
+        id: `req_${type}`,
+        type,
+        payload,
+        timestamp: Date.now(),
+        source: 'hydra-client',
+      });
+
+    it('signTx code 2 without a phrase is UserDeclined', async () => {
+      (mockApi.signTx as any).mockRejectedValueOnce({ code: 2, info: 'whatever' });
+      await expect(call('SIGN_TX', { cbor: 'tx' })).rejects.toThrowError(HydraUserRejectedError);
+    });
+
+    it('signData code 3 is UserDeclined', async () => {
+      (mockApi.signData as any).mockRejectedValueOnce({ code: 3, info: 'UserDeclined' });
+      await expect(call('SIGN_DATA', { address: 'a', payloadHex: '00' })).rejects.toThrowError(
+        HydraUserRejectedError,
+      );
+    });
+
+    it('signData code 2 (AddressNotPK) is not a user rejection', async () => {
+      (mockApi.signData as any).mockRejectedValueOnce({ code: 2, info: 'AddressNotPK' });
+      const err = await call('SIGN_DATA', { address: 'a', payloadHex: '00' }).catch((e) => e);
+      expect(err).not.toBeInstanceOf(HydraUserRejectedError);
+      expect(err.message).toBe('AddressNotPK');
+      expect(err.code).toBe('2');
+    });
+
+    it.each([
+      [{ code: 2, info: 'Failure: node unreachable' }],
+      [{ code: 1, info: 'Refused' }],
+      [new Error('Transaction rejected by node: BadInputsUTxO')],
+    ])('submitTx node failure %# is not a user rejection', async (failure) => {
+      (mockApi.submitTx as any).mockRejectedValueOnce(failure);
+      const err = await call('SUBMIT_TX', { cbor: 'tx' }).catch((e) => e);
+      expect(err).not.toBeInstanceOf(HydraUserRejectedError);
+    });
+
+    it('an explicit "user rejected" phrase is still recognised for any operation', async () => {
+      (mockApi.submitTx as any).mockRejectedValueOnce(new Error('User rejected the request'));
+      await expect(call('SUBMIT_TX', { cbor: 'tx' })).rejects.toThrowError(HydraUserRejectedError);
+    });
+
+    it('enable() APIError.Refused (-3) is a user rejection', async () => {
+      const refusing = new DirectExtensionTransport({
+        walletName: 'eternl',
+        extension: {
+          ...mockExtension,
+          enable: vi.fn().mockRejectedValue({ code: -3, info: 'Refused' }),
+        },
+      });
+      await expect(refusing.enable()).rejects.toThrowError(HydraUserRejectedError);
     });
   });
 

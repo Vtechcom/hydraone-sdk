@@ -381,6 +381,12 @@ export interface AuthSession {
 export interface SignInParams {
   /** Challenge / nonce issued by the auth backend. */
   challenge: string;
+  /**
+   * How the challenge is turned into the signed bytes (default: 'auto').
+   * 'utf8' signs the string's UTF-8 bytes; 'hex' signs the bytes the (optionally 0x-prefixed) hex string encodes;
+   * 'auto' treats only a `0x` prefix followed by even-length hex as hex and everything else as UTF-8.
+   */
+  challengeEncoding?: 'auto' | 'utf8' | 'hex';
   /** Address used to sign (optional; resolved from the client when omitted). */
   address?: string;
   /** Existing JWT, if one was already issued (optional). */

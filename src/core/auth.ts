@@ -140,6 +140,44 @@ export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean 
   }
 }
 
+const EVEN_HEX = /^(?:[0-9a-fA-F]{2})+$/;
+
+/**
+ * Turns a sign-in challenge into the hex payload that is signed.
+ *
+ * - `'utf8'`: always the UTF-8 bytes of the string.
+ * - `'hex'`: the string is already hex (an optional `0x` prefix is removed); anything else throws.
+ * - `'auto'`: a `0x` prefix followed by even-length hex is taken as hex, everything else as UTF-8.
+ *   The decision never depends on the challenge length, so a backend can verify it unambiguously.
+ */
+function encodeChallenge(challenge: string, encoding: 'auto' | 'utf8' | 'hex'): string {
+  if (encoding === 'utf8') {
+    return stringToHex(challenge);
+  }
+
+  const hasPrefix = challenge.startsWith('0x') || challenge.startsWith('0X');
+  const body = hasPrefix ? challenge.slice(2) : challenge;
+
+  if (encoding === 'hex') {
+    if (!EVEN_HEX.test(body)) {
+      throw new HydraBridgeError(
+        'challenge must be an even-length hex string when challengeEncoding is "hex"',
+        ERROR_CODES.ERR_INVALID_PARAMS,
+      );
+    }
+    return body;
+  }
+
+  if (encoding !== 'auto') {
+    throw new HydraBridgeError(
+      'challengeEncoding must be "auto", "utf8" or "hex"',
+      ERROR_CODES.ERR_INVALID_PARAMS,
+    );
+  }
+
+  return hasPrefix && EVEN_HEX.test(body) ? body : stringToHex(challenge);
+}
+
 /**
  * AuthManager - handles 1-click Web3 CIP-8 login and the JWT lifecycle for games and dApps
  */
@@ -237,20 +275,8 @@ export class AuthManager {
     }
 
     // 2. Hex-encode the challenge
-    let payloadHex: string;
     const challenge = params.challenge;
-    if (challenge.startsWith('0x')) {
-      const hexCandidate = challenge.slice(2);
-      if (/^[0-9a-fA-F]+$/.test(hexCandidate) && hexCandidate.length % 2 === 0) {
-        payloadHex = hexCandidate;
-      } else {
-        payloadHex = stringToHex(challenge);
-      }
-    } else if (/^[0-9a-fA-F]{32,}$/.test(challenge) && challenge.length % 2 === 0) {
-      payloadHex = challenge;
-    } else {
-      payloadHex = stringToHex(challenge);
-    }
+    const payloadHex = encodeChallenge(challenge, params.challengeEncoding ?? 'auto');
 
     // 3. Sign with the wallet via CIP-8 signData
     const dataSig = await this.client.signData(address, payloadHex, params.signOptions);
