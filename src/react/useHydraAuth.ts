@@ -187,8 +187,3 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
     refreshSession,
   };
 }
-
-/**
- * Shorthand alias cho useHydraAuth
- */
-export const useAuth = useHydraAuth;

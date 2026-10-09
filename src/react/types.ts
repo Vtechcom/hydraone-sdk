@@ -228,7 +228,7 @@ export interface UseWalletReturn {
 }
 
 /**
- * Tùy chọn cấu hình cho hook useHydraAuth / useAuth
+ * Tùy chọn cấu hình cho hook useHydraAuth
  */
 export interface UseHydraAuthOptions {
   /**
@@ -249,7 +249,7 @@ export interface UseHydraAuthOptions {
 }
 
 /**
- * Giá trị trả về từ hook useHydraAuth / useAuth
+ * Giá trị trả về từ hook useHydraAuth
  */
 export interface UseHydraAuthReturn {
   /**

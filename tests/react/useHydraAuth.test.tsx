@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { HydraOneProvider } from '../../src/react/context';
-import { useHydraAuth, useAuth } from '../../src/react/useHydraAuth';
+import { useHydraAuth } from '../../src/react/useHydraAuth';
 import { WalletBridgeClient } from '../../src/core/client';
 import { GameAuthManager } from '../../src/core/auth';
 import type { ITransport } from '../../src/core/ports/transport';
@@ -89,7 +89,7 @@ function createMockJwt(payload: Record<string, any> = {}): string {
   return `${b64Header}.${b64Claims}.mock_signature`;
 }
 
-describe('useHydraAuth and useAuth hooks', () => {
+describe('useHydraAuth hook', () => {
   let transport: MockTransport;
   let client: WalletBridgeClient;
   let storage: InMemoryStorageAdapter;
@@ -127,13 +127,6 @@ describe('useHydraAuth and useAuth hooks', () => {
     expect(result.current.isExpired).toBe(true);
     expect(result.current.isAuthenticating).toBe(false);
     expect(result.current.error).toBeNull();
-  });
-
-  it('hoạt động chuẩn xác với alias useAuth', () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    expect(result.current.isAuthenticated).toBe(false);
-    expect(result.current.authManager).toBe(authManager);
   });
 
   it('hoạt động độc lập ngoài Provider khi truyền authManager option', () => {

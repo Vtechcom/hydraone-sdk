@@ -25,11 +25,6 @@ export function useHydraOneContext(componentName = 'useHydraOneContext'): HydraO
 }
 
 /**
- * Alias cho useHydraOneContext
- */
-export const useHydraOne = useHydraOneContext;
-
-/**
  * Component Provider cung cấp WalletBridgeClient, GameAuthManager và IStorage cho toàn bộ React Component Tree
  */
 export function HydraOneProvider({

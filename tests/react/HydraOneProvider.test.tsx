@@ -5,7 +5,6 @@ import { render, screen } from '@testing-library/react';
 import {
   HydraOneProvider,
   useHydraOneContext,
-  useHydraOne,
 } from '../../src/react/context';
 import { WalletBridgeClient } from '../../src/core/client';
 import { GameAuthManager } from '../../src/core/auth';
@@ -52,11 +51,6 @@ function ConsumerComponent(): React.JSX.Element {
   );
 }
 
-function AliasConsumerComponent(): React.JSX.Element {
-  const { client } = useHydraOne();
-  return <span data-testid="alias-client">{client ? 'yes' : 'no'}</span>;
-}
-
 describe('HydraOneProvider and Context', () => {
   it('cung cấp client, authManager và storage cho các component con', () => {
     render(
@@ -68,16 +62,6 @@ describe('HydraOneProvider and Context', () => {
     expect(screen.getByTestId('client-exists').textContent).toBe('yes');
     expect(screen.getByTestId('auth-exists').textContent).toBe('yes');
     expect(screen.getByTestId('storage-exists').textContent).toBe('yes');
-  });
-
-  it('hỗ trợ alias useHydraOne', () => {
-    render(
-      <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
-        <AliasConsumerComponent />
-      </HydraOneProvider>
-    );
-
-    expect(screen.getByTestId('alias-client').textContent).toBe('yes');
   });
 
   it('nhận và sử dụng custom client, authManager và storage được truyền vào props', () => {
