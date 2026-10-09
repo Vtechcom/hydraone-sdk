@@ -22,22 +22,22 @@ function toSafeBigInt(val: unknown, fieldName = 'quantity'): bigint {
 }
 
 /**
- * Phân tích và chuẩn hóa bất kỳ biểu diễn UTxO hoặc Value nào thành CardanoValue chuẩn
+ * Parses and normalizes any UTxO or Value representation into a CardanoValue
  * 
- * @param input Dữ liệu đầu vào (đối tượng UTxO, chuỗi CBOR hex, số nguyên hoặc bigint)
- * @returns CardanoValue với coins (bigint) và assets (Record<string, bigint>)
+ * @param input UTxO object, CBOR hex string, integer or bigint
+ * @returns CardanoValue with coins (bigint) and assets (Record<string, bigint>)
  */
 export function parseValue(input: unknown): CardanoValue {
   if (input === null || input === undefined) {
     return { coins: 0n, assets: {} };
   }
 
-  // 1. Nếu là bigint nguyên thủy
+  // 1. Primitive bigint
   if (typeof input === 'bigint') {
     return { coins: input, assets: {} };
   }
 
-  // 2. Nếu là số number (nguyên)
+  // 2. Integer number
   if (typeof input === 'number') {
     if (!Number.isFinite(input) || !Number.isInteger(input)) {
       throw new HydraBridgeError('Lovelace coin amount must be an integer', 'ERR_INVALID_PARAMS', { input });
@@ -45,14 +45,14 @@ export function parseValue(input: unknown): CardanoValue {
     return { coins: BigInt(input), assets: {} };
   }
 
-  // 3. Nếu là chuỗi string
+  // 3. String
   if (typeof input === 'string') {
     const trimmed = input.trim();
-    // Chuỗi số nguyên đơn giản
+    // Plain integer string
     if (/^-?\d+$/.test(trimmed)) {
       return { coins: BigInt(trimmed), assets: {} };
     }
-    // Chuỗi Hex CBOR (hỗ trợ cả tiền tố 0x hoặc 0X)
+    // CBOR hex string (0x or 0X prefix accepted)
     const cleanHex = trimmed.replace(/^0x/i, '');
     if (/^[0-9a-fA-F]+$/.test(cleanHex)) {
       return parseCborUtxoOrValue(cleanHex);
@@ -60,11 +60,11 @@ export function parseValue(input: unknown): CardanoValue {
     throw new HydraBridgeError('Invalid string representation for Cardano Value or UTxO', 'ERR_INVALID_PARAMS', { input });
   }
 
-  // 4. Nếu là đối tượng JavaScript
+  // 4. JavaScript object
   if (typeof input === 'object') {
     const utxo = input as StructuredUtxo;
 
-    // Trường hợp theo chuẩn Blockfrost / Lucid: { amount: [{ unit: 'lovelace', quantity: '...' }] }
+    // Blockfrost / Lucid shape: { amount: [{ unit: 'lovelace', quantity: '...' }] }
     if (Array.isArray(utxo.amount)) {
       let coins = 0n;
       const assets: Record<string, bigint> = {};
@@ -85,17 +85,17 @@ export function parseValue(input: unknown): CardanoValue {
       return { coins, assets };
     }
 
-    // Trường hợp có thuộc tính value lồng bên trong
+    // Nested value property
     if (utxo.value !== undefined) {
       if (typeof utxo.value === 'object' && utxo.value !== null && !('coins' in utxo.value) && !('lovelace' in utxo.value) && !('assets' in utxo.value)) {
-        // Có thể là nested UTxO
+        // May be a nested UTxO
         return parseValue(utxo.value);
       }
       if (typeof utxo.value === 'bigint' || typeof utxo.value === 'number' || typeof utxo.value === 'string') {
         return parseValue(utxo.value);
       }
 
-      // value là đối tượng { coins, assets?, multiasset? }
+      // value is an object { coins, assets?, multiasset? }
       const valObj = utxo.value as {
         coins?: bigint | string | number;
         lovelace?: bigint | string | number;
@@ -133,7 +133,7 @@ export function parseValue(input: unknown): CardanoValue {
       return { coins, assets };
     }
 
-    // Trường hợp đối tượng phẳng có coins hoặc lovelace ở top-level
+    // Flat object with coins or lovelace at the top level
     if (utxo.coins !== undefined || utxo.lovelace !== undefined) {
       let coins = 0n;
       if (utxo.coins !== undefined) {
@@ -149,10 +149,10 @@ export function parseValue(input: unknown): CardanoValue {
 }
 
 /**
- * Tính tổng số Lovelace từ danh sách các UTxO Cardano bằng native bigint
+ * Sums the lovelace of a list of Cardano UTxOs using native bigint
  * 
- * @param utxos Mảng các UTxO (đối tượng hoặc chuỗi CBOR hex)
- * @returns Tổng lượng Lovelace dưới dạng bigint nguyên thủy
+ * @param utxos UTxOs (objects or CBOR hex strings)
+ * @returns Total lovelace as a bigint
  */
 export function getTotalLovelace(utxos?: CardanoUtxoInput[] | null): bigint {
   if (utxos === null || utxos === undefined) {
@@ -173,13 +173,13 @@ export function getTotalLovelace(utxos?: CardanoUtxoInput[] | null): bigint {
 }
 
 /**
- * Chuyển đổi lượng Lovelace sang chuỗi số thập phân ADA không dùng floating-point
+ * Converts lovelace to an ADA decimal string without floating-point math
  * 
- * 1 ADA = 1,000,000 Lovelace (6 chữ số thập phân)
+ * 1 ADA = 1,000,000 lovelace (6 decimal places)
  * 
- * @param lovelace Lượng Lovelace cần chuyển đổi (bigint, chuỗi số nguyên hoặc number)
- * @param options Tùy chọn định dạng số thập phân (minDecimals, maxDecimals, trimTrailingZeros)
- * @returns Chuỗi số thập phân ADA chuẩn xác
+ * @param lovelace Lovelace amount (bigint, integer string or number)
+ * @param options Decimal formatting options (minDecimals, maxDecimals, trimTrailingZeros)
+ * @returns Exact ADA decimal string
  */
 export function lovelaceToAda(
   lovelace: bigint | string | number,
@@ -221,15 +221,15 @@ export function lovelaceToAda(
   const integerPart = (absVal / 1_000_000n).toString();
   const remainderFull = (absVal % 1_000_000n).toString().padStart(6, '0');
 
-  // Cắt phần thập phân theo maxDecimals
+  // Truncate the fractional part to maxDecimals
   let decimalPart = remainderFull.slice(0, maxDecimals);
 
   if (trimTrailingZeros) {
-    // Cắt bớt các số 0 ở đuôi
+    // Trim trailing zeros
     decimalPart = decimalPart.replace(/0+$/, '');
   }
 
-  // Bổ sung số 0 nếu chưa đạt minDecimals
+  // Pad with zeros up to minDecimals
   if (decimalPart.length < minDecimals) {
     decimalPart = decimalPart.padEnd(minDecimals, '0');
   }
@@ -239,10 +239,10 @@ export function lovelaceToAda(
 }
 
 /**
- * Chuyển đổi chuỗi số thập phân ADA sang lượng Lovelace (bigint)
+ * Converts an ADA decimal string to lovelace (bigint)
  * 
- * @param ada Chuỗi hoặc số ADA (ví dụ "12.5" hoặc 12.5)
- * @returns Lượng Lovelace tương ứng (bigint)
+ * @param ada ADA as a string or number (e.g. "12.5" or 12.5)
+ * @returns Equivalent lovelace (bigint)
  */
 export function adaToLovelace(ada: string | number): bigint {
   let str = typeof ada === 'number' ? ada.toString() : String(ada || '').trim();
@@ -278,11 +278,11 @@ export function adaToLovelace(ada: string | number): bigint {
 }
 
 /**
- * Lấy tổng số dư ADA từ danh sách UTxO dưới dạng chuỗi số thập phân
+ * Returns the total ADA balance of a list of UTxOs as a decimal string
  * 
- * @param utxos Mảng các UTxO (đối tượng hoặc chuỗi CBOR hex)
- * @param options Tùy chọn định dạng số thập phân
- * @returns Chuỗi số thập phân ADA chuẩn xác
+ * @param utxos UTxOs (objects or CBOR hex strings)
+ * @param options Decimal formatting options
+ * @returns Exact ADA decimal string
  */
 export function getAdaBalance(
   utxos?: CardanoUtxoInput[] | null,
@@ -293,12 +293,12 @@ export function getAdaBalance(
 }
 
 /**
- * Lấy tổng số lượng Native Token (Multi-Asset) từ danh sách UTxO
+ * Returns the total quantity of a native token (multi-asset) across a list of UTxOs
  * 
- * @param utxos Mảng các UTxO
- * @param policyId Policy ID của token (chuỗi Hex 56 ký tự)
- * @param assetName Tên token (chuỗi Hex, chuỗi ký tự UTF-8 hoặc Uint8Array)
- * @returns Tổng số lượng token dạng native bigint (trả về 0n nếu không tìm thấy)
+ * @param utxos UTxOs
+ * @param policyId Token policy ID (56-character hex string)
+ * @param assetName Token name (hex string, UTF-8 string or Uint8Array)
+ * @returns Total quantity as a native bigint (0n if not found)
  */
 export function getAssetQuantity(
   utxos: CardanoUtxoInput[] | null | undefined,
@@ -322,7 +322,7 @@ export function getAssetQuantity(
     throw new HydraBridgeError('Invalid policyId: must be a non-empty hex policy ID', 'ERR_INVALID_PARAMS', { policyId });
   }
 
-  // Chuẩn hóa assetName: nếu là Uint8Array -> chuyển hex; nếu là string -> chuẩn bị cả dạng raw hex và utf8 hex
+  // Normalize assetName: a Uint8Array becomes hex; a string yields both raw-hex and UTF-8-hex candidates
   const assetNameHexCandidates: string[] = [];
 
   if (assetName instanceof Uint8Array) {
@@ -342,7 +342,7 @@ export function getAssetQuantity(
           assetNameHexCandidates.push(utf8Hex);
         }
       } catch {
-        // bỏ qua nếu chuyển đổi utf8 thất bại
+        // Skip when UTF-8 conversion fails
       }
     }
   } else {
@@ -358,12 +358,12 @@ export function getAssetQuantity(
     for (const [key, qty] of Object.entries(val.assets)) {
       const cleanKey = key.toLowerCase().replace(/^0x/, '');
 
-      // Kiểm tra xem key có khớp với policyId không
+      // Check whether the key matches the policyId
       if (!cleanKey.startsWith(cleanPolicyId) && !cleanKey.startsWith(`${cleanPolicyId}.`)) {
         continue;
       }
 
-      // Tách phần tên token từ key
+      // Extract the asset name part from the key
       let keyName = '';
       if (cleanKey.startsWith(`${cleanPolicyId}.`)) {
         keyName = cleanKey.slice(cleanPolicyId.length + 1);
@@ -371,7 +371,7 @@ export function getAssetQuantity(
         keyName = cleanKey.slice(cleanPolicyId.length);
       }
 
-      // So khớp tên token
+      // Match the asset name
       const matches =
         assetNameHexCandidates.length > 0 &&
         assetNameHexCandidates.some((candidate) => candidate === keyName);

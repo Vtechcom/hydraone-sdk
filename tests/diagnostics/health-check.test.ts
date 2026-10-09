@@ -11,7 +11,7 @@ import { WalletBridgeClient } from '../../src/core/client';
 import { HostStorageRelayAdapter } from '../../src/core/adapters/storage/host-storage-relay';
 import { SafariItpStorageSimulator } from '../../src/simulator/devtools-ui';
 
-describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
+describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
   let host: MockBridgeHost;
   let transport: MockClientTransport;
   let client: WalletBridgeClient;
@@ -40,8 +40,8 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
   });
 
   describe('1. Iframe Sandbox Checks (checkIframeSandbox)', () => {
-    it('ghi nhận WARN khi chạy ở chế độ standalone bên ngoài iframe', () => {
-      // Trong môi trường happy-dom mặc định window.self === window.top
+    it('reports WARN in standalone mode outside an iframe', () => {
+      // In the default happy-dom environment window.self === window.top
       const result = checkIframeSandbox();
       expect(result.id).toBe('iframe-sandbox');
       expect(result.status).toBe('WARN');
@@ -51,8 +51,8 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(result.details?.isStandalone).toBe(true);
     });
 
-    it('ghi nhận PASS khi chạy trong iframe có origin hợp lệ', () => {
-      // Giả lập đang chạy trong iframe: window.self !== window.top
+    it('reports PASS inside an iframe with a valid origin', () => {
+      // Simulate running inside an iframe: window.self !== window.top
       const originalTop = window.top;
       try {
         Object.defineProperty(window, 'top', {
@@ -77,7 +77,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('ghi nhận FAIL khi chạy trong iframe nhưng origin là "null" (thiếu allow-same-origin)', () => {
+    it('reports FAIL inside an iframe whose origin is "null" (missing allow-same-origin)', () => {
       const originalTop = window.top;
       const originalOrigin = window.origin;
       try {
@@ -111,7 +111,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('kiểm tra và phát hiện frameElement sandbox thiếu tokens', () => {
+    it('detects a frameElement sandbox that is missing tokens', () => {
       const originalTop = window.top;
       const originalFrameElement = window.frameElement;
       try {
@@ -148,13 +148,13 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
   });
 
   describe('2. PostMessage Latency Checks (checkPostMessageLatency & client.ping)', () => {
-    it('client.ping() gửi bản tin PING và nhận phản hồi pong từ MockBridgeHost', async () => {
+    it('client.ping() sends a PING message and receives a pong from MockBridgeHost', async () => {
       const res = await client.ping();
       expect(res.pong).toBe(true);
       expect(typeof res.timestamp).toBe('number');
     });
 
-    it('checkPostMessageLatency ghi nhận PASS và đo lường latencyMs chính xác khi phản hồi nhanh', async () => {
+    it('checkPostMessageLatency reports PASS and measures latencyMs on a fast response', async () => {
       host.setLatency(10);
       const result = await checkPostMessageLatency(client);
 
@@ -165,7 +165,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(result.message).toContain('responsive');
     });
 
-    it('ghi nhận WARN khi độ trễ postMessage vượt quá warningThresholdMs', async () => {
+    it('reports WARN when postMessage latency exceeds warningThresholdMs', async () => {
       host.setLatency(180);
       const result = await checkPostMessageLatency(client, { warningThresholdMs: 100 });
 
@@ -176,7 +176,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(result.hint).toContain('exceeds recommended threshold');
     });
 
-    it('ghi nhận FAIL khi postMessage bị timeout hoặc host không phản hồi', async () => {
+    it('reports FAIL when postMessage times out or the host does not respond', async () => {
       host.setLatency(500);
       const result = await checkPostMessageLatency(client, { timeoutMs: 50 });
 
@@ -186,7 +186,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(result.hint).toContain('Host Shell did not respond within timeout period');
     });
 
-    it('ghi nhận WARN khi không truyền client hoặc transport', async () => {
+    it('reports WARN when no client or transport is provided', async () => {
       const result = await checkPostMessageLatency(undefined);
       expect(result.id).toBe('postmessage-latency');
       expect(result.status).toBe('WARN');
@@ -195,7 +195,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
   });
 
   describe('3. Storage Health Checks (checkStorageHealth)', () => {
-    it('kiểm tra và ghi nhận PASS cho Local Storage khi đọc/ghi bình thường', async () => {
+    it('reports PASS for Local Storage when reads and writes succeed', async () => {
       const results = await checkStorageHealth();
       const localCheck = results.find((r) => r.id === 'storage-local');
 
@@ -204,7 +204,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(localCheck?.message).toContain('read/write accessible');
     });
 
-    it('phát hiện Safari ITP khi localStorage bị chặn ném SecurityError và đưa ra gợi ý Host Storage Relay', async () => {
+    it('detects Safari ITP when localStorage throws SecurityError and suggests Host Storage Relay', async () => {
       const itpSimulator = new SafariItpStorageSimulator();
       try {
         itpSimulator.enable();
@@ -222,7 +222,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('kiểm tra và ghi nhận PASS cho Host Storage Relay khi kết nối thành công với MockBridgeHost', async () => {
+    it('reports PASS for Host Storage Relay when connected to MockBridgeHost', async () => {
       const relayStorage = new HostStorageRelayAdapter({
         transport,
       });
@@ -239,7 +239,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(relayCheck?.message).toContain('fully operational');
     });
 
-    it('ghi nhận WARN cho Host Storage Relay khi Host chặn storage (storageBlock bật)', async () => {
+    it('reports WARN for Host Storage Relay when the host blocks storage (storageBlock enabled)', async () => {
       host.setStorageBlock(true);
 
       const relayStorage = new HostStorageRelayAdapter({
@@ -259,7 +259,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(relayCheck?.hint).toContain('HOST_STORAGE_SET/GET');
     });
 
-    it('dọn dẹp sạch sẽ khóa kiểm tra tạm thời và không để lại rác trong localStorage', async () => {
+    it('cleans up the temporary test key and leaves nothing behind in localStorage', async () => {
       const customKey = 'hydra:sdk:diag:test_clean_up';
       await checkStorageHealth(undefined, { customKey });
       expect(localStorage.getItem(customKey)).toBeNull();
@@ -267,7 +267,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
   });
 
   describe('4. Comprehensive Report (checkBridgeHealth & bridge.checkHealth())', () => {
-    it('trả về BridgeHealthReport đầy đủ với cấu trúc chuẩn', async () => {
+    it('returns a complete BridgeHealthReport with the standard shape', async () => {
       const report = await checkBridgeHealth(client);
 
       expect(report).toBeDefined();
@@ -281,7 +281,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(typeof report.summary).toBe('string');
     });
 
-    it('WalletBridgeClient.prototype.checkHealth() thực thi chẩn đoán thành công', async () => {
+    it('WalletBridgeClient.prototype.checkHealth() runs the diagnosis successfully', async () => {
       const report = await client.checkHealth();
       expect(report).toBeDefined();
       expect(report.checks.some((c) => c.id === 'iframe-sandbox')).toBe(true);
@@ -289,8 +289,8 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(report.checks.some((c) => c.id === 'storage-local')).toBe(true);
     });
 
-    it('đánh giá overall status là FAIL khi có ít nhất một check FAIL', async () => {
-      // Giả lập postMessage timeout gây ra FAIL
+    it('sets overall status to FAIL when at least one check fails', async () => {
+      // Simulate a postMessage timeout to force a FAIL
       host.setLatency(1000);
       const report = await client.checkHealth({ timeoutMs: 50 });
 
@@ -300,7 +300,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(report.summary).toContain('failed');
     });
 
-    it('tôn trọng các cờ bỏ qua kiểm tra (skipIframeCheck, skipLatencyCheck, skipStorageCheck)', async () => {
+    it('honors the skip flags (skipIframeCheck, skipLatencyCheck, skipStorageCheck)', async () => {
       const report = await client.checkHealth({
         skipIframeCheck: true,
         skipStorageCheck: true,
@@ -312,7 +312,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(report.checks.length).toBe(1);
     });
 
-    it('hoàn thành an toàn trong môi trường SSR/Node.js khi document là undefined', async () => {
+    it('completes safely in SSR/Node.js when document is undefined', async () => {
       const originalDoc = globalThis.document;
       try {
         (globalThis as any).document = undefined;
@@ -327,7 +327,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('báo cáo đúng khi tất cả các kiểm tra bị bỏ qua (checks rỗng)', async () => {
+    it('reports correctly when all checks are skipped (empty checks)', async () => {
       const report = await client.checkHealth({
         skipIframeCheck: true,
         skipLatencyCheck: true,
@@ -338,8 +338,8 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(report.summary).toContain('No diagnostic checks were executed');
     });
 
-    it('tự động kiểm tra Host Storage Relay thông qua client.transport', async () => {
-      // client trong beforeEach có client.transport nhưng chưa gán client.storage
+    it('auto-checks Host Storage Relay through client.transport', async () => {
+      // The client from beforeEach has client.transport but no client.storage assigned
       const report = await client.checkHealth({
         skipIframeCheck: true,
         skipLatencyCheck: true,
@@ -351,7 +351,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(relayCheck?.message).toContain('Host Storage Relay is fully operational');
     });
 
-    it('hỗ trợ truyền adapter options.storage tùy chỉnh', async () => {
+    it('supports a custom options.storage adapter', async () => {
       let storedVal: string | null = null;
       const mockStorage = {
         getItem: vi.fn().mockImplementation(async () => storedVal),
@@ -377,7 +377,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(mockStorage.removeItem).toHaveBeenCalled();
     });
 
-    it('client.ping() ném ERR_NOT_IN_IFRAME khi chạy ở chế độ standalone ngoài iframe', async () => {
+    it('client.ping() throws ERR_NOT_IN_IFRAME in standalone mode outside an iframe', async () => {
       const standaloneClient = new WalletBridgeClient({
         transport,
         fallbackToExtension: true,
@@ -388,13 +388,13 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
         /outside App Center iframe/
       );
 
-      // checkPostMessageLatency khi gặp ERR_NOT_IN_IFRAME sẽ trả về WARN thân thiện
+      // On ERR_NOT_IN_IFRAME, checkPostMessageLatency returns a friendly WARN
       const latencyResult = await checkPostMessageLatency(standaloneClient);
       expect(latencyResult.status).toBe('WARN');
       expect(latencyResult.message).toContain('running in standalone browser');
     });
 
-    it('checkPostMessageLatency báo lỗi rõ ràng khi client chưa kết nối (ERR_NOT_CONNECTED)', async () => {
+    it('checkPostMessageLatency reports a clear error when the client is not connected (ERR_NOT_CONNECTED)', async () => {
       const uninitClient = new WalletBridgeClient({
         transport,
         isIframeFn: () => true,
@@ -406,13 +406,13 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(latencyResult.hint).toContain('client.init()');
     });
 
-    it('sử dụng fallback khóa ngẫu nhiên khi options.customKey là chuỗi rỗng', async () => {
+    it('falls back to a random key when options.customKey is an empty string', async () => {
       const results = await checkStorageHealth(undefined, { customKey: '   ' });
       expect(results.length).toBeGreaterThan(0);
     });
 
-    it('hỗ trợ truyền trực tiếp một instance ITransport vào checkStorageHealth và checkBridgeHealth', async () => {
-      // Truyền trực tiếp transport (không qua client)
+    it('accepts an ITransport instance directly in checkStorageHealth and checkBridgeHealth', async () => {
+      // Pass the transport directly (not through a client)
       const storageResults = await checkStorageHealth(transport);
       const relayCheck = storageResults.find((r) => r.id === 'storage-relay');
       expect(relayCheck).toBeDefined();
@@ -427,7 +427,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(reportRelayCheck?.status).toBe('PASS');
     });
 
-    it('nhận diện cờ iframe sandbox không phân biệt chữ hoa chữ thường (case-insensitive)', () => {
+    it('detects iframe sandbox flags case-insensitively', () => {
       const originalTop = window.top;
       const originalFrameElement = window.frameElement;
       try {
@@ -462,7 +462,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('checkIframeSandbox xử lý an toàn khi window.location là undefined trong standalone mode', () => {
+    it('checkIframeSandbox handles an undefined window.location safely in standalone mode', () => {
       const originalLocation = window.location;
       try {
         delete (window as any).location;
@@ -479,7 +479,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       }
     });
 
-    it('không phân loại nhầm lỗi có chứa từ "time" (ví dụ Runtime error) thành lỗi timeout trong checkPostMessageLatency', async () => {
+    it('does not misclassify errors containing the word "time" (e.g. Runtime error) as timeouts in checkPostMessageLatency', async () => {
       const mockClientWithRuntimeError = {
         ping: vi.fn().mockRejectedValue(new Error('Runtime error in host execution engine')),
       };
@@ -491,7 +491,7 @@ describe('Story 5.3: Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)
       expect(result.hint).toContain('Verify that App Center host is connected');
     });
 
-    it('khởi tạo WalletBridgeClient với tùy chọn cấu hình pingTimeoutMs tùy biến', () => {
+    it('constructs WalletBridgeClient with a custom pingTimeoutMs option', () => {
       const customClient = new WalletBridgeClient({
         transport,
         pingTimeoutMs: 8000,

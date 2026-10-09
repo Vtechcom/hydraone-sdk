@@ -1,15 +1,15 @@
 /**
- * Định nghĩa types và interfaces cho Bridge Health Diagnostics Suite
+ * Types and interfaces for the Bridge Health Diagnostics Suite
  * (@hydraone/sdk/diagnostics)
  */
 
 /**
- * Trạng thái đánh giá của từng hạng mục kiểm tra hoặc toàn bộ báo cáo
+ * Status of a single check or of the whole report
  */
 export type DiagnosticStatus = 'PASS' | 'WARN' | 'FAIL';
 
 /**
- * Mã định danh tiêu chuẩn cho các hạng mục kiểm tra
+ * Standard identifiers for diagnostic checks
  */
 export type DiagnosticCheckId =
   | 'iframe-sandbox'
@@ -19,111 +19,111 @@ export type DiagnosticCheckId =
   | (string & {});
 
 /**
- * Kết quả chi tiết của một hạng mục kiểm tra chẩn đoán
+ * Detailed result of a single diagnostic check
  */
 export interface DiagnosticCheckItem {
   /**
-   * Mã định danh duy nhất của bài kiểm tra
+   * Unique identifier of the check
    */
   id: DiagnosticCheckId;
 
   /**
-   * Tên hiển thị người dùng của bài kiểm tra
+   * Human-readable name of the check
    */
   name: string;
 
   /**
-   * Kết quả đánh giá: PASS (Đạt), WARN (Cảnh báo), hoặc FAIL (Thất bại)
+   * Outcome: PASS, WARN or FAIL
    */
   status: DiagnosticStatus;
 
   /**
-   * Thông điệp giải thích ngắn gọn kết quả
+   * Short explanation of the outcome
    */
   message: string;
 
   /**
-   * Độ trễ đo được (tính bằng mili-giây), áp dụng cho các bài test hiệu năng/ping
+   * Measured latency in milliseconds, set for performance/ping checks
    */
   latencyMs?: number;
 
   /**
-   * Dữ liệu bổ sung chi tiết phục vụ debug
+   * Extra details for debugging
    */
   details?: Record<string, unknown>;
 
   /**
-   * Gợi ý khắc phục cụ thể khi trạng thái là WARN hoặc FAIL
+   * Actionable remediation hint when the status is WARN or FAIL
    */
   hint?: string;
 }
 
 /**
- * Thông tin môi trường thực thi của client
+ * Runtime environment information of the client
  */
 export interface DiagnosticEnvironmentInfo {
   /**
-   * Client có đang chạy bên trong iframe hay không
+   * Whether the client is running inside an iframe
    */
   isIframe: boolean;
 
   /**
-   * Client có đang chạy ở chế độ độc lập ngoài iframe hay không
+   * Whether the client is running standalone, outside an iframe
    */
   isStandalone: boolean;
 
   /**
-   * Origin của trang hiện tại
+   * Origin of the current page
    */
   origin: string;
 
   /**
-   * Chuỗi User-Agent của trình duyệt (nếu có)
+   * Browser User-Agent string, if available
    */
   userAgent?: string;
 }
 
 /**
- * Báo cáo tổng thể tình trạng sức khỏe kết nối cầu nối HydraOne
+ * Overall health report of the HydraOne bridge connection
  */
 export interface BridgeHealthReport {
   /**
-   * Trạng thái tổng thể: FAIL nếu có bất kỳ check FAIL, WARN nếu có WARN và không có FAIL, ngược lại PASS
+   * Overall status: FAIL if any check failed, WARN if any warned and none failed, otherwise PASS
    */
   status: DiagnosticStatus;
 
   /**
-   * Thời điểm thực hiện chẩn đoán (epoch ms)
+   * When the diagnosis ran (epoch ms)
    */
   timestamp: number;
 
   /**
-   * Thông tin môi trường thực thi
+   * Runtime environment information
    */
   environment: DiagnosticEnvironmentInfo;
 
   /**
-   * Danh sách kết quả chi tiết từng bài kiểm tra
+   * Detailed results of each check
    */
   checks: DiagnosticCheckItem[];
 
   /**
-   * Tóm tắt tổng quan kết quả chẩn đoán (ví dụ: "All 3 checks passed" hoặc "1 failure, 2 warnings")
+   * Summary of the diagnosis (e.g. "All 3 checks passed" or "1 failure, 2 warnings")
    */
   summary: string;
 }
 
 /**
- * Tùy chọn cấu hình khi chạy kiểm tra độ trễ PostMessage
+ * Options for the postMessage latency check
  */
 export interface LatencyCheckOptions {
   /**
-   * Thời gian chờ tối đa (ms) trước khi đánh dấu thất bại do timeout (mặc định 3,000ms)
+   * Maximum wait in ms before the check fails with a timeout (default 3,000ms)
    */
   timeoutMs?: number;
 
   /**
-   * Ngưỡng độ trễ cảnh báo (ms). Nếu độ trễ vượt quá ngưỡng này sẽ đánh dấu WARN (mặc định 150ms)
+   * Latency threshold in ms above which the check reports WARN (default 150ms)
    */
   warningThresholdMs?: number;
 }
@@ -131,36 +131,36 @@ export interface LatencyCheckOptions {
 import type { IStorage } from '../core/ports/storage';
 
 /**
- * Tùy chọn cấu hình khi chạy kiểm tra lưu trữ Storage
+ * Options for the storage check
  */
 export interface StorageCheckOptions {
   /**
-   * Tên khóa kiểm tra tạm thời (mặc định sinh ngẫu nhiên với tiền tố hydra:sdk:diag:test_*)
+   * Name of the temporary test key (default: random, prefixed hydra:sdk:diag:test_*)
    */
   customKey?: string;
 
   /**
-   * Adapter Storage tùy chỉnh cần kiểm tra (mặc định kiểm tra LocalStorage và HostStorageRelay qua client)
+   * Custom storage adapter to check (default: LocalStorage and HostStorageRelay via the client)
    */
   storage?: IStorage;
 }
 
 /**
- * Tùy chọn cấu hình tổng thể cho hàm checkBridgeHealth()
+ * Options for checkBridgeHealth()
  */
 export interface CheckHealthOptions extends LatencyCheckOptions, StorageCheckOptions {
   /**
-   * Bỏ qua bài kiểm tra sandbox iframe
+   * Skip the iframe sandbox check
    */
   skipIframeCheck?: boolean;
 
   /**
-   * Bỏ qua bài kiểm tra độ trễ postMessage
+   * Skip the postMessage latency check
    */
   skipLatencyCheck?: boolean;
 
   /**
-   * Bỏ qua bài kiểm tra tính sẵn sàng của storage
+   * Skip the storage readiness check
    */
   skipStorageCheck?: boolean;
 }

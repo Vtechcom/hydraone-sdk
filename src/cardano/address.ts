@@ -1,6 +1,6 @@
 /**
  * @hydraone/sdk/cardano — Zero-dependency Bech32 & Cardano Address Utility
- * Triển khai chuẩn BIP-173 và CIP-19 để mã hóa/giải mã địa chỉ Cardano giữa Hex CBOR và Bech32.
+ * Implements BIP-173 and CIP-19 to convert Cardano addresses between CBOR hex and Bech32.
  */
 
 import { hexToBytes, bytesToHex } from './hex';
@@ -8,7 +8,7 @@ import { hexToBytes, bytesToHex } from './hex';
 const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
 /**
- * Tính đa thức checksum BIP-173 (polymod)
+ * Computes the BIP-173 checksum polynomial (polymod)
  */
 function polymod(values: number[]): number {
   let chk = 1;
@@ -25,7 +25,7 @@ function polymod(values: number[]): number {
 }
 
 /**
- * Mở rộng tiền tố HRP cho việc tính checksum
+ * Expands the HRP prefix for checksum computation
  */
 function hrpExpand(hrp: string): number[] {
   const ret: number[] = [];
@@ -36,7 +36,7 @@ function hrpExpand(hrp: string): number[] {
 }
 
 /**
- * Chuyển đổi mảng bit (8-bit sang 5-bit hoặc ngược lại)
+ * Converts a bit array between group sizes (8-bit to 5-bit or vice versa)
  */
 function convertBits(data: Uint8Array | number[], fromBits: number, toBits: number, pad: boolean): number[] {
   let acc = 0;
@@ -63,7 +63,7 @@ function convertBits(data: Uint8Array | number[], fromBits: number, toBits: numb
 }
 
 /**
- * Mã hóa dữ liệu byte thành chuỗi Bech32
+ * Encodes bytes as a Bech32 string
  */
 export function encodeBech32(hrp: string, data: Uint8Array | number[]): string {
   const words = convertBits(data, 8, 5, true);
@@ -81,7 +81,7 @@ export function encodeBech32(hrp: string, data: Uint8Array | number[]): string {
 }
 
 /**
- * Giải mã chuỗi Bech32 thành { hrp, data }
+ * Decodes a Bech32 string into { hrp, data }
  */
 export function decodeBech32(bechString: string): { hrp: string; data: Uint8Array } {
   const pos = bechString.lastIndexOf('1');
@@ -107,16 +107,16 @@ export function decodeBech32(bechString: string): { hrp: string; data: Uint8Arra
 }
 
 /**
- * Chuyển đổi địa chỉ Cardano từ chuỗi Hex CBOR (CIP-30) sang chuỗi Bech32 dễ đọc (addr1 / addr_test1 / stake1)
+ * Converts a Cardano address from CIP-30 CBOR hex to a readable Bech32 string (addr1 / addr_test1 / stake1)
  * 
- * @param hexAddress Chuỗi địa chỉ Cardano dạng hex hoặc Bech32
- * @returns Địa chỉ định dạng Bech32 chuẩn (addr1... hoặc addr_test1...)
+ * @param hexAddress Cardano address as hex or Bech32
+ * @returns Standard Bech32 address (addr1... or addr_test1...)
  */
 export function cardanoHexToBech32(hexAddress: string): string {
   if (!hexAddress || typeof hexAddress !== 'string') return '';
 
   const trimmed = hexAddress.trim();
-  // Nếu đã là Bech32 thì trả về nguyên bản
+  // Already Bech32: return unchanged
   if (
     trimmed.startsWith('addr1') ||
     trimmed.startsWith('addr_test1') ||
@@ -132,8 +132,8 @@ export function cardanoHexToBech32(hexAddress: string): string {
     if (bytes.length < 1) return trimmed;
 
     const header = bytes[0];
-    const networkId = header & 0x0f; // 4 bit thấp là Network Tag (0 = Testnet, 1 = Mainnet)
-    const typeTag = (header >> 4) & 0x0f; // 4 bit cao là Type Tag
+    const networkId = header & 0x0f; // low 4 bits are the network tag (0 = testnet, 1 = mainnet)
+    const typeTag = (header >> 4) & 0x0f; // high 4 bits are the address type
 
     let hrp = 'addr';
     // Stake / Reward Address (Type 14, 15: 0b1110, 0b1111)
@@ -150,7 +150,7 @@ export function cardanoHexToBech32(hexAddress: string): string {
 }
 
 /**
- * Chuyển đổi địa chỉ Bech32 sang chuỗi Hex
+ * Converts a Bech32 address to a hex string
  */
 export function cardanoBech32ToHex(bechAddress: string): string {
   if (!bechAddress) return '';

@@ -1,33 +1,33 @@
 /**
- * Kiểu dữ liệu đại diện cho cấu trúc giá trị (Value) của Cardano
+ * Shape of a Cardano Value
  */
 export interface CardanoValue {
   /**
-   * Lượng Lovelace (1 ADA = 1,000,000 Lovelace) được biểu diễn bằng native bigint
+   * Lovelace amount (1 ADA = 1,000,000 lovelace) as a native bigint
    */
   coins: bigint;
   /**
-   * Bản đồ Native Assets / Multi-Assets (key: policyId + assetNameHex hoặc policyId.assetName, value: bigint)
+   * Native assets / multi-assets (key: policyId + assetNameHex or policyId.assetName, value: bigint)
    */
   assets?: Record<string, bigint>;
 }
 
 /**
- * Cấu trúc phần tử tài sản theo chuẩn Lucid / Blockfrost
+ * Asset entry in the Lucid / Blockfrost format
  */
 export interface CardanoAssetAmount {
   /**
-   * Đơn vị tài sản: 'lovelace' hoặc chuỗi kết hợp policyId (56 hex chars) + assetNameHex
+   * Asset unit: 'lovelace' or policyId (56 hex chars) + assetNameHex
    */
   unit: string;
   /**
-   * Số lượng tài sản
+   * Asset quantity
    */
   quantity: string | bigint | number;
 }
 
 /**
- * Cấu trúc UTxO dạng đối tượng chuẩn
+ * UTxO as a plain object
  */
 export interface StructuredUtxo {
   txHash?: string;
@@ -51,24 +51,24 @@ export interface StructuredUtxo {
 }
 
 /**
- * Kiểu UTxO Cardano chấp nhận cả cấu trúc đối tượng lẫn chuỗi CBOR hex CIP-30
+ * A Cardano UTxO: either a plain object or a CIP-30 CBOR hex string
  */
 export type CardanoUtxoInput = StructuredUtxo | string | unknown;
 
 /**
- * Tùy chọn định dạng chuỗi số dư ADA
+ * Options for formatting an ADA balance string
  */
 export interface FormatAdaOptions {
   /**
-   * Số chữ số thập phân tối thiểu cần giữ lại (mặc định: 0)
+   * Minimum number of decimal places to keep (default: 0)
    */
   minDecimals?: number;
   /**
-   * Số chữ số thập phân tối đa (mặc định: 6)
+   * Maximum number of decimal places (default: 6)
    */
   maxDecimals?: number;
   /**
-   * Có lược bỏ các số 0 vô nghĩa ở cuối phần thập phân hay không (mặc định: true)
+   * Whether to trim trailing zeros from the fractional part (default: true)
    */
   trimTrailingZeros?: boolean;
 }

@@ -3,7 +3,7 @@ import { hexToBytes, bytesToHex } from './hex';
 import type { CardanoValue } from './types';
 
 /**
- * Lớp đọc luồng byte CBOR (Reader)
+ * CBOR byte stream reader
  */
 class CborReader {
   private offset = 0;
@@ -173,7 +173,7 @@ class CborReader {
       case 6: {
         const tagNum = this.readLength(additionalInfo);
         const item = this.decodeItem();
-        // Tag 2: Positive Bignum (RFC 8949) dạng byte string
+        // Tag 2: positive bignum (RFC 8949), encoded as a byte string
         if (tagNum === 2n && item instanceof Uint8Array) {
           let val = 0n;
           for (let i = 0; i < item.length; i++) {
@@ -211,10 +211,10 @@ class CborReader {
 }
 
 /**
- * Giải mã chuỗi CBOR hex sang đối tượng JavaScript
+ * Decodes a CBOR hex string into a JavaScript value
  * 
- * @param hex Chuỗi CBOR hex
- * @returns Dữ liệu giải mã
+ * @param hex CBOR hex string
+ * @returns The decoded value
  */
 export function decodeCborHex(hex: string): unknown {
   try {
@@ -234,10 +234,10 @@ export function decodeCborHex(hex: string): unknown {
 }
 
 /**
- * Trích xuất CardanoValue (Lovelace và Multi-assets) từ cấu trúc dữ liệu CBOR đã decode
+ * Extracts a CardanoValue (lovelace and multi-assets) from decoded CBOR
  */
 function extractValueFromDecoded(decoded: unknown): CardanoValue | null {
-  // 1. Nếu là một số nguyên dương BigInt -> đó chính là Coin (Lovelace)
+  // 1. A positive bigint is the coin amount (lovelace)
   if (typeof decoded === 'bigint') {
     return {
       coins: decoded,
@@ -245,23 +245,23 @@ function extractValueFromDecoded(decoded: unknown): CardanoValue | null {
     };
   }
 
-  // 2. Nếu là mảng [coin, multiasset]
+  // 2. An array [coin, multiasset]
   if (Array.isArray(decoded)) {
-    // Trường hợp mảng 2 phần tử [coin, multiasset] (Value của Cardano)
+    // Two-element array [coin, multiasset]: a Cardano Value
     if (decoded.length === 2 && typeof decoded[0] === 'bigint' && decoded[1] instanceof Map) {
       return parseValueTuple(decoded[0], decoded[1]);
     }
 
-    // Trường hợp mảng [address, value, ...] (TransactionOutput) hoặc [tx_in, tx_out]
+    // [address, value, ...] (TransactionOutput) or [tx_in, tx_out]
     if (decoded.length >= 2) {
       const candidateValue = extractValueFromDecoded(decoded[1]);
       if (candidateValue) return candidateValue;
     }
   }
 
-  // 3. Nếu là Map
+  // 3. A Map
   if (decoded instanceof Map) {
-    // TransactionOutput dạng Map (Babbage): key 1 hoặc 'value' chứa Value
+    // Babbage-era TransactionOutput as a Map: key 1 or 'value' holds the Value
     for (const [k, v] of decoded.entries()) {
       const keyStr = k instanceof Uint8Array ? bytesToHex(k) : String(k);
       if (keyStr === '1' || keyStr === 'value') {
@@ -275,7 +275,7 @@ function extractValueFromDecoded(decoded: unknown): CardanoValue | null {
 }
 
 /**
- * Chuyển đổi tuple [coin, multiassetMap] thành CardanoValue
+ * Converts a [coin, multiassetMap] tuple into a CardanoValue
  */
 function parseValueTuple(coins: bigint, multiassetMap: Map<unknown, unknown>): CardanoValue {
   const assets: Record<string, bigint> = {};
@@ -316,10 +316,10 @@ function parseValueTuple(coins: bigint, multiassetMap: Map<unknown, unknown>): C
 }
 
 /**
- * Trích xuất CardanoValue từ chuỗi CBOR hex của UTxO hoặc Value
+ * Extracts a CardanoValue from the CBOR hex of a UTxO or Value
  * 
- * @param cborHex Chuỗi CBOR hex
- * @returns CardanoValue nếu trích xuất thành công, ngược lại ném HydraBridgeError
+ * @param cborHex CBOR hex string
+ * @returns The CardanoValue on success; throws HydraBridgeError otherwise
  */
 export function parseCborUtxoOrValue(cborHex: string): CardanoValue {
   const decoded = decodeCborHex(cborHex);

@@ -1,5 +1,5 @@
 /**
- * Bộ công cụ tự chẩn đoán sức khỏe kết nối Bridge Health Diagnostics Suite
+ * Bridge Health Diagnostics Suite: self-diagnostics for the bridge connection
  * (@hydraone/sdk/diagnostics)
  */
 
@@ -15,10 +15,10 @@ import type {
 import { HostStorageRelayAdapter } from '../core/adapters/storage/host-storage-relay';
 
 /**
- * Kiểm tra quyền sandbox và môi trường nhúng của iframe
+ * Checks sandbox permissions and the embedding environment of the iframe
  */
 export function checkIframeSandbox(): DiagnosticCheckItem {
-  // 1. Kiểm tra môi trường SSR / Node.js
+  // 1. SSR / Node.js environment
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return {
       id: 'iframe-sandbox',
@@ -32,12 +32,12 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
     };
   }
 
-  // 2. Kiểm tra chế độ chạy độc lập (Standalone) ngoài iframe
+  // 2. Standalone mode, outside an iframe
   let isInsideIframe: boolean;
   try {
     isInsideIframe = window.self !== window.top;
   } catch {
-    // Nếu truy cập window.top ném ngoại lệ bảo mật cross-origin, chứng tỏ chắc chắn đang chạy trong iframe!
+    // Accessing window.top threw a cross-origin security error, so we are definitely inside an iframe
     isInsideIframe = true;
   }
 
@@ -56,7 +56,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
     };
   }
 
-  // 3. Đang chạy trong iframe: Kiểm tra origin và cờ allow-same-origin
+  // 3. Inside an iframe: check the origin and the allow-same-origin flag
   const currentOrigin = window.origin || (window.location && window.location.origin) || '';
 
   if (currentOrigin === 'null' || !currentOrigin) {
@@ -75,7 +75,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
     };
   }
 
-  // 4. Nếu truy cập được frameElement (same-origin iframe trong testing/simulator)
+  // 4. frameElement is accessible (same-origin iframe in testing/simulator)
   let hasExplicitSandboxAttr = false;
   let sandboxTokens: string[] = [];
   try {
@@ -111,10 +111,10 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
       }
     }
   } catch {
-    // Không truy cập được frameElement do cross-origin, tiếp tục với kiểm tra origin
+    // frameElement is not accessible (cross-origin); fall back to the origin check
   }
 
-  // Mọi kiểm tra sandbox đều hợp lệ
+  // All sandbox checks passed
   return {
     id: 'iframe-sandbox',
     name: 'Iframe Sandbox Permissions',
@@ -132,10 +132,10 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
 }
 
 /**
- * Kiểm tra độ trễ 2 chiều (Ping-Pong Roundtrip Latency) của kênh postMessage
+ * Measures the ping-pong roundtrip latency of the postMessage channel
  * 
- * @param clientOrTransport Instance WalletBridgeClient hoặc ITransport
- * @param options Tùy chọn thời gian chờ và ngưỡng cảnh báo
+ * @param clientOrTransport A WalletBridgeClient instance or an ITransport
+ * @param options Timeout and warning-threshold options
  */
 export async function checkPostMessageLatency(
   clientOrTransport?: unknown,
@@ -174,22 +174,22 @@ export async function checkPostMessageLatency(
 
   const client = clientOrTransport as any;
 
-  // Đo thời gian bắt đầu
+  // Record the start time
   const startTime =
     typeof performance !== 'undefined' && typeof performance.now === 'function'
       ? performance.now()
       : Date.now();
 
   try {
-    // Cách 1: Client có phương thức ping() chuyên biệt
+    // Strategy 1: the client has a dedicated ping() method
     if (typeof client.ping === 'function') {
       await client.ping({ timeoutMs });
     }
-    // Cách 2: Client có phương thức getBalance() hoặc query RPC
+    // Strategy 2: the client has getBalance() or an RPC query method
     else if (typeof client.getBalance === 'function') {
       await client.getBalance({ timeoutMs });
     }
-    // Cách 3: Transport có phương thức request()
+    // Strategy 3: the transport has a request() method
     else if (client.transport && typeof client.transport.request === 'function') {
       await client.transport.request(
         {
@@ -201,7 +201,7 @@ export async function checkPostMessageLatency(
         timeoutMs
       );
     }
-    // Cách 4: Gọi trực tiếp request trên transport
+    // Strategy 4: call request directly on the transport
     else if (typeof client.request === 'function') {
       await client.request(
         {
@@ -314,10 +314,10 @@ export async function checkPostMessageLatency(
 }
 
 /**
- * Kiểm tra tính sẵn sàng đọc/ghi của Storage (Local Storage & Host Storage Relay)
+ * Checks that storage is readable and writable (Local Storage and Host Storage Relay)
  * 
- * @param clientOrStorage Instance WalletBridgeClient hoặc adapter Storage
- * @param options Tùy chọn cấu hình khóa kiểm tra tạm thời
+ * @param clientOrStorage A WalletBridgeClient instance or a storage adapter
+ * @param options Options for the temporary test key
  */
 export async function checkStorageHealth(
   clientOrStorage?: unknown,
@@ -330,7 +330,7 @@ export async function checkStorageHealth(
       : `hydra:sdk:diag:test_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const testValue = `ok_${Date.now()}`;
 
-  // 1. Kiểm tra Local Storage (localStorage của trình duyệt)
+  // 1. Local Storage (browser localStorage)
   if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
     checks.push({
       id: 'storage-local',
@@ -394,25 +394,25 @@ export async function checkStorageHealth(
       try {
         window.localStorage.removeItem(testKey);
       } catch {
-        // bỏ qua
+        // ignore
       }
     }
   }
 
-  // 2. Kiểm tra Host Storage Relay (thông qua options.storage, client.storage hoặc tự động tạo HostStorageRelayAdapter)
+  // 2. Host Storage Relay (via options.storage, client.storage, or an auto-created HostStorageRelayAdapter)
   const client = clientOrStorage as any;
   let storageAdapter =
     options?.storage ??
     client?.storage ??
     (client?.getItem && client?.setItem ? client : undefined);
 
-  // Nếu client có transport hoặc clientOrStorage chính là một ITransport (có hàm send)
+  // The client has a transport, or clientOrStorage itself is an ITransport (has a send function)
   const transport = client?.transport ?? (typeof client?.send === 'function' ? client : undefined);
   if (!storageAdapter && transport && typeof transport.send === 'function') {
     try {
       storageAdapter = new HostStorageRelayAdapter({ transport });
     } catch {
-      // bỏ qua
+      // ignore
     }
   }
 
@@ -461,7 +461,7 @@ export async function checkStorageHealth(
       try {
         await storageAdapter.removeItem(testKey);
       } catch {
-        // bỏ qua
+        // ignore
       }
     }
   }
@@ -470,7 +470,7 @@ export async function checkStorageHealth(
 }
 
 /**
- * Trích xuất thông tin môi trường thực thi hiện tại
+ * Collects information about the current runtime environment
  */
 export function getDiagnosticEnvironmentInfo(): DiagnosticEnvironmentInfo {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -498,16 +498,16 @@ export function getDiagnosticEnvironmentInfo(): DiagnosticEnvironmentInfo {
 }
 
 /**
- * Hàm chẩn đoán toàn diện sức khỏe kết nối cầu nối HydraOne
+ * Runs a full health diagnosis of the HydraOne bridge connection
  * 
- * Kiểm tra tự động 3 hạng mục:
- * 1. Thuộc tính quyền sandbox của iframe (`allow-scripts`, `allow-same-origin`)
- * 2. Độ trễ 2 chiều postMessage (ping-pong roundtrip latency)
- * 3. Tính sẵn sàng đọc/ghi của Storage (Local Storage & Host Storage Relay)
+ * Runs three checks:
+ * 1. Iframe sandbox permissions (`allow-scripts`, `allow-same-origin`)
+ * 2. postMessage ping-pong roundtrip latency
+ * 3. Storage read/write readiness (Local Storage and Host Storage Relay)
  * 
- * @param clientOrTransport Instance WalletBridgeClient hoặc ITransport
- * @param options Tùy chọn chẩn đoán và bỏ qua từng bài test
- * @returns Báo cáo chi tiết `BridgeHealthReport` kèm actionable hints
+ * @param clientOrTransport A WalletBridgeClient instance or an ITransport
+ * @param options Diagnostic options, including which checks to skip
+ * @returns A detailed `BridgeHealthReport` with actionable hints
  */
 export async function checkBridgeHealth(
   clientOrTransport?: unknown,
@@ -517,13 +517,13 @@ export async function checkBridgeHealth(
   const environment = getDiagnosticEnvironmentInfo();
   const checks: DiagnosticCheckItem[] = [];
 
-  // 1. Kiểm tra Iframe Sandbox (nếu không bỏ qua)
+  // 1. Iframe sandbox (unless skipped)
   if (!options?.skipIframeCheck) {
     const sandboxCheck = checkIframeSandbox();
     checks.push(sandboxCheck);
   }
 
-  // 2. Chạy đồng thời kiểm tra độ trễ PostMessage và kiểm tra Storage để tối ưu hóa hiệu năng
+  // 2. Run the postMessage latency and storage checks concurrently for speed
   const latencyPromise = !options?.skipLatencyCheck
     ? checkPostMessageLatency(clientOrTransport, options)
     : Promise.resolve(null);
@@ -542,7 +542,7 @@ export async function checkBridgeHealth(
     checks.push(...storageResults);
   }
 
-  // Xác định trạng thái tổng thể
+  // Determine the overall status
   let overallStatus: DiagnosticStatus = 'PASS';
   const hasFail = checks.some((c) => c.status === 'FAIL');
   const hasWarn = checks.some((c) => c.status === 'WARN');
@@ -553,7 +553,7 @@ export async function checkBridgeHealth(
     overallStatus = 'WARN';
   }
 
-  // Xây dựng tóm tắt kết quả
+  // Build the result summary
   const passCount = checks.filter((c) => c.status === 'PASS').length;
   const warnCount = checks.filter((c) => c.status === 'WARN').length;
   const failCount = checks.filter((c) => c.status === 'FAIL').length;

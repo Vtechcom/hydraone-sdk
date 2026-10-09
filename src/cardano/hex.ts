@@ -1,10 +1,10 @@
 import { HydraBridgeError } from '../core/errors';
 
 /**
- * Chuyển đổi mảng byte sang chuỗi Hex
+ * Converts a byte array to a hex string
  * 
- * @param bytes Mảng Uint8Array
- * @returns Chuỗi Hex chữ thường
+ * @param bytes Byte array
+ * @returns Lowercase hex string
  */
 export function bytesToHex(bytes: Uint8Array): string {
   let hex = '';
@@ -15,10 +15,10 @@ export function bytesToHex(bytes: Uint8Array): string {
 }
 
 /**
- * Chuyển đổi chuỗi Hex sang mảng byte Uint8Array
+ * Converts a hex string to a Uint8Array
  * 
- * @param hex Chuỗi Hex cần chuyển đổi (chấp nhận tiền tố 0x hoặc 0X)
- * @returns Mảng byte Uint8Array
+ * @param hex Hex string to convert (a 0x or 0X prefix is accepted)
+ * @returns Byte array
  */
 export function hexToBytes(hex: string): Uint8Array {
   if (typeof hex !== 'string') {
@@ -42,10 +42,10 @@ export function hexToBytes(hex: string): Uint8Array {
 }
 
 /**
- * Chuyển đổi chuỗi văn bản UTF-8 sang chuỗi Hex chuẩn hóa
+ * Converts a UTF-8 string to a normalized hex string
  * 
- * @param str Chuỗi văn bản cần chuyển đổi
- * @returns Chuỗi Hex biểu diễn các byte UTF-8
+ * @param str Text to convert
+ * @returns Hex string of the UTF-8 bytes
  */
 export function stringToHex(str: string): string {
   if (typeof str !== 'string') {
@@ -56,10 +56,10 @@ export function stringToHex(str: string): string {
 }
 
 /**
- * Chuyển đổi chuỗi Hex về chuỗi văn bản UTF-8
+ * Converts a hex string back to UTF-8 text
  * 
- * @param hex Chuỗi Hex cần giải mã (chấp nhận tiền tố 0x hoặc 0X)
- * @returns Chuỗi văn bản UTF-8
+ * @param hex Hex string to decode (a 0x or 0X prefix is accepted)
+ * @returns UTF-8 text
  */
 export function hexToString(hex: string): string {
   if (typeof hex !== 'string') {
