@@ -192,7 +192,13 @@ ${style('Khởi tạo dự án game Web3 Cardano với HydraOne SDK & DevTools S
     console.log(`  ${style(`${pm} run dev`, 'cyan')}\n`);
     console.log(
       style(
-        '💡 Gợi ý: Widget Floating DevTools đã được bật sẵn để test ví Mock và Safari ITP trên localhost:3000!',
+        '💡 Giao diện Host: Tự động nhúng 100% giao diện HydraOne Web Client (Header, CIP-30 & Viewport Frames) qua Iframe khi chạy dev!',
+        'green'
+      )
+    );
+    console.log(
+      style(
+        '🚀 Production Build: Khi chạy build, toàn bộ code Host Shell được loại bỏ 100%, chỉ xuất ra bundle Game thuần để cắm vào HydraOne thật.\n',
         'dim'
       )
     );

@@ -1,24 +1,47 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWallet, useHydraAuth } from '@hydraone/sdk/react';
 import { mountDevTools } from '@hydraone/sdk/simulator';
 
 export default function Home() {
-  const { isConnected, address, shortAddress, balanceADA, connect, disconnect } = useWallet();
+  const [isReadyToRender, setIsReadyToRender] = useState(false);
+  const { isConnected, shortAddress, balanceADA, connect, disconnect } = useWallet();
   const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   useEffect(() => {
-    // Kích hoạt Floating DevTools UI widget trên localhost
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || process.env.NODE_ENV !== 'production')) {
-      mountDevTools({ initialCollapsed: false });
+    async function initDevShell() {
+      // 1. Kích hoạt Dev Host Shell chuẩn 100% HydraOne Web Client khi dev trên localhost
+      if (process.env.NODE_ENV !== 'production') {
+        const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
+        const isEmbed = initHydraDevShell({
+          projectName: '{{PROJECT_NAME}}',
+          enableMockWallet: true,
+          enableRealWallet: true,
+        });
+        if (!isEmbed) {
+          // Đã mount Host Shell ở Top-level Window, dừng để Iframe con render Game
+          return;
+        }
+
+        // Trong iframe / standalone: dev vẫn có thể mở widget DevTools khi cần
+        mountDevTools({ defaultCollapsed: true });
+      }
+
+      setIsReadyToRender(true);
     }
+
+    initDevShell();
   }, []);
 
+  if (!isReadyToRender) {
+    return null;
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', background: '#0a0a1a', color: '#f8fafc' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', background: '#090d16', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#38bdf8' }}>🎮 {{PROJECT_NAME}}</div>
+        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#38bdf8' }}>🎮 {'{{PROJECT_NAME}}'}</div>
         <div style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, background: isConnected ? '#065f46' : '#334155', color: isConnected ? '#34d399' : '#f8fafc', fontFamily: 'monospace' }}>
           {isConnected ? shortAddress : 'Chưa kết nối ví'}
         </div>
@@ -27,7 +50,7 @@ export default function Home() {
       <main style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', padding: '2.5rem', maxWidth: 600, width: '100%' }}>
           <h2 style={{ marginTop: 0, color: '#38bdf8' }}>Next.js Cardano Web3 Starter</h2>
-          <p>Dự án game Next.js tích hợp sẵn <strong>@hydraone/sdk/react</strong> và DevTools Simulator.</p>
+          <p>Dự án game Next.js tích hợp sẵn <strong>@hydraone/sdk/react</strong> và Dev Host Shell Iframe.</p>
 
           <div style={{ display: 'grid', gap: '0.75rem', background: '#0f172a', padding: '1rem', borderRadius: '0.5rem', margin: '1.5rem 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

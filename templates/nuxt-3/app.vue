@@ -1,5 +1,5 @@
 <template>
-  <div class="hydra-app">
+  <div v-if="isReadyToRender" class="hydra-app">
     <header class="header">
       <div class="logo">🎮 {{ projectName }}</div>
       <div class="wallet-badge" :class="{ connected: isConnected }">
@@ -56,6 +56,8 @@ const projectName = '{{PROJECT_NAME}}';
 const { isConnected, shortAddress, balanceADA, connect, disconnect } = useWalletBridgeClient();
 const { isAuthenticated, signIn, signOut } = useGameAuth();
 
+const isReadyToRender = ref(false);
+
 async function handleConnect() {
   await connect();
 }
@@ -72,15 +74,22 @@ async function handleSignOut() {
   await signOut();
 }
 
-onMounted(() => {
-  // Gắn Floating DevTools UI widget để test ví và Safari ITP trên localhost:3000
-  const isDev = typeof window !== 'undefined' && (
-    ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
-    (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')
-  );
-  if (isDev) {
-    mountDevTools({ initialCollapsed: false });
+onMounted(async () => {
+  // 1. Kích hoạt Dev Host Shell chuẩn 100% HydraOne Web Client khi dev trên localhost
+  if (import.meta.env.DEV) {
+    const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
+    const isEmbed = initHydraDevShell({
+      projectName,
+      enableMockWallet: true,
+      enableRealWallet: true,
+    });
+    if (!isEmbed) {
+      // Đã mount Host Shell ở Top-level Window, dừng để Iframe con render Game
+      return;
+    }
   }
+
+  isReadyToRender.value = true;
 });
 </script>
 

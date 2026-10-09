@@ -13,3 +13,6 @@ export * from './cbor';
 
 // BigInt Asset & Lovelace Calculation Functions
 export * from './assets';
+
+// Bech32 & Address Conversion Utilities
+export * from './address';

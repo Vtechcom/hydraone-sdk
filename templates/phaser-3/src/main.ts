@@ -7,6 +7,7 @@ class MainScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private balanceText!: Phaser.GameObjects.Text;
   private addressText!: Phaser.GameObjects.Text;
+  private connectButtonText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -14,71 +15,82 @@ class MainScene extends Phaser.Scene {
 
   create() {
     // 1. Khởi tạo WalletBridgeClient
-    this.client = new WalletBridgeClient();
+    this.client = new WalletBridgeClient({ fallbackToExtension: true });
 
-    // 2. Giao diện Canvas game
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    this.add.text(width / 2, 80, '🎮 {{PROJECT_NAME}}', {
+    // 2. Tiêu đề và thông tin Game
+    this.add.text(width / 2, 90, '🎮 {{PROJECT_NAME}}', {
       fontSize: '32px',
       color: '#38bdf8',
       fontStyle: 'bold',
+      fontFamily: 'Inter, system-ui, sans-serif',
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, 130, 'Cardano Web3 Game Powered by HydraOne SDK & Phaser 3', {
-      fontSize: '16px',
+    this.add.text(width / 2, 140, 'Cardano Web3 Game Powered by HydraOne SDK & Phaser 3', {
+      fontSize: '15px',
       color: '#94a3b8',
+      fontFamily: 'Inter, system-ui, sans-serif',
     }).setOrigin(0.5);
 
-    this.statusText = this.add.text(width / 2, 220, 'Trạng thái: Đang kết nối Host...', {
-      fontSize: '20px',
+    this.statusText = this.add.text(width / 2, 230, 'Trạng thái: Đang kết nối Host Shell...', {
+      fontSize: '18px',
       color: '#e2e8f0',
+      fontFamily: 'Inter, system-ui, sans-serif',
     }).setOrigin(0.5);
 
-    this.balanceText = this.add.text(width / 2, 270, 'Số dư: -- ADA', {
+    this.balanceText = this.add.text(width / 2, 280, 'Số dư: -- ADA', {
       fontSize: '22px',
       color: '#34d399',
       fontStyle: 'bold',
+      fontFamily: 'monospace',
     }).setOrigin(0.5);
 
-    this.addressText = this.add.text(width / 2, 320, 'Địa chỉ: --', {
-      fontSize: '14px',
+    this.addressText = this.add.text(width / 2, 330, 'Địa chỉ: --', {
+      fontSize: '13px',
       color: '#64748b',
       fontFamily: 'monospace',
     }).setOrigin(0.5);
 
-    // Nút tương tác trong game
-    const connectButton = this.add.rectangle(width / 2, 400, 220, 50, 0x0284c7)
+    // 3. Nút tương tác trong game
+    const connectButton = this.add.rectangle(width / 2, 420, 240, 52, 0x0284c7)
       .setInteractive({ useHandCursor: true });
-    const buttonText = this.add.text(width / 2, 400, 'Lấy số dư từ ví', {
-      fontSize: '18px',
+    
+    this.connectButtonText = this.add.text(width / 2, 420, 'Lấy số dư từ ví', {
+      fontSize: '16px',
       color: '#ffffff',
       fontStyle: 'bold',
+      fontFamily: 'Inter, system-ui, sans-serif',
     }).setOrigin(0.5);
 
+    connectButton.on('pointerover', () => connectButton.setFillStyle(0x0369a1));
+    connectButton.on('pointerout', () => connectButton.setFillStyle(0x0284c7));
+
     connectButton.on('pointerdown', async () => {
-      buttonText.setText('Đang kết nối...');
+      this.connectButtonText.setText('Đang đồng bộ...');
       try {
         if (!this.client.isConnected) {
           await this.client.connect();
         }
         await this.updateWalletInfo();
-      } catch (err) {
-        this.statusText.setText('Không thể kết nối ví. Hãy thử mở panel DevTools!');
+      } catch {
+        this.statusText.setText('Không thể kết nối ví. Hãy thử bấm nút Connect Wallet trên Header Host!');
       } finally {
-        buttonText.setText('Lấy số dư từ ví');
+        this.connectButtonText.setText('Lấy số dư từ ví');
       }
     });
 
-    // 3. Khởi chạy Floating DevTools widget trên localhost
-    const isDev = typeof window !== 'undefined' && (
-      ['localhost', '127.0.0.1'].includes(window.location.hostname) ||
-      (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')
-    );
-    if (isDev) {
-      mountDevTools({ initialCollapsed: false });
-    }
+    // 4. Lắng nghe sự kiện ví từ Host (Dev Host Shell hoặc HydraOne Web Client thật)
+    this.client.on('WALLET_CONNECTED', () => {
+      this.updateWalletInfo();
+    });
+
+    this.client.on('WALLET_DISCONNECTED', () => {
+      this.statusText.setText('Trạng thái: Đã ngắt kết nối ví');
+      this.balanceText.setText('Số dư: -- ADA');
+      this.addressText.setText('Địa chỉ: --');
+    });
 
     // Tự động kiểm tra kết nối ban đầu
     this.updateWalletInfo();
@@ -88,7 +100,7 @@ class MainScene extends Phaser.Scene {
     try {
       const isConnected = this.client.isConnected;
       if (!isConnected) {
-        this.statusText.setText('Trạng thái: Chưa kết nối ví (dùng DevTools bên dưới)');
+        this.statusText.setText('Trạng thái: Chưa kết nối (Bấm nút ví trên Header HydraOne)');
         this.balanceText.setText('Số dư: -- ADA');
         this.addressText.setText('Địa chỉ: --');
         return;
@@ -101,19 +113,54 @@ class MainScene extends Phaser.Scene {
       this.statusText.setText('Trạng thái: Đã kết nối ví thành công');
       this.addressText.setText(`Địa chỉ: ${addr.slice(0, 15)}...${addr.slice(-8)}`);
       this.balanceText.setText(`Số dư (CBOR): ${balanceCbor.slice(0, 16)}...`);
-    } catch (err) {
-      this.statusText.setText('Lỗi truy vấn ví. Hãy thử mở panel DevTools!');
+    } catch {
+      this.statusText.setText('Đang chờ ví kết nối từ Host Shell...');
     }
   }
 }
 
-const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  parent: 'game-container',
-  backgroundColor: '#0f172a',
-  scene: [MainScene],
-};
+function initGame(): void {
+  const config: Phaser.Types.Core.GameConfig = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    parent: 'game-container',
+    backgroundColor: '#07090e',
+    scene: [MainScene],
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+  };
 
-new Phaser.Game(config);
+  new Phaser.Game(config);
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// BOOTSTRAP ENTRY POINT
+// ═════════════════════════════════════════════════════════════════════════
+async function bootstrap(): Promise<void> {
+  // Chỉ kích hoạt Dev Host Shell ở môi trường DEV
+  if (import.meta.env.DEV) {
+    const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
+    const isEmbedMode = initHydraDevShell({
+      projectName: '{{PROJECT_NAME}}',
+      enableMockWallet: true,
+      enableRealWallet: true,
+    });
+
+    // Nếu đang ở Top-level window: Đã mount giao diện 100% HydraOne Web Client
+    // Dừng tại đây, iframe con sẽ tự động nạp chính file này với param standalone để chạy initGame()!
+    if (!isEmbedMode) {
+      return;
+    }
+
+    // Khi chạy trong standalone / iframe, developer vẫn có thể mở widget DevTools nếu cần
+    mountDevTools({ defaultCollapsed: true });
+  }
+
+  // Khởi chạy game (trong iframe khi Dev hoặc trực tiếp trên Production)
+  initGame();
+}
+
+bootstrap();

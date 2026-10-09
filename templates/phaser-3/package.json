@@ -1,5 +1,5 @@
 {
-  "name": "{{PROJECT_NAME}}",
+  "name": "@hydraone/template-phaser-3",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hydraone/sdk": "{{SDK_VERSION}}",
+    "@hydraone/sdk": "workspace:*",
     "phaser": "^3.87.0"
   },
   "devDependencies": {

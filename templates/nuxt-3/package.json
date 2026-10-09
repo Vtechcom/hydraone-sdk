@@ -1,5 +1,6 @@
 {
-  "name": "{{PROJECT_NAME}}",
+  "name": "@hydraone/template-nuxt-3",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +11,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@hydraone/sdk": "{{SDK_VERSION}}",
+    "@hydraone/sdk": "workspace:*",
     "vue": "^3.5.0"
   },
   "devDependencies": {

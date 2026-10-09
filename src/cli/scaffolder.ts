@@ -167,6 +167,10 @@ export async function scaffoldProject(
   const replacements: Record<string, string> = {
     '{{PROJECT_NAME}}': actualProjectName,
     '{{SDK_VERSION}}': `^${CLI_VERSION}`,
+    '@hydraone/template-nuxt-3': actualProjectName,
+    '@hydraone/template-next-js': actualProjectName,
+    '@hydraone/template-phaser-3': actualProjectName,
+    'workspace:*': `^${CLI_VERSION}`,
   };
 
   await copyTemplateDir(sourceTemplateDir, resolvedTarget, replacements);
