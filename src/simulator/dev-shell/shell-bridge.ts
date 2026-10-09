@@ -6,6 +6,10 @@
 
 import { MockBridgeHost } from '../mock-host';
 import type { DevShellWalletState } from './types';
+import type { CIP30Api } from '../../core/types';
+import { ERROR_CODES, HydraBridgeError } from '../../core/errors';
+import { errorMessage } from '../../core/error-utils';
+import { getWalletExtension, getWindowCardano } from '../../core/cardano-provider';
 import { cardanoHexToBech32 } from '../../cardano/address';
 import { parseCborUtxoOrValue } from '../../cardano/cbor';
 
@@ -21,7 +25,24 @@ export interface BridgeActivityLog {
   direction: 'in' | 'out';
   type: string;
   requestId?: string;
-  payload?: any;
+  payload?: unknown;
+}
+
+/** Request envelope sent by a game iframe to the dev shell host. */
+interface WalletRequest {
+  type: string;
+  requestId?: string;
+  address?: string;
+  hexPayload?: string;
+  txHex?: string;
+  partialSign?: boolean;
+}
+
+/** Response or push event posted back to a game iframe. */
+interface BridgeEnvelope {
+  type: string;
+  requestId?: string;
+  [key: string]: unknown;
 }
 
 export class DevShellBridgeController {
@@ -31,7 +52,7 @@ export class DevShellBridgeController {
   private onStateChangeCb?: (state: DevShellWalletState) => void;
   private activityLogs: BridgeActivityLog[] = [];
   private onActivityCb?: (log: BridgeActivityLog) => void;
-  private extensionApi: any = null;
+  private extensionApi: CIP30Api | null = null;
   public onOpenConnectModal?: () => void;
 
   constructor(options?: {
@@ -138,7 +159,11 @@ export class DevShellBridgeController {
   /**
    * Handles every WalletRequest message type
    */
-  private async handleWalletRequest(request: any, source: Window, origin: string): Promise<void> {
+  private async handleWalletRequest(
+    request: WalletRequest,
+    source: Window,
+    origin: string,
+  ): Promise<void> {
     const { type, requestId } = request;
     if (!requestId && type !== 'WALLET_PING' && type !== 'GAME_READY') return;
 
@@ -151,12 +176,12 @@ export class DevShellBridgeController {
             requestId,
             result: address,
           });
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_ADDRESS_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Error getting address',
+            error: errorMessage(err, 'Error getting address'),
           });
         }
         break;
@@ -168,7 +193,7 @@ export class DevShellBridgeController {
             throw new Error('Wallet not connected in App Center');
           }
           if (this.walletState.walletType === 'extension' && this.extensionApi) {
-            const signResult = await this.extensionApi.signData(request.address, request.hexPayload);
+            const signResult = await this.extensionApi.signData(request.address ?? '', request.hexPayload ?? '');
             this.sendResponse(source, origin, {
               type: 'WALLET_SIGN_DATA_RESULT',
               requestId,
@@ -184,12 +209,12 @@ export class DevShellBridgeController {
               result: { signature: sigHex, key: keyHex },
             });
           }
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_SIGN_DATA_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to sign data',
+            error: errorMessage(err, 'Failed to sign data'),
           });
         }
         break;
@@ -201,7 +226,7 @@ export class DevShellBridgeController {
             throw new Error('Wallet not connected in App Center');
           }
           if (this.walletState.walletType === 'extension' && this.extensionApi) {
-            const signedTx = await this.extensionApi.signTx(request.txHex, request.partialSign ?? false);
+            const signedTx = await this.extensionApi.signTx(request.txHex ?? '', request.partialSign ?? false);
             this.sendResponse(source, origin, {
               type: 'WALLET_SIGN_TX_RESULT',
               requestId,
@@ -215,12 +240,12 @@ export class DevShellBridgeController {
               result: mockWitness,
             });
           }
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_SIGN_TX_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to sign transaction',
+            error: errorMessage(err, 'Failed to sign transaction'),
           });
         }
         break;
@@ -246,12 +271,12 @@ export class DevShellBridgeController {
               result: mockUtxos,
             });
           }
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_GET_UTXOS_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to get UTxOs',
+            error: errorMessage(err, 'Failed to get UTxOs'),
           });
         }
         break;
@@ -265,12 +290,12 @@ export class DevShellBridgeController {
             requestId,
             result: netId,
           });
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_NETWORK_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to get network id',
+            error: errorMessage(err, 'Failed to get network id'),
           });
         }
         break;
@@ -297,12 +322,12 @@ export class DevShellBridgeController {
               result: cbor,
             });
           }
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_BALANCE_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to get balance',
+            error: errorMessage(err, 'Failed to get balance'),
           });
         }
         break;
@@ -314,7 +339,7 @@ export class DevShellBridgeController {
             throw new Error('Wallet not connected in App Center');
           }
           if (this.walletState.walletType === 'extension' && this.extensionApi) {
-            const txHash = await this.extensionApi.submitTx(request.txHex);
+            const txHash = await this.extensionApi.submitTx(request.txHex ?? '');
             this.sendResponse(source, origin, {
               type: 'WALLET_SUBMIT_TX_RESULT',
               requestId,
@@ -328,12 +353,12 @@ export class DevShellBridgeController {
               result: mockTxHash,
             });
           }
-        } catch (err: any) {
+        } catch (err) {
           this.sendResponse(source, origin, {
             type: 'WALLET_SUBMIT_TX_RESULT',
             requestId,
             result: null,
-            error: err?.message || 'Failed to submit transaction',
+            error: errorMessage(err, 'Failed to submit transaction'),
           });
         }
         break;
@@ -416,7 +441,7 @@ export class DevShellBridgeController {
     }
   }
 
-  public sendResponse(targetWindow: Window, origin: string, response: any): void {
+  public sendResponse(targetWindow: Window, origin: string, response: BridgeEnvelope): void {
     this.recordLog('out', response.type, response.requestId, response);
     try {
       targetWindow.postMessage(response, origin);
@@ -425,7 +450,7 @@ export class DevShellBridgeController {
     }
   }
 
-  public sendEventToIframe(targetWindow: Window, origin: string, event: any): void {
+  public sendEventToIframe(targetWindow: Window, origin: string, event: BridgeEnvelope): void {
     this.recordLog('out', event.type, undefined, event);
     try {
       targetWindow.postMessage(event, origin);
@@ -434,13 +459,13 @@ export class DevShellBridgeController {
     }
   }
 
-  public notifyAllGames(event: any): void {
+  public notifyAllGames(event: BridgeEnvelope): void {
     for (const [targetWin, info] of this.registeredIframes.entries()) {
       this.sendEventToIframe(targetWin, info.origin, event);
     }
   }
 
-  public recordLog(direction: 'in' | 'out', type: string, requestId?: string, payload?: any): void {
+  public recordLog(direction: 'in' | 'out', type: string, requestId?: string, payload?: unknown): void {
     const log: BridgeActivityLog = {
       timestamp: Date.now(),
       direction,
@@ -488,14 +513,12 @@ export class DevShellBridgeController {
    */
   public waitForExtension(extName: string, timeoutMs = 3500): Promise<boolean> {
     if (typeof window === 'undefined') return Promise.resolve(false);
-    const cardano = (window as any).cardano;
-    if (cardano?.[extName]) return Promise.resolve(true);
+    if (getWindowCardano()?.[extName]) return Promise.resolve(true);
 
     return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       const interval = setInterval(() => {
-        const c = (window as any).cardano;
-        if (c?.[extName]) {
+        if (getWindowCardano()?.[extName]) {
           clearInterval(interval);
           resolve(true);
         } else if (Date.now() >= deadline) {
@@ -515,14 +538,15 @@ export class DevShellBridgeController {
 
     // 1. Wait for the extension to inject if it is not present right after page load
     const isAvailable = await this.waitForExtension(extName, 3500);
-    const cardano = (window as any).cardano;
-    if (!isAvailable || !cardano || !cardano[extName]) {
-      throw new Error(
-        `Wallet "${extName}" not found. Please install the ${extName} extension from the Chrome Web Store.`
+    const ext = getWalletExtension(getWindowCardano(), extName);
+    if (!isAvailable || !ext) {
+      throw new HydraBridgeError(
+        `Wallet "${extName}" not found. Please install the ${extName} extension from the Chrome Web Store.`,
+        ERROR_CODES.ERR_WALLET_NOT_FOUND,
+        { extName },
       );
     }
 
-    const ext = cardano[extName];
     // 2. Request wallet access (approval popup of Eternl / Lace)
     const api = await ext.enable();
     this.extensionApi = api;
@@ -633,10 +657,9 @@ export class DevShellBridgeController {
 
       // Real browser extension (eternl, lace...)
       const isAvailable = await this.waitForExtension(saved, 3500);
-      const cardano = (window as any).cardano;
-      if (!isAvailable || !cardano?.[saved]) return false;
+      const ext = getWalletExtension(getWindowCardano(), saved);
+      if (!isAvailable || !ext) return false;
 
-      const ext = cardano[saved];
       if (typeof ext.isEnabled === 'function') {
         const enabled = await ext.isEnabled();
         if (enabled) {
@@ -672,15 +695,9 @@ export class DevShellBridgeController {
   }
 
   public getInstalledExtensions(): string[] {
-    if (typeof window === 'undefined' || !(window as any).cardano) return [];
-    const cardano = (window as any).cardano;
-    const list: string[] = [];
-    for (const key of Object.keys(cardano)) {
-      if (cardano[key] && typeof cardano[key].enable === 'function') {
-        list.push(key);
-      }
-    }
-    return list;
+    const cardano = getWindowCardano();
+    if (!cardano) return [];
+    return Object.keys(cardano).filter((key) => getWalletExtension(cardano, key));
   }
 }
 

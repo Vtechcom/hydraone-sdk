@@ -10,6 +10,8 @@ export const ERROR_CODES = {
   ERR_STORAGE_UNAVAILABLE: 'ERR_STORAGE_UNAVAILABLE',
   ERR_NOT_CONNECTED: 'ERR_NOT_CONNECTED',
   ERR_INVALID_PARAMS: 'ERR_INVALID_PARAMS',
+  /** The requested wallet extension is not installed or did not inject into window.cardano. */
+  ERR_WALLET_NOT_FOUND: 'ERR_WALLET_NOT_FOUND',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES] | (string & {});

@@ -66,7 +66,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
   const isAuthenticated = ref<boolean>(initialState.isAuthenticated);
   const jwtToken = ref<string | null>(initialState.token);
   const address = ref<string | null>(initialState.address);
-  const claims = ref<Record<string, any> | null>(initialState.claims ?? null);
+  const claims = ref<Record<string, unknown> | null>(initialState.claims ?? null);
   const error = ref<Error | null>(initialState.error ?? null);
 
   // 3. Computed JWT expiry check
@@ -114,7 +114,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
       const session = await authManager.signIn(params);
       syncState(authManager.state);
       return session;
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;
@@ -130,7 +130,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
       error.value = null;
       await authManager.signOut();
       syncState(authManager.state);
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;
@@ -146,7 +146,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
       const state = await authManager.checkSession();
       syncState(state);
       return state;
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;

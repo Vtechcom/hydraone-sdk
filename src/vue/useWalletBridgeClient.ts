@@ -130,7 +130,7 @@ export function useWalletBridgeClient(
       balanceLovelace.value = lovelace;
       balanceADA.value = adaStr;
       return adaStr;
-    } catch (err: any) {
+    } catch (err) {
       error.value = err instanceof Error ? err : new Error(String(err));
       throw err;
     }
@@ -247,12 +247,12 @@ export function useWalletBridgeClient(
       if (options?.autoRefreshBalance !== false) {
         try {
           await refreshBalance();
-        } catch (balErr: any) {
+        } catch (balErr) {
           // Record balance errors in the error ref without breaking an already successful handshake
           error.value = balErr instanceof Error ? balErr : new Error(String(balErr));
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;
@@ -280,7 +280,7 @@ export function useWalletBridgeClient(
   ): Promise<string> => {
     try {
       return await client.signTx(tx, partialSign, signOptions);
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;
@@ -290,7 +290,7 @@ export function useWalletBridgeClient(
   const submitTx = async (tx: string, queryOptions?: QueryOptions): Promise<string> => {
     try {
       return await client.submitTx(tx, queryOptions);
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;
@@ -304,7 +304,7 @@ export function useWalletBridgeClient(
   ): Promise<DataSignature> => {
     try {
       return await client.signData(addr, payload, signOptions);
-    } catch (err: any) {
+    } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
       throw errObj;

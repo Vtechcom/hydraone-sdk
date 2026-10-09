@@ -19,6 +19,14 @@ export interface ITransport {
   onMessage(handler: MessageHandler): UnsubscribeFn;
 
   /**
+   * Sends a message and resolves with the matching response. Transports that omit it
+   * are driven through send() and onMessage() by the client.
+   * @param message Partial message; id and timestamp are filled in when absent.
+   * @param timeoutMs Per-request timeout override.
+   */
+  request?<T = unknown>(message: Partial<BridgeMessage>, timeoutMs?: number): Promise<BridgeMessage<T>>;
+
+  /**
    * Disconnects, removes listeners and releases resources.
    */
   destroy?(): void;

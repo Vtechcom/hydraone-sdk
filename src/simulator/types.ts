@@ -1,5 +1,13 @@
 import type { MockBridgeHost } from './mock-host';
-import type { WalletBridgeClient } from '../core/client';
+
+/**
+ * The lifecycle methods the DevTools widget drives on a client.
+ * A WalletBridgeClient satisfies this shape.
+ */
+export interface DevToolsClient {
+  init?(): unknown;
+  disconnect?(): unknown;
+}
 
 /**
  * Simulated wallet state inside MockBridgeHost
@@ -115,7 +123,7 @@ export interface DevToolsWidgetOptions {
   /** MockBridgeHost to control */
   host?: MockBridgeHost;
   /** WalletBridgeClient to interact with */
-  client?: WalletBridgeClient | any;
+  client?: DevToolsClient;
   /** HTML container to mount the widget into (default document.body) */
   container?: HTMLElement;
   /** Whether the widget starts collapsed (default false) */

@@ -61,7 +61,7 @@ export function hexToString(hex: string): string {
  * @param token JWT in Header.Payload.Signature format
  * @returns The claims contained in the JWT payload
  */
-export function parseJwt<T = Record<string, any>>(token: string): T {
+export function parseJwt<T = Record<string, unknown>>(token: string): T {
   if (!token || typeof token !== 'string') {
     throw new Error('Invalid JWT token: token must be a non-empty string');
   }
@@ -112,7 +112,7 @@ export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean 
   }
 
   try {
-    const payload = parseJwt<Record<string, any>>(token);
+    const payload = parseJwt<Record<string, unknown>>(token);
     if (!payload || typeof payload !== 'object') {
       return true;
     }
@@ -179,8 +179,12 @@ export class AuthManager {
 
     // Listen to host events when the client supports onHostEvent
     if (typeof this.client.onHostEvent === 'function') {
-      this.hostUnsubscribe = this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: any) => {
-        if (payload && payload.isAuthenticated === false) {
+      this.hostUnsubscribe = this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: unknown) => {
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          (payload as { isAuthenticated?: unknown }).isAuthenticated === false
+        ) {
           this.signOut().catch(() => {});
         }
       });
@@ -262,7 +266,7 @@ export class AuthManager {
       token = await exchangeFn(signaturePayload);
     }
 
-    let claims: Record<string, any> | null = null;
+    let claims: Record<string, unknown> | null = null;
 
     if (token) {
       if (isJwtExpired(token, this.clockToleranceSeconds)) {
@@ -327,7 +331,7 @@ export class AuthManager {
 
     if (!this.currentState.isAuthenticated || this.currentState.token !== token) {
       const address = await this.storage.getItem(this.addressStorageKey);
-      let claims: Record<string, any> | null = null;
+      let claims: Record<string, unknown> | null = null;
       try {
         claims = parseJwt(token);
       } catch {
@@ -389,7 +393,7 @@ export class AuthManager {
   /**
    * Returns the decoded claims of the current JWT
    */
-  public async getClaims<T = Record<string, any>>(): Promise<T | null> {
+  public async getClaims<T = Record<string, unknown>>(): Promise<T | null> {
     const token = await this.getToken();
     if (!token) {
       return null;

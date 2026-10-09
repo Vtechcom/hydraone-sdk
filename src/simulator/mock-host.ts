@@ -1,4 +1,4 @@
-import type { BridgeMessage } from '../core/types';
+import type { BridgeMessage, PostMessageTarget } from '../core/types';
 import { ERROR_CODES } from '../core/errors';
 import type {
   MockBridgeHostOptions,
@@ -468,8 +468,9 @@ export class MockBridgeHost {
         try {
           const targetOrigin =
             event.origin && event.origin !== 'null' ? event.origin : '*';
-          if (event.source && typeof (event.source as any).postMessage === 'function') {
-            (event.source as any).postMessage(response, targetOrigin);
+          const replyTarget = event.source as Partial<PostMessageTarget> | null;
+          if (replyTarget && typeof replyTarget.postMessage === 'function') {
+            replyTarget.postMessage(response, targetOrigin);
           } else {
             win.postMessage(response, targetOrigin);
           }
@@ -764,7 +765,7 @@ export class MockBridgeHost {
           'Safari ITP SecurityError: Host storage access blocked'
         );
       }
-      const key = (payload as any)?.key;
+      const key = (payload as { key?: string } | undefined)?.key;
       const value = key ? this.storage.get(key) ?? null : null;
       return this.createRpcResponse(id, value);
     }
@@ -777,7 +778,7 @@ export class MockBridgeHost {
           'Safari ITP SecurityError: Host storage access blocked'
         );
       }
-      const { key, value } = (payload as any) || {};
+      const { key, value } = (payload as { key?: string; value?: unknown } | undefined) ?? {};
       if (key) {
         this.storage.set(key, String(value));
       }
@@ -792,7 +793,7 @@ export class MockBridgeHost {
           'Safari ITP SecurityError: Host storage access blocked'
         );
       }
-      const key = (payload as any)?.key;
+      const key = (payload as { key?: string } | undefined)?.key;
       if (key) {
         this.storage.delete(key);
       }
@@ -807,7 +808,7 @@ export class MockBridgeHost {
           'Safari ITP SecurityError: Host storage access blocked'
         );
       }
-      const prefix = (payload as any)?.prefix ?? 'hydra:sdk:';
+      const prefix = (payload as { prefix?: string } | undefined)?.prefix ?? 'hydra:sdk:';
       for (const k of Array.from(this.storage.keys())) {
         if (k.startsWith(prefix)) {
           this.storage.delete(k);

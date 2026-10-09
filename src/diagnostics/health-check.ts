@@ -13,6 +13,24 @@ import type {
   StorageCheckOptions,
 } from './types';
 import { HostStorageRelayAdapter } from '../core/adapters/storage/host-storage-relay';
+import type { IStorage } from '../core/ports/storage';
+import type { ITransport } from '../core/ports/transport';
+import { errorCode, errorMessage, errorName } from '../core/error-utils';
+
+/** Optional capabilities a client or transport may expose; probed at runtime. */
+interface PingCapable {
+  ping?(options: { timeoutMs: number }): Promise<unknown>;
+  getBalance?(options: { timeoutMs: number }): Promise<unknown>;
+  request?: ITransport['request'];
+  transport?: Pick<ITransport, 'request'>;
+}
+
+/** Optional storage-related members a client may expose; probed at runtime. */
+interface StorageProbe extends Partial<IStorage> {
+  storage?: IStorage;
+  transport?: ITransport;
+  send?: ITransport['send'];
+}
 
 /**
  * Checks sandbox permissions and the embedding environment of the iframe
@@ -172,7 +190,7 @@ export async function checkPostMessageLatency(
     };
   }
 
-  const client = clientOrTransport as any;
+  const client = clientOrTransport as PingCapable;
 
   // Record the start time
   const startTime =
@@ -253,7 +271,7 @@ export async function checkPostMessageLatency(
         latencyMs,
       },
     };
-  } catch (err: any) {
+  } catch (err) {
     const endTime =
       typeof performance !== 'undefined' && typeof performance.now === 'function'
         ? performance.now()
@@ -261,11 +279,11 @@ export async function checkPostMessageLatency(
     const duration = Math.max(0, Math.round(endTime - startTime));
 
     const isTimeout =
-      err?.code === 'ERR_TIMEOUT' ||
-      err?.name === 'HydraTimeoutError' ||
-      (typeof err?.message === 'string' && /timed?\s*out|timeout/i.test(err.message));
+      errorCode(err) === 'ERR_TIMEOUT' ||
+      errorName(err) === 'HydraTimeoutError' ||
+      /timed?\s*out|timeout/i.test(errorMessage(err));
 
-    if (err?.code === 'ERR_NOT_IN_IFRAME') {
+    if (errorCode(err) === 'ERR_NOT_IN_IFRAME') {
       return {
         id: 'postmessage-latency',
         name: 'PostMessage Roundtrip Latency',
@@ -280,7 +298,7 @@ export async function checkPostMessageLatency(
       };
     }
 
-    if (err?.code === 'ERR_NOT_CONNECTED') {
+    if (errorCode(err) === 'ERR_NOT_CONNECTED') {
       return {
         id: 'postmessage-latency',
         name: 'PostMessage Roundtrip Latency',
@@ -299,10 +317,10 @@ export async function checkPostMessageLatency(
       name: 'PostMessage Roundtrip Latency',
       status: 'FAIL',
       latencyMs: duration,
-      message: `PostMessage roundtrip failed: ${err?.message || 'Unknown error'}`,
+      message: `PostMessage roundtrip failed: ${errorMessage(err, 'Unknown error')}`,
       details: {
-        error: err?.message || String(err),
-        code: err?.code,
+        error: errorMessage(err) || String(err),
+        code: errorCode(err),
         isTimeout,
         durationMs: duration,
       },
@@ -360,11 +378,12 @@ export async function checkStorageHealth(
           hint: 'Verify if third-party extensions or privacy extensions are modifying localStorage.',
         });
       }
-    } catch (err: any) {
+    } catch (err) {
+      const lowered = errorMessage(err).toLowerCase();
       const isSecurityError =
-        err?.name === 'SecurityError' ||
-        (err?.message && String(err.message).toLowerCase().includes('insecure')) ||
-        (err?.message && String(err.message).toLowerCase().includes('safari itp'));
+        errorName(err) === 'SecurityError' ||
+        lowered.includes('insecure') ||
+        lowered.includes('safari itp');
 
       if (isSecurityError) {
         checks.push({
@@ -373,8 +392,8 @@ export async function checkStorageHealth(
           status: 'WARN',
           message: 'LocalStorage access blocked by Safari ITP or Storage Partitioning',
           details: {
-            errorName: err?.name,
-            errorMessage: err?.message,
+            errorName: errorName(err),
+            errorMessage: errorMessage(err) || undefined,
           },
           hint: 'Safari ITP blocked browser storage. Ensure Host Storage Relay (bridge.storage) is utilized to persist user sessions and auth tokens.',
         });
@@ -383,9 +402,9 @@ export async function checkStorageHealth(
           id: 'storage-local',
           name: 'Local Storage Availability',
           status: 'WARN',
-          message: `LocalStorage access failed: ${err?.message || 'Access error'}`,
+          message: `LocalStorage access failed: ${errorMessage(err, 'Access error')}`,
           details: {
-            error: err?.message,
+            error: errorMessage(err) || undefined,
           },
           hint: 'Verify browser storage quota and privacy settings.',
         });
@@ -400,14 +419,15 @@ export async function checkStorageHealth(
   }
 
   // 2. Host Storage Relay (via options.storage, client.storage, or an auto-created HostStorageRelayAdapter)
-  const client = clientOrStorage as any;
-  let storageAdapter =
+  const client = clientOrStorage as StorageProbe | undefined;
+  let storageAdapter: IStorage | undefined =
     options?.storage ??
     client?.storage ??
-    (client?.getItem && client?.setItem ? client : undefined);
+    (client?.getItem && client?.setItem ? (client as IStorage) : undefined);
 
   // The client has a transport, or clientOrStorage itself is an ITransport (has a send function)
-  const transport = client?.transport ?? (typeof client?.send === 'function' ? client : undefined);
+  const transport =
+    client?.transport ?? (typeof client?.send === 'function' ? (client as ITransport) : undefined);
   if (!storageAdapter && transport && typeof transport.send === 'function') {
     try {
       storageAdapter = new HostStorageRelayAdapter({ transport });
@@ -445,15 +465,15 @@ export async function checkStorageHealth(
           hint: 'Host Shell storage relay did not return the expected stored value.',
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       checks.push({
         id: 'storage-relay',
         name: 'Host Storage Relay Availability',
         status: 'WARN',
-        message: `Host Storage Relay access failed: ${err?.message || 'Unavailable'}`,
+        message: `Host Storage Relay access failed: ${errorMessage(err, 'Unavailable')}`,
         details: {
-          error: err?.message,
-          code: err?.code,
+          error: errorMessage(err) || undefined,
+          code: errorCode(err),
         },
         hint: 'Host Shell rejected storage relay RPC. Ensure App Center Host supports HOST_STORAGE_SET/GET messages.',
       });

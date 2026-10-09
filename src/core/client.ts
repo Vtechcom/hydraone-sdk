@@ -34,10 +34,12 @@ import {
   HydraTransportError,
   HydraUserRejectedError,
 } from './errors';
+import { errorCode, errorMessage } from './error-utils';
 import {
   DirectExtensionTransport,
   detectCardanoWallets,
 } from './adapters/direct-extension-transport';
+import { getWalletExtension, getWindowCardano } from './cardano-provider';
 import { checkBridgeHealth } from '../diagnostics/health-check';
 import type { BridgeHealthReport, CheckHealthOptions } from '../diagnostics/types';
 
@@ -81,7 +83,7 @@ export class WalletBridgeClient {
   public readonly signingTimeoutMs: number;
   public readonly fallbackToExtension: boolean;
   public readonly preferredWallet?: string;
-  public readonly cardanoProvider?: Record<string, any>;
+  public readonly cardanoProvider?: Record<string, unknown>;
   public readonly isIframeFn?: () => boolean;
   public readonly debug: boolean;
   private readonly logger: Logger;
@@ -92,10 +94,10 @@ export class WalletBridgeClient {
   private _theme?: ThemeMode;
   private _isDestroyed = false;
   private handshakePromise: Promise<void> | null = null;
-  private readonly pendingRequests = new Map<string, PendingRequest<any>>();
+  private readonly pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly expiredRequestIds = new Set<string>();
   private transportUnsubscribe?: UnsubscribeFn;
-  private readonly eventListeners = new Map<string, Set<(payload: any) => void>>();
+  private readonly eventListeners = new Map<string, Set<(payload: unknown) => void>>();
 
   constructor(options: WalletBridgeClientOptions) {
     if (!options || (!options.transport && !options.fallbackToExtension)) {
@@ -146,7 +148,7 @@ export class WalletBridgeClient {
   /**
    * Dispatches an internal event to listeners registered through onHostEvent.
    */
-  private emitHostEvent<T = any>(type: string, payload: T): void {
+  private emitHostEvent<T = unknown>(type: string, payload: T): void {
     const handlers = this.eventListeners.get(type);
     if (handlers) {
       const snapshot = Array.from(handlers);
@@ -280,8 +282,8 @@ export class WalletBridgeClient {
         : payload &&
             typeof payload === 'object' &&
             'theme' in payload &&
-            typeof (payload as any).theme === 'string'
-          ? (payload as any).theme.trim().toLowerCase()
+            typeof (payload as { theme?: unknown }).theme === 'string'
+          ? (payload as { theme: string }).theme.trim().toLowerCase()
           : undefined;
 
     if (raw === 'dark' || raw === 'light') {
@@ -448,11 +450,7 @@ export class WalletBridgeClient {
             );
           }
 
-          const provider =
-            this.cardanoProvider ??
-            (typeof window !== 'undefined' && (window as any).cardano
-              ? (window as any).cardano
-              : undefined);
+          const provider = this.cardanoProvider ?? getWindowCardano();
 
           const availableWallets = detectCardanoWallets(provider);
           if (availableWallets.length === 0) {
@@ -469,7 +467,7 @@ export class WalletBridgeClient {
 
           const directTransport = new DirectExtensionTransport({
             walletName: selectedWallet,
-            extension: provider ? provider[selectedWallet] : undefined,
+            extension: getWalletExtension(provider, selectedWallet),
             cardanoProvider: provider,
             defaultTimeoutMs: this.queryTimeoutMs,
           });
@@ -558,13 +556,9 @@ export class WalletBridgeClient {
       );
     }
     // Prefer the transport own request() when it has one (e.g. PostMessageTransport).
-    const maybeRequestTransport = this.transport as unknown as {
-      request?: <R = unknown>(msg: Partial<BridgeMessage>, tMs?: number) => Promise<BridgeMessage<R>>;
-    };
-
-    if (typeof maybeRequestTransport.request === 'function') {
+    if (typeof this.transport.request === 'function') {
       try {
-        const response = await maybeRequestTransport.request<any>(message, timeoutMs);
+        const response = await this.transport.request<unknown>(message, timeoutMs);
         if (response.type === 'HOST_ACK') {
           const payload = response.payload as HostAckPayload | undefined;
           return (payload?.hostInfo || payload || {}) as T;
@@ -574,17 +568,18 @@ export class WalletBridgeClient {
           return payload.result as T;
         }
         return response.payload as T;
-      } catch (err: any) {
-        if (err?.code === ERROR_CODES.ERR_TIMEOUT) {
+      } catch (err) {
+        const code = errorCode(err);
+        if (code === ERROR_CODES.ERR_TIMEOUT) {
           throw new HydraTimeoutError(
             `Request [${message.type}] timed out (${timeoutMs}ms)`,
             { messageType: message.type, timeoutMs }
           );
         }
-        if (err?.code === ERROR_CODES.ERR_USER_REJECTED) {
+        if (code === ERROR_CODES.ERR_USER_REJECTED) {
           throw new HydraUserRejectedError(
-            err.message || 'User rejected the wallet operation',
-            err.details
+            errorMessage(err, 'User rejected the wallet operation'),
+            (err as { details?: unknown }).details
           );
         }
         throw err;
@@ -621,7 +616,7 @@ export class WalletBridgeClient {
       }
 
       pending.timeoutTimer = timeoutTimer;
-      this.pendingRequests.set(message.id, pending);
+      this.pendingRequests.set(message.id, pending as PendingRequest<unknown>);
 
       try {
         transport.send(message).catch((sendErr) => {
@@ -631,7 +626,7 @@ export class WalletBridgeClient {
           this.pendingRequests.delete(message.id);
           reject(sendErr);
         });
-      } catch (syncErr: any) {
+      } catch (syncErr) {
         if (timeoutTimer) {
           clearTimeout(timeoutTimer);
         }
@@ -966,6 +961,8 @@ export class WalletBridgeClient {
    * @param handler Callback invoked when the event arrives.
    * @returns A function that removes the subscription.
    */
+  // T defaults to any so existing call sites can read the payload without annotating it.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public onHostEvent<T = any>(
     type: string,
     handler: (payload: T) => void
@@ -979,10 +976,11 @@ export class WalletBridgeClient {
     }
 
     const handlers = this.eventListeners.get(type)!;
-    handlers.add(handler);
+    const stored = handler as (payload: unknown) => void;
+    handlers.add(stored);
 
     return () => {
-      handlers.delete(handler);
+      handlers.delete(stored);
       if (handlers.size === 0) {
         this.eventListeners.delete(type);
       }
@@ -992,6 +990,7 @@ export class WalletBridgeClient {
   /**
    * Short alias for onHostEvent.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public on<T = any>(
     type: string,
     handler: (payload: T) => void
@@ -1149,10 +1148,15 @@ export class WalletBridgeClient {
     if (this.isStandaloneBrowser()) {
       try {
         if (typeof screen !== 'undefined' && screen.orientation) {
-          if (validOrientation === 'any' && typeof (screen.orientation as any).unlock === 'function') {
-            (screen.orientation as any).unlock();
-          } else if (typeof (screen.orientation as any).lock === 'function') {
-            await (screen.orientation as any).lock(validOrientation);
+          // lib.dom omits lock()/unlock() on ScreenOrientation, so widen the type locally.
+          const orientationApi = screen.orientation as ScreenOrientation & {
+            lock?: (orientation: string) => Promise<void>;
+            unlock?: () => void;
+          };
+          if (validOrientation === 'any' && typeof orientationApi.unlock === 'function') {
+            orientationApi.unlock();
+          } else if (typeof orientationApi.lock === 'function') {
+            await orientationApi.lock(validOrientation);
           }
         }
       } catch (err) {
@@ -1478,9 +1482,6 @@ export class WalletBridgeClient {
     }
     this.eventListeners.clear();
 
-    const maybeDestroyable = this.transport as unknown as { destroy?: () => void };
-    if (typeof maybeDestroyable.destroy === 'function') {
-      maybeDestroyable.destroy();
-    }
+    this.transport?.destroy?.();
   }
 }

@@ -6,6 +6,7 @@ import type {
   DirectExtensionTransportOptions,
   HostAckPayload,
   MessageHandler,
+  Paginate,
   RpcResponsePayload,
   UnsubscribeFn,
 } from '../types';
@@ -16,6 +17,8 @@ import {
   HydraTransportError,
   HydraUserRejectedError,
 } from '../errors';
+import { getWindowCardano, getWalletExtension } from '../cardano-provider';
+import { errorCode, errorInfo, errorMessage } from '../error-utils';
 
 /** Well-known Cardano wallet keys, detected first */
 export const KNOWN_CARDANO_WALLETS = [
@@ -68,14 +71,13 @@ function isUserRejectionError(err: unknown): boolean {
     return false;
   }
 
-  const anyErr = err as Record<string, any>;
-
   // CIP-30 uses code 2 for PaginateError / UserDeclined
-  if (anyErr.code === 2 || anyErr.code === 'ERR_USER_REJECTED') {
+  const code = errorCode(err);
+  if (code === 2 || code === 'ERR_USER_REJECTED') {
     return true;
   }
 
-  const message = String(anyErr.message || anyErr.info || '').toLowerCase();
+  const message = (errorMessage(err) || errorInfo(err) || '').toLowerCase();
   return (
     message.includes('user decline') ||
     message.includes('user reject') ||
@@ -93,12 +95,8 @@ function isUserRejectionError(err: unknown): boolean {
  * @param provider Cardano provider (defaults to window.cardano when present)
  * @returns Names of wallets that expose enable()
  */
-export function detectCardanoWallets(provider?: Record<string, any>): string[] {
-  const target =
-    provider ??
-    (typeof window !== 'undefined' && (window as any).cardano
-      ? (window as any).cardano
-      : undefined);
+export function detectCardanoWallets(provider?: Record<string, unknown>): string[] {
+  const target = provider ?? getWindowCardano();
 
   if (!target || typeof target !== 'object') {
     return [];
@@ -108,23 +106,14 @@ export function detectCardanoWallets(provider?: Record<string, any>): string[] {
 
   // 1. Scan known wallets first, in priority order
   for (const wallet of KNOWN_CARDANO_WALLETS) {
-    if (
-      target[wallet] &&
-      typeof target[wallet] === 'object' &&
-      typeof target[wallet].enable === 'function'
-    ) {
+    if (getWalletExtension(target, wallet)) {
       available.push(wallet);
     }
   }
 
   // 2. Then scan remaining wallets not in KNOWN_CARDANO_WALLETS
   for (const key of Object.keys(target)) {
-    if (
-      !available.includes(key) &&
-      target[key] &&
-      typeof target[key] === 'object' &&
-      typeof target[key].enable === 'function'
-    ) {
+    if (!available.includes(key) && getWalletExtension(target, key)) {
       available.push(key);
     }
   }
@@ -151,11 +140,7 @@ export class DirectExtensionTransport implements ITransport {
   constructor(options: DirectExtensionTransportOptions = {}) {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 15000;
 
-    const provider =
-      options.cardanoProvider ??
-      (typeof window !== 'undefined' && (window as any).cardano
-        ? (window as any).cardano
-        : undefined);
+    const provider = options.cardanoProvider ?? getWindowCardano();
 
     if (options.api) {
       this.api = options.api;
@@ -173,9 +158,10 @@ export class DirectExtensionTransport implements ITransport {
     const availableWallets = detectCardanoWallets(provider);
 
     if (options.walletName) {
-      if (provider && provider[options.walletName] && typeof provider[options.walletName].enable === 'function') {
+      const named = getWalletExtension(provider, options.walletName);
+      if (named) {
         this.walletName = options.walletName;
-        this.extension = provider[options.walletName];
+        this.extension = named;
       } else {
         throw new HydraTransportError(
           `Specified Cardano wallet extension "${options.walletName}" was not found`,
@@ -191,7 +177,7 @@ export class DirectExtensionTransport implements ITransport {
         );
       }
       this.walletName = availableWallets[0];
-      this.extension = provider![this.walletName];
+      this.extension = getWalletExtension(provider, this.walletName);
     }
   }
 
@@ -227,15 +213,15 @@ export class DirectExtensionTransport implements ITransport {
         }
         this.api = api;
         return this.api;
-      } catch (err: any) {
+      } catch (err) {
         if (isUserRejectionError(err)) {
           throw new HydraUserRejectedError(
-            err.info || err.message || `User rejected connection to wallet "${this.walletName}"`,
+            errorInfo(err) || errorMessage(err) || `User rejected connection to wallet "${this.walletName}"`,
             err
           );
         }
         throw new HydraBridgeError(
-          err.message || `Failed to enable wallet extension "${this.walletName}"`,
+          errorMessage(err) || `Failed to enable wallet extension "${this.walletName}"`,
           'ERR_WALLET_ENABLE_FAILED',
           err
         );
@@ -322,10 +308,10 @@ export class DirectExtensionTransport implements ITransport {
       try {
         const result = await this.handleMessageInternally(message);
         return result as BridgeMessage<T>;
-      } catch (err: any) {
+      } catch (err) {
         if (isUserRejectionError(err)) {
           throw new HydraUserRejectedError(
-            err.info || err.message || 'User rejected the operation',
+            errorInfo(err) || errorMessage(err) || 'User rejected the operation',
             err
           );
         }
@@ -333,8 +319,8 @@ export class DirectExtensionTransport implements ITransport {
           throw err;
         }
         throw new HydraBridgeError(
-          err?.message || `Direct extension operation failed for [${message.type}]`,
-          err?.code || 'ERR_RPC_FAILED',
+          errorMessage(err) || `Direct extension operation failed for [${message.type}]`,
+          String(errorCode(err) || 'ERR_RPC_FAILED'),
           err
         );
       }
@@ -353,7 +339,7 @@ export class DirectExtensionTransport implements ITransport {
   /**
    * Handles a message internally and maps it to the CIP-30 API
    */
-  private async handleMessageInternally(message: BridgeMessage): Promise<BridgeMessage<any>> {
+  private async handleMessageInternally(message: BridgeMessage): Promise<BridgeMessage<unknown>> {
     if (message.type === 'CLIENT_READY') {
       const api = await this.enable();
       let network = 'mainnet';
@@ -388,7 +374,14 @@ export class DirectExtensionTransport implements ITransport {
       await this.enable();
     }
     const api = this.api!;
-    const payload = (message.payload || {}) as Record<string, any>;
+    const payload = (message.payload || {}) as {
+      amount?: string;
+      paginate?: Paginate;
+      cbor: string;
+      partialSign?: boolean;
+      address: string;
+      payloadHex: string;
+    };
 
     let result: unknown;
 
@@ -464,10 +457,10 @@ export class DirectExtensionTransport implements ITransport {
       };
 
       return rpcResponse;
-    } catch (err: any) {
+    } catch (err) {
       if (isUserRejectionError(err)) {
         throw new HydraUserRejectedError(
-          err.info || err.message || 'User rejected the wallet operation',
+          errorInfo(err) || errorMessage(err) || 'User rejected the wallet operation',
           err
         );
       }

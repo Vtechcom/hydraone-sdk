@@ -7,6 +7,7 @@
 import { MockBridgeHost } from './mock-host';
 import { escapeHtml } from './escape-html';
 import type {
+  DevToolsClient,
   DevToolsPosition,
   DevToolsTheme,
   DevToolsWidgetOptions,
@@ -56,15 +57,17 @@ export class SafariItpStorageSimulator {
         }
       } else if (typeof globalThis !== 'undefined') {
         try {
-          if ('localStorage' in globalThis && (globalThis as any).localStorage) {
-            storages.push((globalThis as any).localStorage);
+          const { localStorage } = globalThis as { localStorage?: Storage };
+          if (localStorage) {
+            storages.push(localStorage);
           }
         } catch {
           // Ignored
         }
         try {
-          if ('sessionStorage' in globalThis && (globalThis as any).sessionStorage) {
-            storages.push((globalThis as any).sessionStorage);
+          const { sessionStorage } = globalThis as { sessionStorage?: Storage };
+          if (sessionStorage) {
+            storages.push(sessionStorage);
           }
         } catch {
           // Ignored
@@ -151,7 +154,7 @@ export class SafariItpStorageSimulator {
                 value: originalFn,
               });
             } catch {
-              (storage as any)[prop] = originalFn;
+              (storage as unknown as Record<string, unknown>)[prop] = originalFn;
             }
           }
         }
@@ -190,7 +193,7 @@ export class SafariItpStorageSimulator {
  */
 export class DevToolsWidget {
   public readonly host: MockBridgeHost;
-  public readonly client?: any;
+  public readonly client?: DevToolsClient;
   public readonly position: DevToolsPosition;
   public readonly theme: DevToolsTheme;
   public readonly title: string;

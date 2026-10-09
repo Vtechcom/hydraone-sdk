@@ -218,7 +218,7 @@ export interface UseGameAuthReturn {
   /**
    * All claims decoded from the JWT payload
    */
-  claims: Ref<Record<string, any> | null>;
+  claims: Ref<Record<string, unknown> | null>;
 
   /**
    * Computed flag telling whether the current JWT has expired

@@ -58,11 +58,11 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
   const jwtToken = token;
   const address = authState.address;
 
-  const claims = useMemo<Record<string, any> | null>(() => {
+  const claims = useMemo<Record<string, unknown> | null>(() => {
     if (authState.claims) return authState.claims;
     if (token) {
       try {
-        return parseJwt<Record<string, any>>(token);
+        return parseJwt<Record<string, unknown>>(token);
       } catch {
         return null;
       }
@@ -70,7 +70,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
     return null;
   }, [authState.claims, token]);
 
-  const user = useMemo<Record<string, any> | null>(() => {
+  const user = useMemo<Record<string, unknown> | null>(() => {
     return claims ?? (address ? { address } : null);
   }, [claims, address]);
 

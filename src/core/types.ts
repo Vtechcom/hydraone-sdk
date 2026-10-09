@@ -101,9 +101,18 @@ export interface PostMessageTarget {
 /**
  * Minimal window-like object that emits message events.
  */
+/**
+ * The subset of MessageEvent the transport reads.
+ */
+export interface BridgeMessageEvent {
+  origin?: string;
+  source?: unknown;
+  data?: unknown;
+}
+
 export interface MessageEventSource {
-  addEventListener(type: 'message', listener: (event: any) => void): void;
-  removeEventListener(type: 'message', listener: (event: any) => void): void;
+  addEventListener(type: 'message', listener: (event: BridgeMessageEvent) => void): void;
+  removeEventListener(type: 'message', listener: (event: BridgeMessageEvent) => void): void;
   parent?: unknown;
 }
 
@@ -201,7 +210,7 @@ export interface WalletBridgeClientOptions {
   /** Preferred wallet when falling back (for example 'eternl', 'lace', 'nami'). */
   preferredWallet?: string;
   /** Custom window.cardano object (for tests or custom injection). */
-  cardanoProvider?: Record<string, any>;
+  cardanoProvider?: Record<string, unknown>;
   /** Custom iframe detection function (for tests). */
   isIframeFn?: () => boolean;
   /** Enable warning/debug logging (default: false). */
@@ -302,7 +311,7 @@ export interface DirectExtensionTransportOptions {
   /** Or pass an already enabled CIP30Api instance directly. */
   api?: CIP30Api;
   /** Cardano provider object (defaults to window.cardano when present). */
-  cardanoProvider?: Record<string, any>;
+  cardanoProvider?: Record<string, unknown>;
   /** Default timeout in ms for RPC requests (default: 15000). */
   defaultTimeoutMs?: number;
 }
@@ -354,7 +363,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
   address: string | null;
-  claims?: Record<string, any> | null;
+  claims?: Record<string, unknown> | null;
   error?: Error | null;
 }
 
@@ -368,7 +377,7 @@ export interface AuthSession {
   challenge: string;
   payloadHex: string;
   token?: string;
-  claims?: Record<string, any> | null;
+  claims?: Record<string, unknown> | null;
 }
 
 /**
@@ -394,7 +403,7 @@ export interface IAuthSignerClient {
   signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
   getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]>;
   getChangeAddress?(options?: QueryOptions): Promise<string>;
-  onHostEvent?(event: string, handler: (payload: any) => void): UnsubscribeFn;
+  onHostEvent?(event: string, handler: (payload: unknown) => void): UnsubscribeFn;
 }
 
 /**

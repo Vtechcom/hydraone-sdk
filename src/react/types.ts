@@ -285,12 +285,12 @@ export interface UseHydraAuthReturn {
   /**
    * Claims extracted from the JWT payload or null
    */
-  claims: Record<string, any> | null;
+  claims: Record<string, unknown> | null;
 
   /**
    * User identity (the claims, or an object containing the address)
    */
-  user: Record<string, any> | null;
+  user: Record<string, unknown> | null;
 
   /**
    * true when the current JWT has expired

@@ -1,6 +1,7 @@
 import type { ITransport } from '../ports/transport';
 import type {
   BridgeMessage,
+  BridgeMessageEvent,
   InFlightEntry,
   MessageEventSource,
   MessageHandler,
@@ -17,6 +18,7 @@ import {
   HydraTransportError,
   HydraUserRejectedError,
 } from '../errors';
+import { errorMessage } from '../error-utils';
 
 /**
  * PostMessageTransport - ITransport implementation for iframe mode.
@@ -72,7 +74,7 @@ export class PostMessageTransport implements ITransport {
   /**
    * Handles incoming postMessage events
    */
-  public handleMessageEvent = (event: any): void => {
+  public handleMessageEvent = (event: BridgeMessageEvent): void => {
     if (this.isDestroyed || !event || typeof event !== 'object') {
       return;
     }
@@ -202,9 +204,9 @@ export class PostMessageTransport implements ITransport {
 
     try {
       target.postMessage(message, this.appCenterOrigin);
-    } catch (err: any) {
+    } catch (err) {
       throw new HydraTransportError(
-        `Failed to send postMessage: ${err?.message || 'Unable to serialize message'}`,
+        `Failed to send postMessage: ${errorMessage(err, 'Unable to serialize message')}`,
         'ERR_POSTMESSAGE_FAILED',
         err
       );
@@ -257,7 +259,7 @@ export class PostMessageTransport implements ITransport {
         }, timeout);
       }
 
-      const entry: InFlightEntry<any> = {
+      const entry: InFlightEntry<T> = {
         id,
         state: 'Pending',
         resolve,
@@ -266,7 +268,7 @@ export class PostMessageTransport implements ITransport {
         createdAt: Date.now(),
       };
 
-      this.inFlightMap.set(id, entry);
+      this.inFlightMap.set(id, entry as InFlightEntry<unknown>);
 
       this.send(fullMessage).catch((err) => {
         if (timeoutTimer) {

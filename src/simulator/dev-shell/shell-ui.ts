@@ -11,6 +11,8 @@ import type {
 import { DevShellBridgeController } from "./shell-bridge";
 import { HYDRA_LOGO_SRC } from "./assets";
 import { escapeHtml } from "../escape-html";
+import { ERROR_CODES } from "../../core/errors";
+import { errorCode, errorMessage } from "../../core/error-utils";
 
 /** Shortens an address for display */
 function formatId(id: string | null | undefined, begin = 6, last = 4): string {
@@ -828,10 +830,10 @@ export class HydraDevShellUI {
         try {
           await this.bridge.connectRealExtension("eternl");
           this.closeConnectModal();
-        } catch (err: any) {
+        } catch (err) {
           if (statusSpan) statusSpan.textContent = prevText;
-          const msg = err?.message || String(err);
-          if (msg.includes("not found")) {
+          const msg = errorMessage(err) || String(err);
+          if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
             const openStore = confirm(
               msg + "\n\nDo you want to open the Chrome Web Store to install the Eternl extension?"
             );
@@ -858,10 +860,10 @@ export class HydraDevShellUI {
         try {
           await this.bridge.connectRealExtension("lace");
           this.closeConnectModal();
-        } catch (err: any) {
+        } catch (err) {
           if (statusSpan) statusSpan.textContent = prevText;
-          const msg = err?.message || String(err);
-          if (msg.includes("not found")) {
+          const msg = errorMessage(err) || String(err);
+          if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
             const openStore = confirm(
               msg + "\n\nDo you want to open the Chrome Web Store to install the Lace extension?"
             );
