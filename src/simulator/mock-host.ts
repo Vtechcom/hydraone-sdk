@@ -537,7 +537,9 @@ export class MockBridgeHost {
     }
     for (const win of Array.from(this.attachedWindows)) {
       try {
-        win.postMessage(message, '*');
+        // Opaque origins (file://, sandboxed frames) report 'null' and cannot be targeted explicitly.
+        const origin = win.location?.origin;
+        win.postMessage(message, origin && origin !== 'null' ? origin : '*');
       } catch (err) {
         if (this.debug) {
           console.error('[MockBridgeHost] Failed to postMessage broadcast to window:', err);

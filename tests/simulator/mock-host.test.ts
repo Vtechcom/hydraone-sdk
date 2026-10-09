@@ -509,6 +509,27 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
       expect(fakeWindow.removeEventListener).toHaveBeenCalledWith('message', handler);
     });
 
+    it('broadcast targets the attached window origin and falls back to * for opaque origins', () => {
+      const makeWindow = (origin?: string) => ({
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        postMessage: vi.fn(),
+        ...(origin === undefined ? {} : { location: { origin } }),
+      });
+
+      const known = makeWindow('https://game.example');
+      const cleanupKnown = host.listenWindow(known as any);
+      host.broadcastAudioMuted(true);
+      expect(known.postMessage).toHaveBeenCalledWith(expect.anything(), 'https://game.example');
+      cleanupKnown();
+
+      const opaque = makeWindow('null');
+      const cleanupOpaque = host.listenWindow(opaque as any);
+      host.broadcastAudioMuted(false);
+      expect(opaque.postMessage).toHaveBeenCalledWith(expect.anything(), '*');
+      cleanupOpaque();
+    });
+
     it('broadcast broadcasts audioMuted and theme events to the window attached through listenWindow', () => {
       const fakeWindow = {
         addEventListener: vi.fn(),
