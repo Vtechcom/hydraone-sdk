@@ -52,7 +52,7 @@ function ConsumerComponent(): React.JSX.Element {
 }
 
 describe('HydraOneProvider and Context', () => {
-  it('cung cấp client, authManager và storage cho các component con', () => {
+  it('provides client, authManager and storage to child components', () => {
     render(
       <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
         <ConsumerComponent />
@@ -64,7 +64,7 @@ describe('HydraOneProvider and Context', () => {
     expect(screen.getByTestId('storage-exists').textContent).toBe('yes');
   });
 
-  it('nhận và sử dụng custom client, authManager và storage được truyền vào props', () => {
+  it('accepts and uses a custom client, authManager and storage passed as props', () => {
     const transport = new MockTransport();
     const customClient = new WalletBridgeClient({ transport });
     const customStorage = new InMemoryStorageAdapter();
@@ -99,8 +99,8 @@ describe('HydraOneProvider and Context', () => {
     expect(screen.getByTestId('is-same-storage').textContent).toBe('true');
   });
 
-  it('ném lỗi rõ ràng khi gọi useHydraOneContext bên ngoài HydraOneProvider', () => {
-    // Tắt console.error tạm thời để tránh làm bẩn test logs khi React log caught error
+  it('throws a clear error when useHydraOneContext is called outside HydraOneProvider', () => {
+    // Silence console.error temporarily so React's caught-error log does not pollute test output
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {

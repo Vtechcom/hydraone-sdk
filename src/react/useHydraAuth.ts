@@ -6,15 +6,15 @@ import { GameAuthManager, isJwtExpired, parseJwt } from '../core/auth';
 import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapters/storage';
 
 /**
- * Custom React Hook quản lý trạng thái xác thực Web3 CIP-8, phiên JWT và các hành động đăng nhập/đăng xuất
+ * React hook managing CIP-8 Web3 authentication, the JWT session and sign-in/sign-out actions
  *
- * @param options Tùy chọn cấu hình useHydraAuth (authManager override, client override)
- * @returns Toàn bộ reactive states và dispatch actions của GameAuthManager
+ * @param options useHydraAuth options (authManager override, client override)
+ * @returns Reactive state and actions of the GameAuthManager
  */
 export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn {
   const context = useContext(HydraOneContext);
 
-  // Khởi tạo nội bộ authManager fallback nếu không có manager từ options hoặc context
+  // Fall back to a locally created authManager when neither options nor context provide one
   const internalAuthManagerRef = useRef<GameAuthManager | null>(null);
   const client = options?.client ?? context?.client;
   if (!options?.authManager && !context?.authManager && client && !internalAuthManagerRef.current) {
@@ -39,7 +39,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
     );
   }
 
-  // 1. Khởi tạo states
+  // 1. Initialize state
   const [authState, setAuthState] = useState<AuthState>(() => authManager.state);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(() => authManager.state.error ?? null);
@@ -143,7 +143,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
 
   const refreshSession = checkSession;
 
-  // 4. Lắng nghe AUTH_STATE_CHANGED trong useEffect (SSR Safe)
+  // 4. Subscribe to AUTH_STATE_CHANGED in useEffect (SSR-safe)
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -162,7 +162,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
       try {
         unsubscribe();
       } catch {
-        // Bỏ qua lỗi unsubscribe
+        // Ignore errors thrown while unsubscribing
       }
     };
   }, [authManager]);

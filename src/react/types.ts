@@ -20,26 +20,26 @@ import type { GameAuthManager } from '../core/auth';
 import type { IStorage } from '../core/ports/storage';
 
 /**
- * Giá trị của React Context được cung cấp bởi HydraOneProvider
+ * Value of the React Context provided by HydraOneProvider
  */
 export interface HydraOneContextValue {
   /**
-   * Instance WalletBridgeClient đang được chia sẻ trong React tree
+   * WalletBridgeClient instance shared across the React tree
    */
   client: WalletBridgeClient;
 
   /**
-   * Instance GameAuthManager đang được chia sẻ trong React tree
+   * GameAuthManager instance shared across the React tree
    */
   authManager: GameAuthManager;
 
   /**
-   * Instance IStorage (storage relay hoặc local)
+   * IStorage instance (storage relay or local)
    */
   storage: IStorage;
 
   /**
-   * Cấu hình mặc định tự động làm mới số dư khi ví kết nối thành công
+   * Default for refreshing the balance automatically once the wallet connects
    */
   autoRefreshBalance?: boolean;
 }
@@ -49,41 +49,41 @@ export interface HydraOneContextValue {
  */
 export interface HydraOneProviderProps {
   /**
-   * Cho phép truyền trực tiếp một instance WalletBridgeClient đã tạo sẵn.
-   * Nếu không truyền, Provider sẽ tự tạo một instance mới.
+   * Accepts a pre-built WalletBridgeClient instance.
+   * If omitted, the provider creates a new instance.
    */
   client?: WalletBridgeClient;
 
   /**
-   * Cho phép truyền trực tiếp một instance GameAuthManager đã tạo sẵn.
-   * Nếu không truyền, Provider sẽ tự tạo một instance mới gắn với client.
+   * Accepts a pre-built GameAuthManager instance.
+   * If omitted, the provider creates a new instance bound to the client.
    */
   authManager?: GameAuthManager;
 
   /**
-   * Cho phép truyền trực tiếp instance IStorage tùy biến.
+   * Accepts a custom IStorage instance.
    */
   storage?: IStorage;
 
   /**
-   * Origin của Host Shell / App Center (ví dụ: 'https://alpha.hydraone.app').
+   * Origin of the Host Shell / App Center (for example: 'https://alpha.hydraone.app').
    */
   appCenterOrigin?: string;
 
   /**
-   * Tùy chọn cấu hình chi tiết cho WalletBridgeClient
+   * Detailed configuration options for WalletBridgeClient
    */
   options?: Partial<WalletBridgeClientOptions>;
 
   /**
-   * Tự động khởi tạo kết nối (init) ngay khi Provider mount ở client-side.
-   * Mặc định là false.
+   * Initializes the connection (init) as soon as the provider mounts on the client.
+   * Defaults to false.
    */
   autoConnect?: boolean;
 
   /**
-   * Tự động làm mới số dư khi ví kết nối thành công hoặc tài khoản thay đổi.
-   * Mặc định là true.
+   * Refreshes the balance automatically when the wallet connects or the account changes.
+   * Defaults to true.
    */
   autoRefreshBalance?: boolean;
 
@@ -94,181 +94,181 @@ export interface HydraOneProviderProps {
 }
 
 /**
- * Tùy chọn cấu hình cho hook useWallet
+ * Configuration options for the useWallet hook
  */
 export interface UseWalletOptions {
   /**
-   * Cho phép ghi đè client instance cho một component cụ thể.
-   * Nếu không truyền, hook sẽ lấy client từ HydraOneContext.
+   * Overrides the client instance for a specific component.
+   * If omitted, the hook reads the client from HydraOneContext.
    */
   client?: WalletBridgeClient;
 
   /**
-   * Tự động kết nối ví khi hook được mount ở client-side.
-   * Mặc định là false.
+   * Connects the wallet automatically when the hook mounts on the client.
+   * Defaults to false.
    */
   autoConnect?: boolean;
 
   /**
-   * Tự động làm mới số dư ví khi kết nối thành công.
-   * Mặc định là true.
+   * Refreshes the wallet balance automatically after a successful connection.
+   * Defaults to true.
    */
   autoRefreshBalance?: boolean;
 }
 
 /**
- * Giá trị trả về từ hook useWallet
+ * Value returned by the useWallet hook
  */
 export interface UseWalletReturn {
   /**
-   * Instance WalletBridgeClient đang được sử dụng
+   * WalletBridgeClient instance in use
    */
   client: WalletBridgeClient;
 
   /**
-   * Trạng thái kết nối hiện tại của Client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
    */
   connectionState: ConnectionState;
 
   /**
-   * true nếu Client đã kết nối thành công với Host hoặc extension ví
+   * true once the client has connected to the host or the wallet extension
    */
   isConnected: boolean;
 
   /**
-   * Địa chỉ ví Cardano đang hoạt động (địa chỉ đầu tiên trong usedAddresses) hoặc null
+   * Active Cardano wallet address (first entry of usedAddresses) or null
    */
   address: string | null;
 
 
   /**
-   * Danh sách toàn bộ các địa chỉ đã qua sử dụng của ví
+   * All used addresses of the wallet
    */
   usedAddresses: string[];
 
   /**
-   * Số dư ADA dạng chuỗi thập phân chính xác (không dùng ký hiệu số mũ)
+   * ADA balance as an exact decimal string (never in exponent notation)
    */
   balanceADA: string | null;
 
   /**
-   * Số dư Lovelace nguyên thủy dạng BigInt
+   * Raw Lovelace balance as a BigInt
    */
   balanceLovelace: bigint | null;
 
   /**
-   * Network ID hiện tại (0: Testnet, 1: Mainnet) hoặc null
+   * Current network ID (0: testnet, 1: mainnet) or null
    */
   networkId: number | null;
 
   /**
-   * Thông tin định danh của Host Shell (App Center)
+   * Identity information of the Host Shell (App Center)
    */
   hostInfo: HostInfo | null;
 
   /**
-   * Trạng thái tắt/bật âm thanh đồng bộ từ Host Shell
+   * Audio mute state synced from the Host Shell
    */
   isAudioMuted: boolean;
 
   /**
-   * Giao diện Dark/Light hiện tại đồng bộ từ Host Shell
+   * Current dark/light theme synced from the Host Shell
    */
   theme: ThemeMode;
 
   /**
-   * Bắt đầu bắt tay và kết nối ví với Host Shell hoặc extension ví
+   * Starts the handshake and connects the wallet to the Host Shell or wallet extension
    */
   connect: () => Promise<void>;
 
   /**
-   * Hủy kết nối ví và reset trạng thái local
+   * Disconnects the wallet and resets local state
    */
   disconnect: () => Promise<void>;
 
   /**
-   * Tải lại và cập nhật số dư ví Cardano (ADA và Lovelace)
+   * Reloads the Cardano wallet balance (ADA and Lovelace)
    */
   refreshBalance: () => Promise<string>;
 
   /**
-   * Yêu cầu người chơi ký giao dịch Cardano qua ví
+   * Asks the player to sign a Cardano transaction through the wallet
    */
   signTx: (txCbor: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
 
   /**
-   * Nộp giao dịch đã ký lên mạng lưới Cardano qua ví
+   * Submits a signed transaction to the Cardano network through the wallet
    */
   submitTx: (txCbor: string, options?: QueryOptions) => Promise<string>;
 
   /**
-   * Ký thông điệp xác thực chuẩn CIP-8
+   * Signs an authentication message following CIP-8
    */
   signData: (address: string, payloadHex: string, options?: SignOptions) => Promise<DataSignature>;
 
   /**
-   * Khóa hoặc đổi hướng màn hình thiết bị di động
+   * Locks or changes the orientation of a mobile device screen
    */
   setOrientation: (orientation: OrientationLockType) => Promise<void>;
 
   /**
-   * Kích hoạt rung phản hồi xúc giác (Haptic) trên thiết bị di động
+   * Triggers haptic feedback on a mobile device
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
 
   /**
-   * Yêu cầu Host Shell hiển thị popup nạp tiền/swap token
+   * Asks the Host Shell to show the deposit / token swap popup
    */
   requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
 
   /**
-   * Lấy thông tin tài khoản người chơi từ Host Shell
+   * Fetches the player profile from the Host Shell
    */
   getPlayerProfile: () => Promise<PlayerProfile>;
 }
 
 /**
- * Tùy chọn cấu hình cho hook useHydraAuth
+ * Configuration options for the useHydraAuth hook
  */
 export interface UseHydraAuthOptions {
   /**
-   * Cho phép ghi đè instance GameAuthManager.
-   * Nếu không truyền, hook sẽ lấy từ HydraOneContext.
+   * Overrides the GameAuthManager instance.
+   * If omitted, the hook reads it from HydraOneContext.
    */
   authManager?: GameAuthManager;
 
   /**
-   * Cho phép truyền client để khởi tạo GameAuthManager nếu không dùng Provider.
+   * Accepts a client used to build a GameAuthManager when no provider is present.
    */
   client?: WalletBridgeClient;
 
   /**
-   * Cho phép truyền storage tùy chọn nếu khởi tạo với client riêng.
+   * Accepts a custom storage when building with a dedicated client.
    */
   storage?: IStorage;
 }
 
 /**
- * Giá trị trả về từ hook useHydraAuth
+ * Value returned by the useHydraAuth hook
  */
 export interface UseHydraAuthReturn {
   /**
-   * Instance GameAuthManager đang được sử dụng
+   * GameAuthManager instance in use
    */
   authManager: GameAuthManager;
 
   /**
-   * Trạng thái xác thực Web3 hiện tại ('unauthenticated' | 'authenticating' | 'authenticated' | 'expired')
+   * Current Web3 authentication state ('unauthenticated' | 'authenticating' | 'authenticated' | 'expired')
    */
   authState: AuthState;
 
   /**
-   * true nếu người chơi đã đăng nhập thành công và JWT còn hiệu lực
+   * true when the player is signed in and the JWT is still valid
    */
   isAuthenticated: boolean;
 
   /**
-   * Mã JWT token phiên đăng nhập hoặc null
+   * Session JWT or null
    */
   token: string | null;
 
@@ -278,37 +278,37 @@ export interface UseHydraAuthReturn {
   jwtToken: string | null;
 
   /**
-   * Địa chỉ ví người dùng xác thực hoặc null
+   * Authenticated user wallet address or null
    */
   address: string | null;
 
   /**
-   * Claims trích xuất từ JWT payload hoặc null
+   * Claims extracted from the JWT payload or null
    */
   claims: Record<string, any> | null;
 
   /**
-   * Thông tin định danh người dùng (claims hoặc đối tượng chứa address)
+   * User identity (the claims, or an object containing the address)
    */
   user: Record<string, any> | null;
 
   /**
-   * true nếu JWT token hiện tại đã hết hạn
+   * true when the current JWT has expired
    */
   isExpired: boolean;
 
   /**
-   * true nếu đang trong tiến trình ký ví đăng nhập
+   * true while the sign-in wallet signature is in progress
    */
   isAuthenticating: boolean;
 
   /**
-   * Lỗi phát sinh trong quá trình đăng nhập (nếu có)
+   * Error raised during sign-in, if any
    */
   error: Error | null;
 
   /**
-   * Đăng nhập 1-click qua CIP-8 Data Signature
+   * One-click sign-in via a CIP-8 data signature
    */
   signIn: (params: SignInParams) => Promise<AuthSession>;
 
@@ -318,7 +318,7 @@ export interface UseHydraAuthReturn {
   login: (params: SignInParams) => Promise<AuthSession>;
 
   /**
-   * Đăng xuất và xóa session/token lưu trữ
+   * Signs out and clears the stored session/token
    */
   signOut: () => Promise<void>;
 
@@ -328,7 +328,7 @@ export interface UseHydraAuthReturn {
   logout: () => Promise<void>;
 
   /**
-   * Kiểm tra và phục hồi phiên đăng nhập từ bộ nhớ lưu trữ
+   * Checks storage and restores a saved session
    */
   checkSession: () => Promise<AuthState>;
 
@@ -339,46 +339,46 @@ export interface UseHydraAuthReturn {
 }
 
 /**
- * Tùy chọn cho hook useHostStorage
+ * Options for the useHostStorage hook
  */
 export interface UseHostStorageOptions {
   /**
-   * Instance IStorage tùy chỉnh
+   * Custom IStorage instance
    */
   storage?: IStorage;
 }
 
 /**
- * Giá trị trả về từ hook useHostStorage
+ * Value returned by the useHostStorage hook
  */
 export interface UseHostStorageReturn {
   /**
-   * Instance IStorage đang sử dụng
+   * IStorage instance in use
    */
   storage: IStorage;
 
   /**
-   * true nếu storage khả dụng
+   * true when storage is available
    */
   isAvailable: boolean;
 
   /**
-   * Lấy giá trị chuỗi lưu trữ theo key
+   * Reads the stored string value for a key
    */
   getItem: (key: string) => Promise<string | null>;
 
   /**
-   * Lưu giá trị chuỗi theo key
+   * Stores a string value under a key
    */
   setItem: (key: string, value: string) => Promise<void>;
 
   /**
-   * Xóa mục lưu trữ theo key
+   * Removes the stored entry for a key
    */
   removeItem: (key: string) => Promise<void>;
 
   /**
-   * Xóa toàn bộ key thuộc namespace của SDK
+   * Removes every key in the SDK namespace
    */
   clear: () => Promise<void>;
 }

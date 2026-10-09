@@ -229,7 +229,7 @@ describe('useWallet hook', () => {
     <HydraOneProvider client={client}>{children}</HydraOneProvider>
   );
 
-  it('khởi tạo với trạng thái mặc định an toàn khi chưa kết nối', () => {
+  it('starts with safe defaults before connecting', () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     expect(result.current.isConnected).toBe(false);
@@ -240,14 +240,14 @@ describe('useWallet hook', () => {
     expect(result.current.balanceLovelace).toBeNull();
   });
 
-  it('hoạt động độc lập ngoài Provider khi truyền client option', () => {
+  it('works outside a provider when a client option is passed', () => {
     const { result } = renderHook(() => useWallet({ client }));
 
     expect(result.current.client).toBe(client);
     expect(result.current.isConnected).toBe(false);
   });
 
-  it('ném lỗi rõ ràng khi gọi useWallet ngoài Provider mà không truyền client', () => {
+  it('throws a clear error when useWallet is used outside a provider without a client', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {
@@ -258,7 +258,7 @@ describe('useWallet hook', () => {
   });
 
 
-  it('kết nối thành công qua connect() và tính toán số dư BigInt', async () => {
+  it('connects via connect() and computes the BigInt balance', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -275,7 +275,7 @@ describe('useWallet hook', () => {
     expect(result.current.networkId).toBe(1);
   });
 
-  it('fallback lấy getChangeAddress khi usedAddresses rỗng', async () => {
+  it('falls back to getChangeAddress when usedAddresses is empty', async () => {
     transport.returnEmptyUsedAddresses = true;
     const { result } = renderHook(() => useWallet(), { wrapper });
 
@@ -292,7 +292,7 @@ describe('useWallet hook', () => {
     ]);
   });
 
-  it('reset trạng thái khi gọi disconnect()', async () => {
+  it('resets state on disconnect()', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -313,7 +313,7 @@ describe('useWallet hook', () => {
     expect(result.current.networkId).toBeNull();
   });
 
-  it('tôn trọng autoRefreshBalance={false} được truyền từ HydraOneProvider', async () => {
+  it('honors autoRefreshBalance={false} passed from HydraOneProvider', async () => {
     const customWrapper = ({ children }: { children: React.ReactNode }) => (
       <HydraOneProvider client={client} autoRefreshBalance={false}>
         {children}
@@ -330,12 +330,12 @@ describe('useWallet hook', () => {
     expect(result.current.address).toBe(
       'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
     );
-    // Số dư không được tự động tải khi autoRefreshBalance = false
+    // The balance must not load automatically when autoRefreshBalance = false
     expect(result.current.balanceADA).toBeNull();
     expect(result.current.balanceLovelace).toBeNull();
   });
 
-  it('đồng bộ sự kiện ACCOUNT_CHANGED từ Host message', async () => {
+  it('syncs the ACCOUNT_CHANGED event from a host message', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -357,7 +357,7 @@ describe('useWallet hook', () => {
     expect(result.current.usedAddresses).toEqual([newAddr]);
   });
 
-  it('đồng bộ sự kiện AUDIO_MUTED_CHANGED và THEME_CHANGED', async () => {
+  it('syncs the AUDIO_MUTED_CHANGED and THEME_CHANGED events', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -381,7 +381,7 @@ describe('useWallet hook', () => {
     expect(result.current.theme).toBe('light');
   });
 
-  it('thực hiện các RPC proxy methods (signTx, submitTx, signData, device controls, profile)', async () => {
+  it('runs the RPC proxy methods (signTx, submitTx, signData, device controls, profile)', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -406,15 +406,15 @@ describe('useWallet hook', () => {
     expect(profile.adaHandle).toBe('$cardanogamer');
   });
 
-  it('dọn dẹp event listeners hoàn toàn khi unmount', () => {
+  it('removes all event listeners on unmount', () => {
     const { unmount } = renderHook(() => useWallet(), { wrapper });
 
-    // Không có lỗi khi unmount
+    // No error on unmount
     expect(() => {
       unmount();
     }).not.toThrow();
 
-    // Phát sự kiện sau khi unmount không gây crash
+    // Emitting an event after unmount must not crash
     expect(() => {
       transport.simulateMessage({
         id: 'evt_unmount',

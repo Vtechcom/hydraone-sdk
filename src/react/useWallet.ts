@@ -17,10 +17,10 @@ import type {
 import type { WalletBridgeClient } from "../core/client";
 
 /**
- * Custom React Hook quản lý trạng thái kết nối ví Cardano, số dư BigInt và các hành động RPC
+ * React hook managing the Cardano wallet connection, BigInt balance and RPC actions
  *
- * @param options Tùy chọn cấu hình useWallet (client override, autoConnect, autoRefreshBalance)
- * @returns Toàn bộ reactive states, computed properties và dispatch functions
+ * @param options useWallet options (client override, autoConnect, autoRefreshBalance)
+ * @returns Reactive state, derived values and action functions
  */
 export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const context = useContext(HydraOneContext);
@@ -33,7 +33,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     );
   }
 
-  // 1. Khởi tạo states
+  // 1. Initialize state
   const [connectionState, setConnectionState] = useState<ConnectionState>(
     () => client.connectionState,
   );
@@ -53,7 +53,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
   const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? "dark");
 
-  // Ref theo dõi unmount để ngăn chặn state updates sau khi unmount
+  // Tracks unmount so state is never updated afterwards
   const isMountedRef = useRef<boolean>(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -65,7 +65,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const autoRefreshBalance =
     options?.autoRefreshBalance ?? context?.autoRefreshBalance ?? true;
 
-  // 3. Actions cập nhật mạng, số dư & địa chỉ ví
+  // 3. Actions that update network, balance and wallet address
   const refreshNetwork = useCallback(async (): Promise<number | null> => {
     try {
       if (!client.isConnected) {
@@ -111,7 +111,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
           return changeAddr;
         }
       } catch {
-        // Bỏ qua lỗi fallback change address
+        // Ignore errors from the change-address fallback
       }
       return null;
     } catch {
@@ -129,7 +129,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         return "0";
       }
 
-      // Ưu tiên getUtxos() để tính toán chính xác tổng Lovelace và ADA bằng BigInt
+      // Prefer getUtxos() so total Lovelace and ADA are computed exactly with BigInt
       const utxos = await client.getUtxos();
       if (utxos && utxos.length > 0) {
         const lovelace = getTotalLovelace(utxos);
@@ -141,7 +141,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         return adaStr;
       }
 
-      // Fallback gọi getBalance() nếu utxos trả về rỗng
+      // Fall back to getBalance() when no UTxOs are returned
       const rawBalance = await client.getBalance();
       const lovelace = getTotalLovelace(rawBalance ? [rawBalance] : []);
       const adaStr = getAdaBalance(rawBalance ? [rawBalance] : []);
@@ -179,7 +179,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       try {
         await refreshBalance();
       } catch {
-        // Bắt lỗi an toàn
+        // Ignore errors
       }
     }
   }, [
@@ -203,7 +203,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     }
   }, [client]);
 
-  // 5. Proxy methods bọc trong useCallback
+  // 5. Proxy methods wrapped in useCallback
   const signTx = useCallback(
     async (
       txCbor: string,
@@ -258,7 +258,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     return client.getPlayerProfile();
   }, [client]);
 
-  // 6. Đăng ký sự kiện và Auto-cleanup trong useEffect (SSR Safe)
+  // 6. Register event listeners with automatic cleanup in useEffect (SSR-safe)
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -354,7 +354,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     );
     cleanups.push(client.on("DISCONNECTED", onDisconnected));
 
-    // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
+    // Sync current state if the client was already connected
     if (client.isConnected) {
       refreshNetwork().catch(() => {});
       refreshAddress().catch(() => {});
@@ -372,7 +372,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         try {
           cleanup();
         } catch {
-          // Bỏ qua lỗi khi hủy listener
+          // Ignore errors thrown while removing a listener
         }
       }
     };

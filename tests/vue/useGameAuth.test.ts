@@ -6,7 +6,7 @@ import { InMemoryStorageAdapter } from '../../src/core/adapters/storage';
 import type { IAuthSignerClient } from '../../src/core/types';
 
 /**
- * Mock IAuthSignerClient phục vụ test GameAuthManager
+ * Mock IAuthSignerClient for GameAuthManager tests
  */
 class MockAuthClient implements IAuthSignerClient {
   public address = 'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
@@ -24,7 +24,7 @@ class MockAuthClient implements IAuthSignerClient {
 }
 
 /**
- * Tạo mock JWT token với expiration mong muốn
+ * Create a mock JWT with the desired expiration
  */
 function createMockJwt(claims: Record<string, any>): string {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -47,7 +47,7 @@ describe('useGameAuth', () => {
       client: mockClient,
       storage,
       exchangeToken: async () => {
-        // Tạo JWT còn hạn 1 giờ
+        // Create a JWT valid for one hour
         const exp = Math.floor(Date.now() / 1000) + 3600;
         return createMockJwt({
           sub: 'player_123',
@@ -64,7 +64,7 @@ describe('useGameAuth', () => {
     delete (globalThis as any).window;
   });
 
-  it('khởi tạo với trạng thái chưa đăng nhập an toàn', () => {
+  it('starts in a safe signed-out state', () => {
     const { isAuthenticated, jwtToken, address, claims, isExpired } = useGameAuth({ authManager });
 
     expect(isAuthenticated.value).toBe(false);
@@ -74,7 +74,7 @@ describe('useGameAuth', () => {
     expect(isExpired.value).toBe(true);
   });
 
-  it('đăng nhập thành công với signIn(), cập nhật reactive isAuthenticated, jwtToken, claims và isExpired', async () => {
+  it('signs in with signIn() and updates the reactive isAuthenticated, jwtToken, claims and isExpired', async () => {
     const { isAuthenticated, jwtToken, address, claims, isExpired, signIn } = useGameAuth({ authManager });
 
     const session = await signIn({ challenge: 'Sign into HydraOne 2026' });
@@ -92,14 +92,14 @@ describe('useGameAuth', () => {
     expect(isExpired.value).toBe(false);
   });
 
-  it('hỗ trợ alias login() tương đương signIn()', async () => {
+  it('supports login() as an alias of signIn()', async () => {
     const { isAuthenticated, login } = useGameAuth({ authManager });
 
     await login({ challenge: 'Login Challenge' });
     expect(isAuthenticated.value).toBe(true);
   });
 
-  it('đăng xuất với signOut() hoặc logout() xóa sạch session và đặt lại reactive refs', async () => {
+  it('signOut() or logout() clears the session and resets the reactive refs', async () => {
     const { isAuthenticated, jwtToken, address, claims, isExpired, login, logout } = useGameAuth({
       authManager,
     });
@@ -115,7 +115,7 @@ describe('useGameAuth', () => {
     expect(isExpired.value).toBe(true);
   });
 
-  it('tính toán isExpired = true khi token đã quá hạn hoặc null', () => {
+  it('computes isExpired = true when the token is expired or null', () => {
     const { isExpired, jwtToken } = useGameAuth({ authManager });
     expect(isExpired.value).toBe(true);
 
@@ -136,7 +136,7 @@ describe('useGameAuth', () => {
     expect(isExpired.value).toBe(false);
   });
 
-  it('kiểm tra checkSession() làm mới trạng thái phiên từ storage', async () => {
+  it('checkSession() refreshes the session state from storage', async () => {
     const validExp = Math.floor(Date.now() / 1000) + 3600;
     const existingToken = createMockJwt({ sub: 'persisted_user', exp: validExp });
     await storage.setItem('hydra:sdk:auth:token', existingToken);
@@ -150,7 +150,7 @@ describe('useGameAuth', () => {
     expect(jwtToken.value).toBe(existingToken);
   });
 
-  it('tự động dọn dẹp listener khi effectScope bị dừng (onScopeDispose)', async () => {
+  it('removes the listener automatically when the effectScope stops (onScopeDispose)', async () => {
     const scope = effectScope();
     let capturedAuth: ReturnType<typeof useGameAuth>;
 
@@ -161,17 +161,17 @@ describe('useGameAuth', () => {
     await capturedAuth!.signIn({ challenge: 'Test dispose' });
     expect(capturedAuth!.isAuthenticated.value).toBe(true);
 
-    // Dừng reactive scope
+    // Stop the reactive scope
     scope.stop();
 
-    // Gọi signOut trực tiếp trên authManager ngoài scope
+    // Call signOut directly on the authManager, outside the scope
     await authManager.signOut();
 
-    // capturedAuth không nhận cập nhật nữa do đã unsubscribe
+    // capturedAuth receives no more updates because it has unsubscribed
     expect(capturedAuth!.isAuthenticated.value).toBe(true);
   });
 
-  it('an toàn tuyệt đối trong môi trường SSR (window is undefined) và không gắn listeners vào authManager', () => {
+  it('is safe under SSR (window is undefined) and attaches no listeners to the authManager', () => {
     const originalWindow = globalThis.window;
     try {
       (globalThis as any).window = undefined;
@@ -186,7 +186,7 @@ describe('useGameAuth', () => {
       expect(composable.jwtToken.value).toBeNull();
       expect(composable.isExpired.value).toBe(true);
 
-      // Xác minh không có listener nào bị rò rỉ vào authManager trong môi trường SSR
+      // Verify that no listener leaks into the authManager under SSR
       const listeners = (ssrAuthManager as any).listeners as Set<any>;
       expect(listeners.size).toBe(0);
     } finally {
@@ -194,7 +194,7 @@ describe('useGameAuth', () => {
     }
   });
 
-  it('tôn trọng options.client riêng biệt khi truyền vào useGameAuth', () => {
+  it('honors a dedicated options.client passed to useGameAuth', () => {
     const customClient = new MockAuthClient();
     customClient.address = 'addr1qcustomclient99999999999999999999999999999999999999999999999999999';
 
@@ -202,7 +202,7 @@ describe('useGameAuth', () => {
     expect((customAuthManager as any).client).toBe(customClient);
   });
 
-  it('ghi nhận lỗi vào error.value khi signIn() thất bại', async () => {
+  it('records the error in error.value when signIn() fails', async () => {
     const { error, signIn } = useGameAuth({ authManager });
     expect(error.value).toBeNull();
 

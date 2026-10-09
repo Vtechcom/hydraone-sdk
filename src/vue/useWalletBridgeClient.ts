@@ -19,12 +19,12 @@ import type {
 } from './types';
 
 /**
- * Biến lưu instance WalletBridgeClient mặc định dùng chung khi không truyền instance riêng
+ * Shared default WalletBridgeClient used when no instance is passed
  */
 let sharedClientInstance: WalletBridgeClient | null = null;
 
 /**
- * Lấy hoặc khởi tạo instance WalletBridgeClient mặc định
+ * Returns the shared default WalletBridgeClient, creating it on first use
  */
 export function getSharedWalletBridgeClient(
   options?: UseWalletBridgeClientOptions
@@ -40,7 +40,7 @@ export function getSharedWalletBridgeClient(
 }
 
 /**
- * Thiết lập instance WalletBridgeClient mặc định
+ * Sets the shared default WalletBridgeClient
  */
 export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): void {
   sharedClientInstance = client;
@@ -48,23 +48,23 @@ export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): 
 
 
 /**
- * Headless Composable useWalletBridgeClient cho Vue 3.5+ và Nuxt 3 / Nuxt 4
+ * Headless useWalletBridgeClient composable for Vue 3.5+ and Nuxt 3 / Nuxt 4
  *
- * Cung cấp reactive state mượt mà quanh WalletBridgeClient, hỗ trợ tính toán số dư ADA
- * chuẩn xác bằng BigInt, an toàn tuyệt đối khi chạy Nuxt SSR và tự động dọn dẹp listeners
- * chống rò rỉ bộ nhớ qua onScopeDispose.
+ * Wraps WalletBridgeClient in reactive state and computes the ADA balance
+ * exactly with BigInt. It is safe under Nuxt SSR and removes its listeners
+ * through onScopeDispose to avoid memory leaks.
  *
- * @param options Tùy chọn cấu hình composable
- * @returns Object chứa các reactive refs, computed properties và actions
+ * @param options Composable options
+ * @returns Object with reactive refs, computed values and actions
  */
 export function useWalletBridgeClient(
   options?: UseWalletBridgeClientOptions
 ): UseWalletBridgeClientReturn {
-  // 1. Xác định instance client (ưu tiên options.client -> shared client)
+  // 1. Resolve the client (options.client, then the shared client)
   const client: WalletBridgeClient =
     options?.client ?? getSharedWalletBridgeClient(options);
 
-  // 2. Khởi tạo các reactive state refs với giá trị ban đầu an toàn
+  // 2. Create the reactive refs with safe initial values
   const connectionState = ref<ConnectionState>(client.connectionState);
   const isConnected = ref<boolean>(client.isConnected);
   const address = ref<string | null>(null);
@@ -78,7 +78,7 @@ export function useWalletBridgeClient(
   const error = ref<Error | null>(null);
 
 
-  // 4. Các hàm cập nhật dữ liệu nội bộ
+  // 4. Internal state update helpers
   const refreshAddress = async (): Promise<string | null> => {
     try {
       if (!client.isConnected) {
@@ -98,7 +98,7 @@ export function useWalletBridgeClient(
           return changeAddr;
         }
       } catch {
-        // Bỏ qua lỗi fallback change address
+        // Ignore errors from the change-address fallback
       }
       return null;
     } catch {
@@ -113,7 +113,7 @@ export function useWalletBridgeClient(
         balanceLovelace.value = null;
         return '0';
       }
-      // Ưu tiên getUtxos() để tính toán chính xác tổng Lovelace và ADA
+      // Prefer getUtxos() so total Lovelace and ADA are computed exactly
       const utxos = await client.getUtxos();
       if (utxos && utxos.length > 0) {
         const lovelace = getTotalLovelace(utxos);
@@ -123,7 +123,7 @@ export function useWalletBridgeClient(
         return adaStr;
       }
 
-      // Fallback gọi getBalance() nếu utxos trả về rỗng
+      // Fall back to getBalance() when no UTxOs are returned
       const rawBalance = await client.getBalance();
       const lovelace = getTotalLovelace(rawBalance ? [rawBalance] : []);
       const adaStr = getAdaBalance(rawBalance ? [rawBalance] : []);
@@ -136,7 +136,7 @@ export function useWalletBridgeClient(
     }
   };
 
-  // 5. Đăng ký các event listeners theo dõi trạng thái từ Client (chỉ chạy ở client-side để tránh rò rỉ bộ nhớ SSR)
+  // 5. Register client event listeners (client only, so SSR never leaks listeners)
   const cleanups: Array<() => void> = [];
 
   if (typeof window !== 'undefined') {
@@ -197,7 +197,7 @@ export function useWalletBridgeClient(
       }
     };
 
-    // Gắn listeners vào client
+    // Attach listeners to the client
     cleanups.push(client.on('HOST_ACK', onHostAck));
     cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
     cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
@@ -206,7 +206,7 @@ export function useWalletBridgeClient(
     cleanups.push(client.onThemeChanged((newTheme) => { theme.value = newTheme; }));
     cleanups.push(client.on('DISCONNECTED', onDisconnected));
 
-    // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
+    // Sync current state if the client was already connected
     if (client.isConnected) {
       refreshAddress().catch(() => {});
       if (options?.autoRefreshBalance !== false) {
@@ -215,21 +215,21 @@ export function useWalletBridgeClient(
     }
   }
 
-  // 6. Tự động dọn dẹp listeners khi reactive scope hoặc component bị hủy (onScopeDispose)
+  // 6. Remove listeners when the reactive scope or component is disposed (onScopeDispose)
   if (getCurrentScope()) {
     onScopeDispose(() => {
       for (const cleanup of cleanups) {
         try {
           cleanup();
         } catch {
-          // Bỏ qua lỗi khi cleanup
+          // Ignore errors thrown during cleanup
         }
       }
       cleanups.length = 0;
     });
   }
 
-  // 7. Actions điều khiển
+  // 7. Control actions
   const init = async (): Promise<void> => {
     try {
       error.value = null;
@@ -248,7 +248,7 @@ export function useWalletBridgeClient(
         try {
           await refreshBalance();
         } catch (balErr: any) {
-          // Ghi nhận lỗi lấy số dư vào ref error nhưng không làm crash trạng thái kết nối đã handshake thành công
+          // Record balance errors in the error ref without breaking an already successful handshake
           error.value = balErr instanceof Error ? balErr : new Error(String(balErr));
         }
       }
@@ -327,12 +327,12 @@ export function useWalletBridgeClient(
     return client.getPlayerProfile();
   };
 
-  // 8. Tự động kết nối ở client-side khi component được mount (chỉ chạy trong Vue component setup và trên client)
+  // 8. Auto-connect on mount (only inside component setup, on the client)
   if (typeof window !== 'undefined' && getCurrentInstance()) {
     onMounted(() => {
       if (options?.autoConnect) {
         init().catch((err) => {
-          // Ghi nhận lỗi vào ref nhưng không làm crash component lifecycle
+          // Record the error in the ref without crashing the component lifecycle
           error.value = err instanceof Error ? err : new Error(String(err));
         });
       }

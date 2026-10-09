@@ -7,12 +7,12 @@ import { getSharedWalletBridgeClient } from './useWalletBridgeClient';
 import type { UseGameAuthOptions, UseGameAuthReturn } from './types';
 
 /**
- * Biến lưu instance GameAuthManager mặc định dùng chung
+ * Shared default GameAuthManager instance
  */
 let sharedAuthManagerInstance: GameAuthManager | null = null;
 
 /**
- * Lấy hoặc khởi tạo instance GameAuthManager mặc định
+ * Returns the shared default GameAuthManager, creating it on first use
  */
 export function getSharedGameAuthManager(options?: UseGameAuthOptions): GameAuthManager {
   if (!sharedAuthManagerInstance) {
@@ -31,23 +31,23 @@ export function getSharedGameAuthManager(options?: UseGameAuthOptions): GameAuth
 }
 
 /**
- * Thiết lập instance GameAuthManager mặc định
+ * Sets the shared default GameAuthManager
  */
 export function setSharedGameAuthManager(authManager: GameAuthManager | null): void {
   sharedAuthManagerInstance = authManager;
 }
 
 /**
- * Headless Composable useGameAuth cho Vue 3.5+ và Nuxt 3 / Nuxt 4
+ * Headless useGameAuth composable for Vue 3.5+ and Nuxt 3 / Nuxt 4
  *
- * Quản lý phiên đăng nhập 1-click Web3 CIP-8, lưu trữ JWT an toàn,
- * tự động phản ánh trạng thái hạn dùng của token và cleanup chống rò rỉ bộ nhớ.
+ * Manages the one-click CIP-8 Web3 session, keeps the JWT in storage,
+ * reflects token expiry reactively and cleans up listeners to avoid memory leaks.
  *
- * @param options Tùy chọn cấu hình composable
- * @returns Object chứa các reactive refs, computed properties và actions
+ * @param options Composable options
+ * @returns Object with reactive refs, computed values and actions
  */
 export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
-  // 1. Xác định instance GameAuthManager (ưu tiên authManager -> client riêng -> shared manager)
+  // 1. Resolve the GameAuthManager (authManager option, then a dedicated client, then the shared manager)
   const authManager: GameAuthManager =
     options?.authManager ??
     (options?.client
@@ -60,7 +60,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
         })
       : getSharedGameAuthManager(options));
 
-  // 2. Lấy trạng thái hiện tại
+  // 2. Read the current state
   const initialState: AuthState = authManager.state;
 
   const isAuthenticated = ref<boolean>(initialState.isAuthenticated);
@@ -69,7 +69,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
   const claims = ref<Record<string, any> | null>(initialState.claims ?? null);
   const error = ref<Error | null>(initialState.error ?? null);
 
-  // 3. Computed kiểm tra hạn sử dụng JWT
+  // 3. Computed JWT expiry check
   const isExpired: ComputedRef<boolean> = computed(() => {
     if (!jwtToken.value) {
       return true;
@@ -77,7 +77,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
     return isJwtExpired(jwtToken.value);
   });
 
-  // 4. Hàm đồng bộ trạng thái nội bộ từ AuthState
+  // 4. Copy AuthState into the reactive refs
   const syncState = (state: AuthState): void => {
     isAuthenticated.value = state.isAuthenticated;
     jwtToken.value = state.token;
@@ -86,7 +86,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
     error.value = state.error ?? null;
   };
 
-  // 5. Đăng ký lắng nghe sự kiện AUTH_STATE_CHANGED từ AuthManager (chỉ chạy ở client-side để tránh rò rỉ SSR)
+  // 5. Subscribe to AUTH_STATE_CHANGED (client only, so SSR never leaks listeners)
   let unsubscribe: (() => void) | undefined;
   if (typeof window !== 'undefined') {
     unsubscribe = authManager.onAuthStateChanged((newState: AuthState) => {
@@ -94,20 +94,20 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
     });
   }
 
-  // 6. Tự động dọn dẹp listener khi reactive scope hoặc component bị hủy (onScopeDispose)
+  // 6. Remove the listener when the reactive scope or component is disposed (onScopeDispose)
   if (getCurrentScope()) {
     onScopeDispose(() => {
       if (unsubscribe) {
         try {
           unsubscribe();
         } catch {
-          // Bỏ qua lỗi khi unsubscribe
+          // Ignore errors thrown while unsubscribing
         }
       }
     });
   }
 
-  // 7. Actions đăng nhập, đăng xuất và kiểm tra session
+  // 7. Sign-in, sign-out and session-check actions
   const signIn = async (params: SignInParams): Promise<AuthSession> => {
     try {
       error.value = null;
@@ -153,7 +153,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
     }
   };
 
-  // 8. Tự động kiểm tra session khi mounted ở client-side trong component
+  // 8. Check the saved session on mount (client only)
   if (typeof window !== 'undefined' && getCurrentInstance()) {
     onMounted(() => {
       if (options?.autoCheckSession !== false) {

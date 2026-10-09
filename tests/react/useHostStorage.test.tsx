@@ -17,7 +17,7 @@ describe('useHostStorage hook', () => {
     <HydraOneProvider storage={storage}>{children}</HydraOneProvider>
   );
 
-  it('hoạt động chuẩn xác bên trong HydraOneProvider', async () => {
+  it('works inside HydraOneProvider', async () => {
     const { result } = renderHook(() => useHostStorage(), { wrapper });
 
     expect(result.current.isAvailable).toBe(true);
@@ -37,7 +37,7 @@ describe('useHostStorage hook', () => {
     expect(deleted).toBeNull();
   });
 
-  it('hỗ trợ xóa toàn bộ với clear()', async () => {
+  it('clears everything with clear()', async () => {
     const { result } = renderHook(() => useHostStorage(), { wrapper });
 
     await act(async () => {
@@ -56,7 +56,7 @@ describe('useHostStorage hook', () => {
     expect(await result.current.getItem('hydra:sdk:k2')).toBeNull();
   });
 
-  it('hoạt động độc lập ngoài Provider khi truyền storage option', async () => {
+  it('works outside a provider when a storage option is passed', async () => {
     const customStorage = new InMemoryStorageAdapter();
     const { result } = renderHook(() => useHostStorage({ storage: customStorage }));
 
@@ -68,7 +68,7 @@ describe('useHostStorage hook', () => {
     expect(await customStorage.getItem('hydra:sdk:test')).toBe('hello');
   });
 
-  it('fallback an toàn khi gọi ngoài Provider mà không truyền storage', async () => {
+  it('falls back safely outside a provider when no storage is passed', async () => {
     const { result } = renderHook(() => useHostStorage());
 
     expect(result.current.isAvailable).toBe(true);

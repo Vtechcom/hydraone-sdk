@@ -5,10 +5,10 @@ import type { IStorage } from '../core/ports/storage';
 import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapters/storage';
 
 /**
- * Custom React Hook hỗ trợ thao tác lưu trữ phân tầng / Host Storage Relay
+ * React hook for tiered storage access / the Host Storage Relay
  *
- * @param options Tùy chọn cấu hình storage override
- * @returns Các hàm bất đồng bộ getItem, setItem, removeItem, clear và trạng thái isAvailable
+ * @param options Storage override options
+ * @returns Async getItem, setItem, removeItem and clear functions plus the isAvailable flag
  */
 export function useHostStorage(options?: UseHostStorageOptions): UseHostStorageReturn {
   const context = useContext(HydraOneContext);

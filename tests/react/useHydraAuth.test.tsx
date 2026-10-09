@@ -75,7 +75,7 @@ class MockTransport implements ITransport {
   }
 }
 
-// Giả lập JWT token hợp lệ chưa hết hạn (exp = hiện tại + 3600s)
+// Build a valid, unexpired JWT (exp = now + 3600s)
 function createMockJwt(payload: Record<string, any> = {}): string {
   const header = { alg: 'HS256', typ: 'JWT' };
   const claims = {
@@ -116,7 +116,7 @@ describe('useHydraAuth hook', () => {
     </HydraOneProvider>
   );
 
-  it('khởi tạo với trạng thái unauthenticated mặc định', () => {
+  it('starts in the default unauthenticated state', () => {
     const { result } = renderHook(() => useHydraAuth(), { wrapper });
 
     expect(result.current.isAuthenticated).toBe(false);
@@ -129,14 +129,14 @@ describe('useHydraAuth hook', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('hoạt động độc lập ngoài Provider khi truyền authManager option', () => {
+  it('works outside a provider when an authManager option is passed', () => {
     const { result } = renderHook(() => useHydraAuth({ authManager }));
 
     expect(result.current.authManager).toBe(authManager);
     expect(result.current.isAuthenticated).toBe(false);
   });
 
-  it('ném lỗi rõ ràng khi gọi useHydraAuth ngoài Provider mà không truyền authManager/client', () => {
+  it('throws a clear error when useHydraAuth is used outside a provider without an authManager/client', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {
@@ -146,7 +146,7 @@ describe('useHydraAuth hook', () => {
     spy.mockRestore();
   });
 
-  it('đăng nhập thành công qua signIn() và cập nhật token, address, claims', async () => {
+  it('signs in via signIn() and updates token, address and claims', async () => {
     const { result } = renderHook(() => useHydraAuth(), { wrapper });
 
     await act(async () => {
@@ -168,7 +168,7 @@ describe('useHydraAuth hook', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('đăng xuất và xóa phiên qua signOut()', async () => {
+  it('signs out and clears the session via signOut()', async () => {
     const { result } = renderHook(() => useHydraAuth(), { wrapper });
 
     await act(async () => {
@@ -188,7 +188,7 @@ describe('useHydraAuth hook', () => {
     expect(result.current.isExpired).toBe(true);
   });
 
-  it('lưu lỗi và ném lại lỗi khi signIn() thất bại do user reject, sau đó xóa lỗi khi đăng nhập lại thành công', async () => {
+  it('stores and rethrows the error when signIn() fails because the user rejected, then clears it after a successful retry', async () => {
     transport.shouldRejectSignData = true;
     const { result } = renderHook(() => useHydraAuth(), { wrapper });
 
@@ -206,7 +206,7 @@ describe('useHydraAuth hook', () => {
     expect(result.current.error).toBeTruthy();
     expect(result.current.isAuthenticating).toBe(false);
 
-    // Thử lại khi người dùng đồng ý ký
+    // Retry once the user agrees to sign
     transport.shouldRejectSignData = false;
     await act(async () => {
       await result.current.signIn({ challenge: 'nonce_retry_success' });
@@ -216,7 +216,7 @@ describe('useHydraAuth hook', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('dọn dẹp event listener khi unmount', () => {
+  it('removes event listeners on unmount', () => {
     const { unmount } = renderHook(() => useHydraAuth(), { wrapper });
 
     expect(() => {

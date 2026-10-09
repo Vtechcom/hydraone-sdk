@@ -8,13 +8,13 @@ import { PostMessageTransport } from '../core/adapters/post-message-transport';
 import type { WalletBridgeClientOptions } from '../core/types';
 
 /**
- * React Context lưu trữ instance WalletBridgeClient, GameAuthManager và IStorage
+ * React Context holding the WalletBridgeClient, GameAuthManager and IStorage instances
  */
 export const HydraOneContext = createContext<HydraOneContextValue | null>(null);
 HydraOneContext.displayName = 'HydraOneContext';
 
 /**
- * Hook nội bộ trích xuất HydraOneContext, ném lỗi rõ ràng nếu dùng ngoài Provider
+ * Internal hook that reads HydraOneContext; throws a clear error when used outside the provider
  */
 export function useHydraOneContext(componentName = 'useHydraOneContext'): HydraOneContextValue {
   const context = useContext(HydraOneContext);
@@ -25,7 +25,7 @@ export function useHydraOneContext(componentName = 'useHydraOneContext'): HydraO
 }
 
 /**
- * Component Provider cung cấp WalletBridgeClient, GameAuthManager và IStorage cho toàn bộ React Component Tree
+ * Provider that exposes WalletBridgeClient, GameAuthManager and IStorage to the whole React tree
  */
 export function HydraOneProvider({
   client: clientProp,
@@ -37,7 +37,7 @@ export function HydraOneProvider({
   autoRefreshBalance = true,
   children,
 }: HydraOneProviderProps): React.JSX.Element {
-  // Tạo hoặc giữ instance storage ổn định
+  // Create the storage instance once and keep it stable across renders
   const storageRef = useRef<IStorage | null>(null);
   if (!storageRef.current) {
     if (storageProp) {
@@ -51,7 +51,7 @@ export function HydraOneProvider({
   }
   const activeStorage = storageProp ?? storageRef.current;
 
-  // Tạo hoặc giữ instance client ổn định
+  // Create the client instance once and keep it stable across renders
   const clientRef = useRef<WalletBridgeClient | null>(null);
   if (!clientRef.current) {
     if (clientProp) {
@@ -71,7 +71,7 @@ export function HydraOneProvider({
   }
   const activeClient = clientProp ?? clientRef.current;
 
-  // Tạo hoặc giữ instance authManager ổn định
+  // Create the authManager instance once and keep it stable across renders
   const authManagerRef = useRef<GameAuthManager | null>(null);
   if (!authManagerRef.current) {
     if (authManagerProp) {
@@ -85,7 +85,7 @@ export function HydraOneProvider({
   }
   const activeAuthManager = authManagerProp ?? authManagerRef.current;
 
-  // SSR Safe autoConnect: chỉ chạy trên Client trong useEffect
+  // SSR-safe autoConnect: runs only on the client, inside useEffect
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -93,7 +93,7 @@ export function HydraOneProvider({
 
     if (autoConnect) {
       activeClient.init().catch(() => {
-        // Bắt lỗi an toàn khi autoConnect chạy ngầm
+        // Ignore errors from the background autoConnect
       });
     }
   }, [activeClient, autoConnect]);

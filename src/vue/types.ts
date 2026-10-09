@@ -19,241 +19,241 @@ import type { WalletBridgeClient } from '../core/client';
 import type { GameAuthManager } from '../core/auth';
 
 /**
- * Tùy chọn cấu hình cho composable useWalletBridgeClient
+ * Configuration options for the useWalletBridgeClient composable
  */
 export interface UseWalletBridgeClientOptions extends Partial<WalletBridgeClientOptions> {
   /**
-   * Tùy chọn truyền instance WalletBridgeClient có sẵn.
-   * Nếu không truyền, composable sẽ tạo instance mới hoặc sử dụng client mặc định.
+   * Accepts an existing WalletBridgeClient instance.
+   * If omitted, the composable creates a new instance or uses the shared default client.
    */
   client?: WalletBridgeClient;
 
   /**
-   * Tự động khởi tạo kết nối (init/handshake) khi component được mount ở client-side.
-   * Mặc định là false.
+   * Initializes the connection (init/handshake) when the component mounts on the client.
+   * Defaults to false.
    */
   autoConnect?: boolean;
 
   /**
-   * Tự động làm mới số dư khi ví kết nối thành công hoặc tài khoản thay đổi.
-   * Mặc định là true.
+   * Refreshes the balance automatically when the wallet connects or the account changes.
+   * Defaults to true.
    */
   autoRefreshBalance?: boolean;
 }
 
 /**
- * Giá trị trả về từ composable useWalletBridgeClient
+ * Value returned by the useWalletBridgeClient composable
  */
 export interface UseWalletBridgeClientReturn {
   /**
-   * Instance WalletBridgeClient đang được sử dụng
+   * WalletBridgeClient instance in use
    */
   client: WalletBridgeClient;
 
   /**
-   * Trạng thái kết nối hiện tại của Client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
    */
   connectionState: Ref<ConnectionState>;
 
   /**
-   * true nếu Client đã kết nối thành công với Host hoặc extension ví
+   * true once the client has connected to the host or the wallet extension
    */
   isConnected: Ref<boolean>;
 
   /**
-   * Địa chỉ ví Cardano đang hoạt động (địa chỉ đầu tiên trong usedAddresses) hoặc null
+   * Active Cardano wallet address (first entry of usedAddresses) or null
    */
   address: Ref<string | null>;
 
 
   /**
-   * Danh sách toàn bộ các địa chỉ đã qua sử dụng của ví
+   * All used addresses of the wallet
    */
   usedAddresses: Ref<string[]>;
 
   /**
-   * Số dư ADA dạng chuỗi thập phân chính xác (không dùng ký hiệu số mũ)
+   * ADA balance as an exact decimal string (never in exponent notation)
    */
   balanceADA: Ref<string | null>;
 
   /**
-   * Số dư Lovelace nguyên thủy dạng BigInt
+   * Raw Lovelace balance as a BigInt
    */
   balanceLovelace: Ref<bigint | null>;
 
   /**
-   * Network ID hiện tại (0: Testnet, 1: Mainnet) hoặc null
+   * Current network ID (0: testnet, 1: mainnet) or null
    */
   networkId: Ref<number | null>;
 
   /**
-   * Thông tin định danh của Host Shell (App Center)
+   * Identity information of the Host Shell (App Center)
    */
   hostInfo: Ref<HostInfo | null>;
 
   /**
-   * Trạng thái tắt/bật âm thanh đồng bộ từ Host Shell
+   * Audio mute state synced from the Host Shell
    */
   isAudioMuted: Ref<boolean>;
 
   /**
-   * Chế độ giao diện (Dark / Light) đồng bộ từ Host Shell
+   * Theme (dark / light) synced from the Host Shell
    */
   theme: Ref<ThemeMode | null>;
 
   /**
-   * Lỗi gần nhất phát sinh trong quá trình kết nối hoặc gọi RPC
+   * Most recent error raised while connecting or calling RPC
    */
   error: Ref<Error | null>;
 
   // --- Actions ---
 
   /**
-   * Khởi tạo kết nối bắt tay (handshake) với Host Shell hoặc extension ví
+   * Starts the handshake with the Host Shell or wallet extension
    */
   init: () => Promise<void>;
 
   /**
-   * Alias tương đương với init()
+   * Alias for init()
    */
   connect: () => Promise<void>;
 
   /**
-   * Ngắt kết nối và giải phóng trạng thái ví
+   * Disconnects and releases wallet state
    */
   disconnect: () => void;
 
   /**
-   * Làm mới số dư ví từ UTxOs hoặc getBalance
+   * Refreshes the wallet balance from UTxOs or getBalance
    */
   refreshBalance: () => Promise<string>;
 
   /**
-   * Làm mới danh sách địa chỉ ví đã sử dụng
+   * Refreshes the list of used wallet addresses
    */
   refreshAddress: () => Promise<string | null>;
 
   /**
-   * Yêu cầu ví ký giao dịch (signTx)
+   * Asks the wallet to sign a transaction (signTx)
    */
   signTx: (tx: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
 
   /**
-   * Yêu cầu Host hoặc ví submit giao dịch lên Cardano network
+   * Asks the host or wallet to submit a transaction to the Cardano network
    */
   submitTx: (tx: string, options?: QueryOptions) => Promise<string>;
 
   /**
-   * Ký xác thực dữ liệu theo chuẩn CIP-8
+   * Signs data following CIP-8
    */
   signData: (addr: string, payload: string, options?: SignOptions) => Promise<DataSignature>;
 
   /**
-   * Yêu cầu khóa hướng màn hình qua Host Shell
+   * Asks the Host Shell to lock the screen orientation
    */
   setOrientation: (orientation: OrientationLockType) => Promise<void>;
 
   /**
-   * Kích hoạt rung phản hồi xúc giác (Haptic Feedback) qua Host Shell
+   * Triggers haptic feedback through the Host Shell
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
 
   /**
-   * Yêu cầu Host hiển thị popup/modal nạp tiền hoặc swap ADA
+   * Asks the host to show the deposit / ADA swap modal
    */
   requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
 
   /**
-   * Lấy thông tin profile người chơi từ App Center Host
+   * Fetches the player profile from the App Center host
    */
   getPlayerProfile: () => Promise<PlayerProfile>;
 }
 
 /**
- * Tùy chọn cấu hình cho composable useGameAuth
+ * Configuration options for the useGameAuth composable
  */
 export interface UseGameAuthOptions {
   /**
-   * Instance GameAuthManager có sẵn.
-   * Nếu không truyền, composable sẽ tạo instance mới hoặc sử dụng instance mặc định.
+   * Existing GameAuthManager instance.
+   * If omitted, the composable creates a new instance or uses the shared default.
    */
   authManager?: GameAuthManager;
 
   /**
-   * Client sử dụng khi khởi tạo GameAuthManager mới
+   * Client used when a new GameAuthManager is created
    */
   client?: WalletBridgeClient;
 
   /**
-   * Tự động kiểm tra phiên xác thực (checkSession) khi component được mount ở client-side.
-   * Mặc định là true.
+   * Checks the saved session (checkSession) when the component mounts on the client.
+   * Defaults to true.
    */
   autoCheckSession?: boolean;
 }
 
 /**
- * Giá trị trả về từ composable useGameAuth
+ * Value returned by the useGameAuth composable
  */
 export interface UseGameAuthReturn {
   /**
-   * Instance GameAuthManager đang được sử dụng
+   * GameAuthManager instance in use
    */
   authManager: GameAuthManager;
 
   /**
-   * Trạng thái đã xác thực và có phiên JWT hợp lệ hay chưa
+   * Whether the user is authenticated with a valid JWT session
    */
   isAuthenticated: Ref<boolean>;
 
   /**
-   * Chuỗi JWT token hiện tại hoặc null
+   * Current JWT string or null
    */
   jwtToken: Ref<string | null>;
 
   /**
-   * Địa chỉ ví Cardano gắn liền với phiên đăng nhập hiện tại
+   * Cardano wallet address bound to the current session
    */
   address: Ref<string | null>;
 
   /**
-   * Toàn bộ payload claims được giải mã từ JWT token
+   * All claims decoded from the JWT payload
    */
   claims: Ref<Record<string, any> | null>;
 
   /**
-   * Computed kiểm tra xem JWT token hiện tại đã hết hạn hay chưa
+   * Computed flag telling whether the current JWT has expired
    */
   isExpired: ComputedRef<boolean>;
 
   /**
-   * Lỗi phát sinh trong quá trình đăng nhập hoặc xác thực
+   * Error raised during sign-in or authentication
    */
   error: Ref<Error | null>;
 
   // --- Actions ---
 
   /**
-   * Thực hiện đăng nhập 1-click Web3 CIP-8
+   * Performs the one-click CIP-8 Web3 sign-in
    */
   signIn: (params: SignInParams) => Promise<AuthSession>;
 
   /**
-   * Alias tương đương với signIn()
+   * Alias for signIn()
    */
   login: (params: SignInParams) => Promise<AuthSession>;
 
   /**
-   * Đăng xuất và xóa sạch session JWT lưu trữ
+   * Signs out and clears the stored JWT session
    */
   signOut: () => Promise<void>;
 
   /**
-   * Alias tương đương với signOut()
+   * Alias for signOut()
    */
   logout: () => Promise<void>;
 
   /**
-   * Kiểm tra phiên đăng nhập đã lưu trong bộ nhớ
+   * Checks for a session saved in storage
    */
   checkSession: () => Promise<AuthState>;
 }

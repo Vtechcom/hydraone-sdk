@@ -9,7 +9,7 @@ import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
 
 /**
- * Mock ITransport phục vụ kiểm thử đơn vị
+ * Mock ITransport for unit tests
  */
 class MockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
@@ -195,7 +195,7 @@ describe('useWalletBridgeClient', () => {
     delete (globalThis as any).window;
   });
 
-  it('khởi tạo với trạng thái ban đầu an toàn (chưa kết nối)', () => {
+  it('starts in a safe initial state (not connected)', () => {
     const {
       isConnected,
       connectionState,
@@ -213,7 +213,7 @@ describe('useWalletBridgeClient', () => {
     expect(hostInfo.value).toBeNull();
   });
 
-  it('kết nối ví thành công qua init(), cập nhật reactive address và balanceADA', async () => {
+  it('connects the wallet via init() and updates the reactive address and balanceADA', async () => {
     const { isConnected, connectionState, address, balanceADA, balanceLovelace, init } =
       useWalletBridgeClient({ client });
 
@@ -228,7 +228,7 @@ describe('useWalletBridgeClient', () => {
     expect(balanceADA.value).toBe('45');
   });
 
-  it('ngắt kết nối qua disconnect() đặt lại toàn bộ trạng thái reactive về mặc định', async () => {
+  it('disconnect() resets all reactive state to defaults', async () => {
     const { isConnected, address, balanceADA, init, disconnect } = useWalletBridgeClient({ client });
 
     await init();
@@ -240,14 +240,14 @@ describe('useWalletBridgeClient', () => {
     expect(balanceADA.value).toBeNull();
   });
 
-  it('lắng nghe và cập nhật sự kiện AUDIO_MUTED_CHANGED và THEME_CHANGED từ Host Shell', async () => {
+  it('listens to and applies AUDIO_MUTED_CHANGED and THEME_CHANGED from the Host Shell', async () => {
     const { isAudioMuted, theme, init } = useWalletBridgeClient({ client });
 
     await init();
     expect(theme.value).toBe('dark');
     expect(isAudioMuted.value).toBe(false);
 
-    // Host Shell phát AUDIO_MUTED_CHANGED
+    // Host Shell emits AUDIO_MUTED_CHANGED
     mockTransport.simulateMessage({
       id: 'evt_1',
       type: 'AUDIO_MUTED_CHANGED',
@@ -257,7 +257,7 @@ describe('useWalletBridgeClient', () => {
     });
     expect(isAudioMuted.value).toBe(true);
 
-    // Host Shell phát THEME_CHANGED
+    // Host Shell emits THEME_CHANGED
     mockTransport.simulateMessage({
       id: 'evt_2',
       type: 'THEME_CHANGED',
@@ -268,7 +268,7 @@ describe('useWalletBridgeClient', () => {
     expect(theme.value).toBe('light');
   });
 
-  it('lắng nghe sự kiện ACCOUNT_CHANGED và tự động cập nhật address, usedAddresses', async () => {
+  it('listens to ACCOUNT_CHANGED and updates address and usedAddresses', async () => {
     const { address, usedAddresses, init } = useWalletBridgeClient({ client });
 
     await init();
@@ -289,7 +289,7 @@ describe('useWalletBridgeClient', () => {
     expect(usedAddresses.value).toEqual(newAddrs);
   });
 
-  it('chuyển giao các hành động ký ví signTx, submitTx, signData qua composable', async () => {
+  it('forwards the signTx, submitTx and signData wallet actions through the composable', async () => {
     const { init, signTx, submitTx, signData, getPlayerProfile } = useWalletBridgeClient({ client });
 
     await init();
@@ -308,7 +308,7 @@ describe('useWalletBridgeClient', () => {
     expect(profile.adaHandle).toBe('$hydra');
   });
 
-  it('tự động dọn dẹp listeners khi effectScope bị dừng (onScopeDispose)', async () => {
+  it('removes listeners automatically when the effectScope stops (onScopeDispose)', async () => {
     const scope = effectScope();
     let capturedComposable: ReturnType<typeof useWalletBridgeClient>;
 
@@ -319,10 +319,10 @@ describe('useWalletBridgeClient', () => {
     await capturedComposable!.init();
     expect(capturedComposable!.isAudioMuted.value).toBe(false);
 
-    // Dừng scope (giả lập component unmount / Vue router page transition)
+    // Stop the scope (simulates component unmount / a Vue router page transition)
     scope.stop();
 
-    // Giả lập phát thêm event sau khi unmount
+    // Simulate another event after unmount
     mockTransport.simulateMessage({
       id: 'evt_after_dispose',
       type: 'AUDIO_MUTED_CHANGED',
@@ -331,11 +331,11 @@ describe('useWalletBridgeClient', () => {
       source: 'hydra-host',
     });
 
-    // Giá trị không bị cập nhật tiếp vì listeners đã được tháo gỡ an toàn
+    // The value stays unchanged because the listeners were removed
     expect(capturedComposable!.isAudioMuted.value).toBe(false);
   });
 
-  it('tự động fallback sang getChangeAddress khi usedAddresses rỗng', async () => {
+  it('falls back to getChangeAddress when usedAddresses is empty', async () => {
     mockTransport.returnEmptyUsedAddresses = true;
     const { address, init } = useWalletBridgeClient({ client });
 
@@ -345,10 +345,10 @@ describe('useWalletBridgeClient', () => {
     );
   });
 
-  it('khởi tạo với client đã kết nối đồng bộ chính xác theme và isAudioMuted ban đầu', async () => {
-    // Kết nối client trước
+  it('starts with an already-connected client and syncs the initial theme and isAudioMuted', async () => {
+    // Connect the client first
     await client.init();
-    // Giả lập client đang có theme và muted
+    // Simulate a client that already has a theme and mute state
     (client as any)._theme = 'light';
     (client as any)._isAudioMuted = true;
 
@@ -359,13 +359,13 @@ describe('useWalletBridgeClient', () => {
     expect(isAudioMuted.value).toBe(true);
   });
 
-  it('lắng nghe HOST_ACK và tự động cập nhật trạng thái kết nối sang connected', async () => {
+  it('listens to HOST_ACK and switches the connection state to connected', async () => {
     const { connectionState, isConnected, hostInfo } = useWalletBridgeClient({ client });
 
     expect(connectionState.value).toBe('disconnected');
     expect(isConnected.value).toBe(false);
 
-    // Host Shell phát HOST_ACK
+    // Host Shell emits HOST_ACK
     mockTransport.simulateMessage({
       id: 'ack_unsolicited',
       type: 'HOST_ACK',
@@ -389,10 +389,10 @@ describe('useWalletBridgeClient', () => {
     );
   });
 
-  it('an toàn tuyệt đối trong môi trường SSR (window is undefined) và không gắn listeners vào client', () => {
+  it('is safe under SSR (window is undefined) and attaches no listeners to the client', () => {
     const originalWindow = globalThis.window;
     try {
-      // Giả lập SSR
+      // Simulate SSR
       (globalThis as any).window = undefined;
 
       const ssrClient = new WalletBridgeClient({
@@ -408,7 +408,7 @@ describe('useWalletBridgeClient', () => {
       expect(composable.address.value).toBeNull();
       expect(composable.balanceADA.value).toBeNull();
 
-      // Kiểm tra không có listener nào bị rò rỉ vào client trong môi trường SSR
+      // Verify that no listener leaks into the client under SSR
       const listenersMap = (ssrClient as any).eventListeners as Map<string, Set<any>>;
       expect(listenersMap.size).toBe(0);
     } finally {
