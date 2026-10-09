@@ -1,0 +1,4 @@
+[
+  { "name": "core (ESM)", "path": "dist/index.js", "gzip": true, "limit": "30 KB" },
+  { "name": "cardano (ESM)", "path": "dist/cardano/index.js", "gzip": true, "limit": "8 KB" }
+]

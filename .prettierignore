@@ -1,0 +1,7 @@
+dist
+coverage
+node_modules
+pnpm-lock.yaml
+templates
+docs/api
+src/simulator/dev-shell/assets.ts
