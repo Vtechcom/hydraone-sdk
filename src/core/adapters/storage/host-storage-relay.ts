@@ -13,21 +13,21 @@ import { HydraStorageError } from '../../errors';
 import { STORAGE_PREFIX } from './storage-policy';
 
 /**
- * Cấu hình khởi tạo cho HostStorageRelayAdapter
+ * Options for HostStorageRelayAdapter
  */
 export interface HostStorageRelayAdapterOptions {
   /**
-   * Transport để giao tiếp hai chiều với Host Shell (PostMessageTransport hoặc bất kỳ ITransport nào)
+   * Transport used to talk to the Host Shell (PostMessageTransport or any ITransport)
    */
   transport: ITransport;
   /**
-   * Thời gian chờ tối đa cho mỗi yêu cầu relay (ms), mặc định 15,000ms theo phân tầng Query timeout
+   * Maximum wait per relay request in ms, defaults to 15,000 (query timeout tier)
    */
   timeoutMs?: number;
 }
 
 /**
- * Entry theo dõi yêu cầu đang chờ phản hồi từ Host Shell
+ * Tracks a request awaiting a response from the Host Shell
  */
 interface PendingStorageRequest<T = unknown> {
   id: string;
@@ -37,7 +37,7 @@ interface PendingStorageRequest<T = unknown> {
 }
 
 /**
- * Sinh ID ngẫu nhiên duy nhất cho mỗi yêu cầu storage relay
+ * Generates a unique random ID for each storage relay request
  */
 function generateId(): string {
   if (
@@ -51,14 +51,14 @@ function generateId(): string {
 }
 
 /**
- * Adapter HostStorageRelayAdapter - Hiện thực hóa port IStorage ủy quyền lưu trữ sang Host Shell
+ * HostStorageRelayAdapter - IStorage implementation that delegates storage to the Host Shell.
  * 
- * Khắc phục triệt để vấn đề Safari ITP (Storage Partitioning) chặn hoặc xóa sạch storage
- * trong iframe sau khi reload (F5). Lưu trữ dữ liệu phiên (JWT token, user address) tại
- * first-party domain của App Center Host qua postMessage relay.
+ * Works around Safari ITP (storage partitioning) blocking or wiping iframe storage
+ * after a reload. Session data (JWT, user address) is kept on the App Center host's
+ * first-party domain via a postMessage relay.
  * 
- * Tuân thủ quy chuẩn bảo mật AD-3: Khi Host Shell disconnect hoặc timeout, ném lỗi có kiểm soát
- * HydraStorageError (ERR_STORAGE_UNAVAILABLE) thay vì tự ý fallback ghi token nhạy cảm vào unpartitioned storage.
+ * Security: when the Host Shell disconnects or times out, throws a HydraStorageError
+ * (ERR_STORAGE_UNAVAILABLE) instead of falling back to writing sensitive tokens to unpartitioned storage.
  */
 export class HostStorageRelayAdapter implements IStorage {
   private readonly transport: ITransport;
@@ -99,7 +99,7 @@ export class HostStorageRelayAdapter implements IStorage {
     this.transport = resolvedTransport;
     this.timeoutMs = resolvedTimeoutMs > 0 ? resolvedTimeoutMs : 15000;
 
-    // Lắng nghe bản tin phản hồi nếu transport không có hàm request tích hợp sẵn
+    // Listen for responses when the transport has no built-in request method
     if (
       typeof (this.transport as any).request !== 'function' &&
       typeof this.transport.onMessage === 'function'
@@ -109,16 +109,16 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Kiểm tra xem adapter đã bị hủy tài nguyên hay chưa
+   * Whether the adapter has been destroyed
    */
   public get isDestroyed(): boolean {
     return this._isDestroyed;
   }
 
   /**
-   * Lấy giá trị chuỗi ứng với key đã cho từ Host Shell
-   * @param key Khóa cần truy vấn
-   * @returns Chuỗi giá trị nếu tồn tại, ngược lại trả về null
+   * Reads the string value for a key from the Host Shell
+   * @param key Key to read
+   * @returns The value, or null when missing
    */
   public async getItem(key: string): Promise<string | null> {
     this.assertNotDestroyed('getItem', key);
@@ -137,9 +137,9 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Lưu trữ cặp khóa - giá trị lên Host Shell
-   * @param key Khóa lưu trữ
-   * @param value Giá trị chuỗi cần lưu
+   * Writes a key-value pair to the Host Shell
+   * @param key Key to write
+   * @param value String value to store
    */
   public async setItem(key: string, value: string): Promise<void> {
     this.assertNotDestroyed('setItem', key);
@@ -157,8 +157,8 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Xóa một key cụ thể khỏi bộ nhớ lưu trữ của Host Shell
-   * @param key Khóa cần xóa
+   * Removes a key from the Host Shell storage
+   * @param key Key to remove
    */
   public async removeItem(key: string): Promise<void> {
     this.assertNotDestroyed('removeItem', key);
@@ -176,8 +176,8 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Yêu cầu Host Shell dọn dẹp có chọn lọc các khóa thuộc quyền quản lý của SDK (tiền tố hydra:sdk:*).
-   * Bảo toàn 100% các dữ liệu riêng của game trên Host storage.
+   * Asks the Host Shell to clear only SDK-owned keys (prefix hydra:sdk:*).
+   * Game-owned data on the host storage is left untouched.
    */
   public async clear(): Promise<void> {
     this.assertNotDestroyed('clear');
@@ -194,7 +194,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Dọn dẹp listener và hủy ngay lập tức các yêu cầu đang chờ xử lý
+   * Removes listeners and immediately rejects pending requests
    */
   public destroy(): void {
     this._isDestroyed = true;
@@ -222,7 +222,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Trích xuất giá trị chuỗi từ phản hồi của Host Shell
+   * Extracts the string value from a Host Shell response
    */
   private extractValue(response: BridgeMessage): string | null {
     const payload = response?.payload;
@@ -254,7 +254,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Kiểm tra tính hợp lệ của key lưu trữ
+   * Validates a storage key
    */
   private assertValidKey(key: string, operation: string): void {
     if (typeof key !== 'string' || !key.trim()) {
@@ -266,7 +266,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Kiểm tra trạng thái destroyed của adapter trước mỗi thao tác
+   * Checks the destroyed state before each operation
    */
   private assertNotDestroyed(operation: string, key?: string): void {
     if (this._isDestroyed) {
@@ -278,7 +278,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Gửi bản tin RPC qua transport và đợi phản hồi, xử lý bao bọc lỗi theo chuẩn bảo mật AD-3
+   * Sends an RPC message over the transport and awaits the response, wrapping failures in HydraStorageError
    */
   private async executeRpc(
     message: BridgeMessage,
@@ -323,7 +323,7 @@ export class HostStorageRelayAdapter implements IStorage {
             return resp;
           }
 
-          // Dispatcher dự phòng cho generic ITransport chỉ có send/onMessage
+          // Fallback dispatcher for generic ITransport implementations that only have send/onMessage
           return await this.dispatchWithPendingMap(message);
         })(),
         cancelPromise,
@@ -359,7 +359,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Dispatcher nội bộ sử dụng map in-flight cho các transport không có hàm request
+   * Internal dispatcher using the in-flight map for transports without a request method
    */
   private dispatchWithPendingMap(message: BridgeMessage): Promise<BridgeMessage> {
     return new Promise<BridgeMessage>((resolve, reject) => {
@@ -410,7 +410,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Xử lý bản tin đến từ Host Shell khi dùng dispatcher nội bộ
+   * Handles messages from the Host Shell when using the internal dispatcher
    */
   private handleIncomingMessage(message: BridgeMessage): void {
     if (this._isDestroyed || !message) {

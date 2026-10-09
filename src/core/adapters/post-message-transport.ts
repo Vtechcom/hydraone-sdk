@@ -19,9 +19,9 @@ import {
 } from '../errors';
 
 /**
- * Adapter PostMessageTransport - Hiện thực hóa port ITransport cho môi trường Iframe
- * Giao tiếp an toàn hai chiều với Host Shell theo nguyên tắc Zero-Trust,
- * tự động sinh ID duy nhất và multiplexing các yêu cầu đồng thời qua In-Flight Map.
+ * PostMessageTransport - ITransport implementation for iframe mode.
+ * Two-way, zero-trust communication with the Host Shell:
+ * unique IDs are generated and concurrent requests are multiplexed via the in-flight map.
  */
 export class PostMessageTransport implements ITransport {
   public readonly appCenterOrigin: string;
@@ -46,7 +46,7 @@ export class PostMessageTransport implements ITransport {
       options.env ??
       (typeof process !== 'undefined' && process.env?.NODE_ENV ? process.env.NODE_ENV : 'development');
 
-    // Chặn wildcard origin trong môi trường production
+    // Reject wildcard origins in production
     if (normalizedOrigin === '*' && env === 'production') {
       throw new HydraSecurityError(
         'Wildcard origin "*" is not allowed in production environment',
@@ -63,21 +63,21 @@ export class PostMessageTransport implements ITransport {
     this.checkIframeSource = options.checkIframeSource ?? true;
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 15000;
 
-    // Lắng nghe sự kiện message trên sourceWindow
+    // Listen for message events on the source window
     if (this.sourceWindow && typeof this.sourceWindow.addEventListener === 'function') {
       this.sourceWindow.addEventListener('message', this.handleMessageEvent);
     }
   }
 
   /**
-   * Trình xử lý sự kiện khi nhận được bản tin qua postMessage
+   * Handles incoming postMessage events
    */
   public handleMessageEvent = (event: any): void => {
     if (this.isDestroyed || !event || typeof event !== 'object') {
       return;
     }
 
-    // 1. Kiểm tra Origin Zero-Trust
+    // 1. Zero-trust origin check
     if (this.appCenterOrigin !== '*' && event.origin !== this.appCenterOrigin) {
       throw new HydraSecurityError(
         `Untrusted origin: "${event.origin}". Expected: "${this.appCenterOrigin}"`,
@@ -88,7 +88,7 @@ export class PostMessageTransport implements ITransport {
       );
     }
 
-    // 2. Kiểm tra Source Window khi chạy trong ngữ cảnh iframe
+    // 2. Check the source window when running inside an iframe
     if (this.checkIframeSource && this.isIframe()) {
       const expectedParent =
         this.sourceWindow && 'parent' in this.sourceWindow
@@ -107,7 +107,7 @@ export class PostMessageTransport implements ITransport {
       }
     }
 
-    // 3. Trích xuất và xác thực dữ liệu bản tin
+    // 3. Extract and validate message data
     const data = event.data;
     if (!data || typeof data !== 'object') {
       return;
@@ -163,18 +163,18 @@ export class PostMessageTransport implements ITransport {
       }
     }
 
-    // 5. Phát thông điệp đến các listeners đã đăng ký qua onMessage
+    // 5. Dispatch to listeners registered via onMessage
     for (const handler of this.handlers) {
       try {
         handler(message);
       } catch {
-        // Ngăn lỗi của một handler gây ảnh hưởng đến các handler khác
+        // Keep one failing handler from affecting the others
       }
     }
   };
 
   /**
-   * Gửi một bản tin bất đồng bộ đến Host Shell
+   * Sends a message to the Host Shell asynchronously
    */
   public async send(message: BridgeMessage): Promise<void> {
     if (this.isDestroyed) {
@@ -189,7 +189,7 @@ export class PostMessageTransport implements ITransport {
       );
     }
 
-    // Tự động gán thông tin phong bì nếu chưa có
+    // Fill in envelope fields when missing
     if (!message.id) {
       message.id = this.generateId();
     }
@@ -212,8 +212,8 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Gửi yêu cầu RPC và đợi phản hồi khớp với requestId / id tương ứng
-   * Hỗ trợ multiplexing và tự động hủy bỏ khi quá thời gian chờ (timeout)
+   * Sends an RPC request and waits for the response matching its requestId / id
+   * Supports multiplexing and aborts automatically on timeout
    */
   public async request<T = unknown>(
     message: Partial<BridgeMessage>,
@@ -280,7 +280,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Đăng ký callback nhận bản tin từ Host Shell
+   * Registers a callback for messages from the Host Shell
    */
   public onMessage(handler: MessageHandler): UnsubscribeFn {
     this.handlers.add(handler);
@@ -290,7 +290,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Hủy kết nối, gỡ bỏ listeners và dọn dẹp bộ nhớ In-Flight Map
+   * Disconnects, removes listeners and clears the in-flight map
    */
   public destroy(): void {
     if (this.isDestroyed) {
@@ -316,28 +316,28 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Trả về số lượng request đang chờ xử lý trong In-Flight Map (phục vụ testing & diagnostics)
+   * Returns the number of pending requests in the in-flight map (for testing and diagnostics)
    */
   public getInFlightCount(): number {
     return this.inFlightMap.size;
   }
 
   /**
-   * Lấy bản ghi in-flight theo ID
+   * Returns the in-flight entry for an ID
    */
   public getInFlightEntry(id: string): InFlightEntry | undefined {
     return this.inFlightMap.get(id);
   }
 
   /**
-   * Kiểm tra xem transport đã bị destroy chưa
+   * Whether the transport has been destroyed
    */
   public isClosed(): boolean {
     return this.isDestroyed;
   }
 
   /**
-   * Sinh chuỗi định danh ngẫu nhiên duy nhất
+   * Generates a unique random ID
    */
   private generateId(): string {
     if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) {
@@ -347,7 +347,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Kiểm tra xem môi trường hiện tại có đang chạy trong iframe hay không
+   * Whether the current environment is running inside an iframe
    */
   private isIframe(): boolean {
     if (this.sourceWindow && 'parent' in this.sourceWindow) {
@@ -364,7 +364,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Xác định cửa sổ mục tiêu (targetWindow)
+   * Resolves the target window
    */
   private resolveTargetWindow(): PostMessageTarget | undefined {
     if (this.targetWindow) {

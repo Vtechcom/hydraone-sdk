@@ -4,26 +4,26 @@ import { isSdkStorageKey, STORAGE_PREFIX } from './storage-policy';
 
 export interface SafeLocalStorageAdapterOptions {
   /**
-   * Tham chiếu đến đối tượng Storage của trình duyệt (mặc định lấy globalThis.localStorage nếu có)
+   * Browser Storage to use (defaults to globalThis.localStorage when available)
    */
   storage?: Storage;
   /**
-   * Bộ lưu trữ dự phòng khi localStorage bị chặn hoặc gặp lỗi (mặc định InMemoryStorageAdapter)
+   * Fallback store used when localStorage is blocked or fails (defaults to InMemoryStorageAdapter)
    */
   fallbackStorage?: IStorage;
   /**
-   * Callback nhận thông báo khi adapter tự động chuyển sang chế độ dự phòng
+   * Called when the adapter switches to the fallback store
    */
   onFallback?: (error: unknown) => void;
 }
 
 /**
- * Adapter bọc an toàn window.localStorage
- * Tự động phát hiện và chuyển đổi trong suốt sang InMemoryStorageAdapter khi:
- * - Chạy trong iframe cross-origin bị Safari ITP / Storage Partitioning chặn
- * - Trình duyệt ở chế độ duyệt web ẩn danh (Private Browsing) ném SecurityError
- * - Bộ nhớ lưu trữ bị đầy (QuotaExceededError)
- * - Môi trường không có DOM/Window (SSR, Node.js)
+ * Safe wrapper around window.localStorage
+ * Transparently switches to InMemoryStorageAdapter when:
+ * - Running in a cross-origin iframe blocked by Safari ITP / storage partitioning
+ * - Private browsing throws a SecurityError
+ * - Storage is full (QuotaExceededError)
+ * - There is no DOM/window (SSR, Node.js)
  */
 export class SafeLocalStorageAdapter implements IStorage {
   private readonly storage?: Storage;
@@ -35,14 +35,14 @@ export class SafeLocalStorageAdapter implements IStorage {
     this.fallbackStorage = options.fallbackStorage ?? new InMemoryStorageAdapter();
     this.onFallback = options.onFallback;
 
-    // Xác định đối tượng Storage khả dụng
+    // Pick an available Storage object
     if (options.storage !== undefined) {
       this.storage = options.storage;
     } else if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
       try {
         this.storage = globalThis.localStorage;
       } catch (err) {
-        // Trường hợp truy cập thuộc tính window.localStorage bị ném SecurityError ngay từ đầu
+        // Accessing window.localStorage can throw a SecurityError right away
         this.activateFallback(err);
         return;
       }
@@ -53,33 +53,33 @@ export class SafeLocalStorageAdapter implements IStorage {
       return;
     }
 
-    // Kiểm tra quyền ghi/đọc thực tế (probe test) để phát hiện sớm lỗi Safari ITP
+    // Probe real read/write access to detect Safari ITP failures early
     this.probeStorage();
   }
 
   /**
-   * Trạng thái cho biết adapter có đang phải chuyển sang dùng RAM fallback hay không
+   * Whether the adapter has switched to the in-memory fallback
    */
   get isUsingFallback(): boolean {
     return this._isUsingFallback;
   }
 
   /**
-   * Đối tượng lưu trữ dự phòng đang được sử dụng
+   * The fallback store in use
    */
   get fallback(): IStorage {
     return this.fallbackStorage;
   }
 
   /**
-   * Tham chiếu đến đối tượng Storage gốc (nếu có) phục vụ chẩn đoán
+   * The underlying native Storage, if any (for diagnostics)
    */
   get underlyingStorage(): Storage | undefined {
     return this.storage;
   }
 
   /**
-   * Kích hoạt chế độ fallback an toàn sang InMemoryStorage
+   * Switches to the in-memory fallback
    */
   private activateFallback(error: unknown): void {
     if (!this._isUsingFallback) {
@@ -88,14 +88,14 @@ export class SafeLocalStorageAdapter implements IStorage {
         try {
           this.onFallback(error);
         } catch {
-          // Bảo đảm onFallback callback không ném lỗi làm crash adapter
+          // Ensure a throwing onFallback callback cannot crash the adapter
         }
       }
     }
   }
 
   /**
-   * Kiểm tra khả năng tương tác đọc/ghi của Storage
+   * Checks that the Storage supports read/write
    */
   private probeStorage(): void {
     if (!this.storage) {
@@ -113,7 +113,7 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
-   * Lấy giá trị chuỗi ứng với key đã cho
+   * Returns the string value for a key
    */
   async getItem(key: string): Promise<string | null> {
     if (this._isUsingFallback || !this.storage) {
@@ -122,7 +122,7 @@ export class SafeLocalStorageAdapter implements IStorage {
         return fallbackVal;
       }
 
-      // Nếu trong RAM chưa có, thử đọc từ underlying storage (nếu storage chỉ bị chặn ghi do quota)
+      // Not in memory yet: try the underlying storage (it may only be write-blocked by quota)
       if (this.storage) {
         try {
           return this.storage.getItem(key);
@@ -143,7 +143,7 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
-   * Lưu trữ cặp khóa - giá trị
+   * Stores a key-value pair
    */
   async setItem(key: string, value: string): Promise<void> {
     if (this._isUsingFallback || !this.storage) {
@@ -160,8 +160,8 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
-   * Xóa một key cụ thể khỏi bộ nhớ lưu trữ
-   * Đảm bảo xóa cả ở underlying storage (nếu có) và fallback storage để tránh zombie keys
+   * Removes a key
+   * Removes from both underlying and fallback storage to avoid zombie keys
    */
   async removeItem(key: string): Promise<void> {
     if (this.storage) {
@@ -175,14 +175,14 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
-   * Dọn dẹp có chọn lọc: chỉ xóa các khóa thuộc quyền quản lý của SDK (bắt đầu bằng `hydra:sdk:*`).
-   * Tuyệt đối không xóa bất kỳ khóa nào của Game.
-   * Đồng thời xóa sạch trên cả underlying storage và fallback storage.
+   * Selective clear: removes only SDK-owned keys (prefix `hydra:sdk:*`).
+   * Never removes game-owned keys.
+   * Clears both underlying and fallback storage.
    */
   async clear(): Promise<void> {
     if (this.storage) {
       try {
-        // Quét danh sách các khóa và chỉ xóa khóa khớp tiền tố `hydra:sdk:*`
+        // Scan keys and remove only those matching the `hydra:sdk:*` prefix
         const keysToRemove: string[] = [];
         const length = this.storage.length;
 
@@ -201,7 +201,7 @@ export class SafeLocalStorageAdapter implements IStorage {
       }
     }
 
-    // Luôn đồng bộ dọn dẹp cả fallbackStorage
+    // Always clear the fallback store too
     await this.fallbackStorage.clear();
   }
 }

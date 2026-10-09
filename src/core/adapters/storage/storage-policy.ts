@@ -1,8 +1,8 @@
 /**
- * Hằng số và chính sách phân vùng Sub-Namespace lưu trữ của HydraOne SDK
- * Tuân thủ kiến trúc phân tầng AD-3:
- * - hydra:sdk:auth:*     -> Dữ liệu phiên đăng nhập, JWT, ví
- * - hydra:sdk:session:*  -> Dữ liệu phiên chơi game, cache tạm thời
+ * Storage sub-namespace constants and policy for HydraOne SDK
+ * Layout:
+ * - hydra:sdk:auth:*     -> login session data, JWT, wallet
+ * - hydra:sdk:session:*  -> gameplay session data, temporary cache
  */
 
 export const STORAGE_PREFIX = 'hydra:sdk:';
@@ -12,34 +12,34 @@ export const STORAGE_SESSION_PREFIX = 'hydra:sdk:session:';
 export type StorageSubNamespace = 'auth' | 'session';
 
 /**
- * Kiểm tra xem một khóa lưu trữ có thuộc quyền quản lý của SDK hay không
- * @param key Khóa cần kiểm tra
+ * Whether a key is owned by the SDK
+ * @param key Key to check
  */
 export function isSdkStorageKey(key: string): boolean {
   return typeof key === 'string' && key.startsWith(STORAGE_PREFIX);
 }
 
 /**
- * Kiểm tra xem một khóa lưu trữ có thuộc phân vùng xác thực auth hay không
- * @param key Khóa cần kiểm tra
+ * Whether a key belongs to the auth sub-namespace
+ * @param key Key to check
  */
 export function isAuthStorageKey(key: string): boolean {
   return typeof key === 'string' && key.startsWith(STORAGE_AUTH_PREFIX);
 }
 
 /**
- * Kiểm tra xem một khóa lưu trữ có thuộc phân vùng session hay không
- * @param key Khóa cần kiểm tra
+ * Whether a key belongs to the session sub-namespace
+ * @param key Key to check
  */
 export function isSessionStorageKey(key: string): boolean {
   return typeof key === 'string' && key.startsWith(STORAGE_SESSION_PREFIX);
 }
 
 /**
- * Xây dựng khóa lưu trữ chuẩn hóa theo sub-namespace
- * @param subNamespace Phân vùng ('auth' | 'session')
- * @param subKey Tên khóa con
- * @returns Khóa hoàn chỉnh có tiền tố chuẩn hóa, ví dụ: 'hydra:sdk:auth:token'
+ * Builds a normalized storage key for a sub-namespace
+ * @param subNamespace Sub-namespace ('auth' | 'session')
+ * @param subKey Sub-key name
+ * @returns Full key with the normalized prefix, e.g. 'hydra:sdk:auth:token'
  */
 export function buildStorageKey(subNamespace: StorageSubNamespace, subKey: string): string {
   if (subNamespace !== 'auth' && subNamespace !== 'session') {
@@ -50,7 +50,7 @@ export function buildStorageKey(subNamespace: StorageSubNamespace, subKey: strin
     throw new Error('Storage subKey must be a non-empty string');
   }
 
-  // Loại bỏ tiền tố hai chấm và khoảng trắng thừa nếu người gọi đã vô tình truyền kèm
+  // Strip a leading colon and stray whitespace if the caller passed them
   const cleanSubKey = subKey.replace(/^:+/, '').trim();
   if (!cleanSubKey) {
     throw new Error('Storage subKey must be a non-empty string');

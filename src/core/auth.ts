@@ -14,10 +14,10 @@ import { STORAGE_AUTH_PREFIX } from './adapters/storage/storage-policy';
 import { ERROR_CODES, HydraAuthError, HydraBridgeError } from './errors';
 
 /**
- * Chuyển đổi chuỗi văn bản UTF-8 sang chuỗi Hex chuẩn hóa
+ * Converts a UTF-8 string to a normalized hex string
  * 
- * @param str Chuỗi văn bản cần chuyển đổi
- * @returns Chuỗi Hex biểu diễn các byte UTF-8
+ * @param str Text to convert
+ * @returns Hex string of the UTF-8 bytes
  */
 export function stringToHex(str: string): string {
   if (typeof str !== 'string') {
@@ -32,10 +32,10 @@ export function stringToHex(str: string): string {
 }
 
 /**
- * Chuyển đổi chuỗi Hex về chuỗi văn bản UTF-8
+ * Converts a hex string back to UTF-8 text
  * 
- * @param hex Chuỗi Hex cần giải mã
- * @returns Chuỗi văn bản UTF-8
+ * @param hex Hex string to decode
+ * @returns UTF-8 text
  */
 export function hexToString(hex: string): string {
   if (typeof hex !== 'string') {
@@ -56,10 +56,10 @@ export function hexToString(hex: string): string {
 }
 
 /**
- * Phân tích và trích xuất payload từ chuỗi JWT token mà không dùng thư viện ngoài
+ * Parses the payload of a JWT without any external library
  * 
- * @param token Chuỗi JWT token định dạng Header.Payload.Signature
- * @returns Object chứa các claims trong payload của JWT
+ * @param token JWT in Header.Payload.Signature format
+ * @returns The claims contained in the JWT payload
  */
 export function parseJwt<T = Record<string, any>>(token: string): T {
   if (!token || typeof token !== 'string') {
@@ -100,11 +100,11 @@ export function parseJwt<T = Record<string, any>>(token: string): T {
 }
 
 /**
- * Kiểm tra xem chuỗi JWT token đã hết hạn hay chưa dựa trên claim exp
+ * Checks whether a JWT has expired, based on its exp claim
  * 
- * @param token Chuỗi JWT token cần kiểm tra
- * @param clockToleranceSeconds Dung sai thời gian (giây) cho độ trễ đồng hồ, mặc định 0
- * @returns true nếu token đã hết hạn hoặc không hợp lệ; false nếu còn hiệu lực hoặc không có claim exp
+ * @param token JWT to check
+ * @param clockToleranceSeconds Clock skew tolerance in seconds, defaults to 0
+ * @returns true if the token is expired or invalid; false if still valid or it has no exp claim
  */
 export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean {
   if (!token || typeof token !== 'string') {
@@ -126,7 +126,7 @@ export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean 
       return true;
     }
 
-    // Nếu timestamp ở dạng milliseconds (13 chữ số), tự động chuẩn hóa về giây
+    // Normalize millisecond timestamps (13 digits) to seconds
     if (expNum > 1000000000000) {
       expNum = Math.floor(expNum / 1000);
     }
@@ -139,7 +139,7 @@ export function isJwtExpired(token: string, clockToleranceSeconds = 0): boolean 
 }
 
 /**
- * AuthManager - Quản lý quy trình đăng nhập 1-click Web3 CIP-8 và vòng đời JWT token cho Game & dApp
+ * AuthManager - handles 1-click Web3 CIP-8 login and the JWT lifecycle for games and dApps
  */
 export class AuthManager {
   private readonly client: IAuthSignerClient;
@@ -177,7 +177,7 @@ export class AuthManager {
     this.clockToleranceSeconds = options.clockToleranceSeconds ?? 0;
     this.defaultExchangeToken = options.exchangeToken;
 
-    // Lắng nghe sự kiện từ Host nếu Client hỗ trợ onHostEvent
+    // Listen to host events when the client supports onHostEvent
     if (typeof this.client.onHostEvent === 'function') {
       this.hostUnsubscribe = this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: any) => {
         if (payload && payload.isAuthenticated === false) {
@@ -188,15 +188,15 @@ export class AuthManager {
   }
 
   /**
-   * Thực hiện quy trình đăng nhập 1-click:
-   * 1. Lấy địa chỉ ví kết nối
-   * 2. Tự động mã hóa Hex cho chuỗi challenge
-   * 3. Yêu cầu ví ký dữ liệu qua CIP-8 signData
-   * 4. Đóng gói chữ ký và tùy chọn trao đổi lấy JWT token
-   * 5. Lưu trữ JWT an toàn vào IStorage và cập nhật trạng thái xác thực
+   * Runs the 1-click login flow:
+   * 1. Get the connected wallet address
+   * 2. Hex-encode the challenge string
+   * 3. Ask the wallet to sign via CIP-8 signData
+   * 4. Bundle the signature and optionally exchange it for a JWT
+   * 5. Persist the JWT in IStorage and update the auth state
    * 
-   * @param params Tham số đăng nhập { challenge, address?, token?, exchangeToken?, signOptions? }
-   * @returns Phiên xác thực hoàn chỉnh AuthSession
+   * @param params Login params { challenge, address?, token?, exchangeToken?, signOptions? }
+   * @returns The resulting AuthSession
    */
   public async signIn(params: SignInParams): Promise<AuthSession> {
     if (!params || typeof params !== 'object') {
@@ -206,7 +206,7 @@ export class AuthManager {
       throw new HydraBridgeError('A non-empty challenge string is required for signIn', 'ERR_INVALID_PARAMS');
     }
 
-    // 1. Xác định địa chỉ ví ký
+    // 1. Resolve the signing address
     let address = params.address?.trim();
     if (!address) {
       const addresses = await this.client.getUsedAddresses();
@@ -227,7 +227,7 @@ export class AuthManager {
       );
     }
 
-    // 2. Tự động Hex-encode cho challenge
+    // 2. Hex-encode the challenge
     let payloadHex: string;
     const challenge = params.challenge;
     if (challenge.startsWith('0x')) {
@@ -243,7 +243,7 @@ export class AuthManager {
       payloadHex = stringToHex(challenge);
     }
 
-    // 3. Gọi ký ví theo chuẩn CIP-8 signData
+    // 3. Sign with the wallet via CIP-8 signData
     const dataSig = await this.client.signData(address, payloadHex, params.signOptions);
 
     const signaturePayload: AuthSignaturePayload = {
@@ -254,7 +254,7 @@ export class AuthManager {
       payloadHex,
     };
 
-    // 4. Trao đổi token nếu có hàm exchangeToken hoặc token truyền vào
+    // 4. Exchange for a token when exchangeToken or token is provided
     let token: string | undefined = params.token;
     const exchangeFn = params.exchangeToken ?? this.defaultExchangeToken;
 
@@ -271,7 +271,7 @@ export class AuthManager {
 
       claims = parseJwt(token);
 
-      // Lưu trữ token và address vào IStorage
+      // Persist token and address in IStorage
       await this.storage.setItem(this.tokenStorageKey, token);
       await this.storage.setItem(this.addressStorageKey, address);
 
@@ -292,9 +292,9 @@ export class AuthManager {
   }
 
   /**
-   * Truy xuất JWT token đã lưu trữ. Nếu token hết hạn, tự động xóa và phát sự kiện AUTH_STATE_CHANGED
+   * Returns the stored JWT. If it has expired, clears it and emits AUTH_STATE_CHANGED
    * 
-   * @returns Chuỗi JWT token hoặc null nếu chưa đăng nhập hoặc token đã hết hạn
+   * @returns The JWT, or null when not logged in or expired
    */
   public async getToken(): Promise<string | null> {
     const token = await this.storage.getItem(this.tokenStorageKey);
@@ -331,7 +331,7 @@ export class AuthManager {
       try {
         claims = parseJwt(token);
       } catch {
-        // bỏ qua nếu lỗi parse claims
+        // Ignore claim parse failures
       }
 
       this.updateAuthState({
@@ -347,10 +347,10 @@ export class AuthManager {
   }
 
   /**
-   * Thiết lập phiên đăng nhập trực tiếp từ chuỗi JWT token
+   * Establishes a session directly from a JWT
    * 
-   * @param token Chuỗi JWT token hợp lệ
-   * @param address Địa chỉ ví người chơi (tùy chọn)
+   * @param token Valid JWT
+   * @param address Player wallet address (optional)
    */
   public async setSession(token: string, address?: string): Promise<AuthState> {
     if (!token || typeof token !== 'string') {
@@ -379,7 +379,7 @@ export class AuthManager {
   }
 
   /**
-   * Kiểm tra người chơi hiện có đang ở trạng thái đăng nhập hợp lệ hay không
+   * Whether the player currently has a valid login
    */
   public async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
@@ -387,7 +387,7 @@ export class AuthManager {
   }
 
   /**
-   * Lấy claims đã giải mã từ JWT token hiện tại
+   * Returns the decoded claims of the current JWT
    */
   public async getClaims<T = Record<string, any>>(): Promise<T | null> {
     const token = await this.getToken();
@@ -402,7 +402,7 @@ export class AuthManager {
   }
 
   /**
-   * Lấy địa chỉ ví của phiên xác thực hiện tại
+   * Returns the wallet address of the current session
    */
   public async getAuthAddress(): Promise<string | null> {
     const authenticated = await this.isAuthenticated();
@@ -414,7 +414,7 @@ export class AuthManager {
   }
 
   /**
-   * Kiểm tra và làm mới trạng thái phiên xác thực
+   * Validates and refreshes the auth state
    */
   public async checkSession(): Promise<AuthState> {
     await this.getToken();
@@ -422,14 +422,14 @@ export class AuthManager {
   }
 
   /**
-   * Lấy trạng thái xác thực tức thời trong bộ nhớ
+   * Returns the current in-memory auth state
    */
   public get state(): AuthState {
     return { ...this.currentState };
   }
 
   /**
-   * Đăng xuất người chơi: xóa token, xóa địa chỉ khỏi storage và phát sự kiện AUTH_STATE_CHANGED
+   * Logs the player out: clears the token and address from storage and emits AUTH_STATE_CHANGED
    */
   public async signOut(): Promise<void> {
     try {
@@ -449,10 +449,10 @@ export class AuthManager {
   }
 
   /**
-   * Đăng ký lắng nghe sự kiện thay đổi trạng thái xác thực AUTH_STATE_CHANGED
+   * Subscribes to AUTH_STATE_CHANGED
    * 
-   * @param handler Hàm callback nhận AuthState
-   * @returns Hàm hủy đăng ký lắng nghe (unsubscribe)
+   * @param handler Callback receiving the AuthState
+   * @returns Function that unsubscribes the handler
    */
   public onAuthStateChanged(handler: AuthStateHandler): UnsubscribeFn {
     if (typeof handler !== 'function') {
@@ -466,7 +466,7 @@ export class AuthManager {
   }
 
   /**
-   * Hủy bỏ toàn bộ listener nội bộ và gỡ bỏ đăng ký sự kiện Host để tránh rò rỉ bộ nhớ
+   * Removes all internal listeners and the host event subscription to avoid memory leaks
    */
   public destroy(): void {
     if (typeof this.hostUnsubscribe === 'function') {
@@ -477,7 +477,7 @@ export class AuthManager {
   }
 
   /**
-   * Cập nhật trạng thái nội bộ và thông báo cho toàn bộ listeners
+   * Updates internal state and notifies all listeners
    */
   private updateAuthState(newState: AuthState): void {
     this.currentState = newState;
@@ -493,7 +493,7 @@ export class AuthManager {
 }
 
 /**
- * Alias tương thích ngược cho các tài liệu hoặc dự án Game
+ * Alias kept for existing game projects and docs
  */
 export { AuthManager as GameAuthManager };
 export type { GameAuthManagerOptions };

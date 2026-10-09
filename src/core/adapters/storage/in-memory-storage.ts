@@ -2,9 +2,9 @@ import type { IStorage } from '../../ports/storage';
 import { isSdkStorageKey } from './storage-policy';
 
 /**
- * Adapter lưu trữ trong bộ nhớ RAM (In-Memory Storage)
- * Đóng vai trò Availability Fallback khi trình duyệt chặn localStorage (Safari ITP / private browsing)
- * hoặc khi chạy trong môi trường SSR/Node.js.
+ * In-memory storage adapter
+ * Availability fallback when the browser blocks localStorage (Safari ITP / private browsing)
+ * or when running in SSR/Node.js.
  */
 export class InMemoryStorageAdapter implements IStorage {
   private readonly store: Map<string, string>;
@@ -23,29 +23,29 @@ export class InMemoryStorageAdapter implements IStorage {
   }
 
   /**
-   * Lấy giá trị chuỗi ứng với key đã cho
+   * Returns the string value for a key
    */
   async getItem(key: string): Promise<string | null> {
     return this.store.get(key) ?? null;
   }
 
   /**
-   * Lưu trữ cặp khóa - giá trị
+   * Stores a key-value pair
    */
   async setItem(key: string, value: string): Promise<void> {
     this.store.set(key, String(value));
   }
 
   /**
-   * Xóa một key cụ thể khỏi bộ nhớ lưu trữ
+   * Removes a key
    */
   async removeItem(key: string): Promise<void> {
     this.store.delete(key);
   }
 
   /**
-   * Dọn dẹp có chọn lọc: chỉ xóa các khóa thuộc tiền tố `hydra:sdk:*`.
-   * Bảo toàn 100% dữ liệu riêng của game không mang tiền tố SDK.
+   * Selective clear: removes only keys with the `hydra:sdk:*` prefix.
+   * Game-owned keys without the SDK prefix are preserved.
    */
   async clear(): Promise<void> {
     for (const key of Array.from(this.store.keys())) {
@@ -56,14 +56,14 @@ export class InMemoryStorageAdapter implements IStorage {
   }
 
   /**
-   * Phương thức trợ giúp kiểm tra số lượng khóa hiện có trong bộ nhớ
+   * Returns the number of keys currently held in memory
    */
   get size(): number {
     return this.store.size;
   }
 
   /**
-   * Xóa toàn bộ dữ liệu trong bộ nhớ RAM không phân biệt namespace (chủ yếu phục vụ unit test)
+   * Clears everything regardless of namespace (mainly for unit tests)
    */
   async clearAll(): Promise<void> {
     this.store.clear();

@@ -66,8 +66,8 @@ describe('PostMessageTransport', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Khởi tạo & Cấu hình Zero-Trust Origin', () => {
-    it('bắt buộc phải truyền appCenterOrigin hợp lệ', () => {
+  describe('Construction & zero-trust origin configuration', () => {
+    it('requires a valid appCenterOrigin', () => {
       expect(() => new PostMessageTransport({ appCenterOrigin: '' } as any)).toThrow(
         HydraTransportError
       );
@@ -76,7 +76,7 @@ describe('PostMessageTransport', () => {
       );
     });
 
-    it('cho phép wildcard origin "*" trong môi trường development hoặc test', () => {
+    it('allows wildcard origin "*" in development or test', () => {
       const devTransport = new PostMessageTransport({
         appCenterOrigin: '*',
         env: 'development',
@@ -94,7 +94,7 @@ describe('PostMessageTransport', () => {
       expect(testTransport.appCenterOrigin).toBe('*');
     });
 
-    it('ném HydraSecurityError với ERR_UNTRUSTED_ORIGIN khi cấu hình wildcard "*" trong production', () => {
+    it('throws HydraSecurityError with ERR_UNTRUSTED_ORIGIN for wildcard "*" in production', () => {
       expect(
         () =>
           new PostMessageTransport({
@@ -119,8 +119,8 @@ describe('PostMessageTransport', () => {
     });
   });
 
-  describe('Kiểm tra Origin & Source Window khi nhận bản tin', () => {
-    it('từ chối bản tin từ untrusted origin bằng HydraSecurityError', () => {
+  describe('Origin & source window checks on incoming messages', () => {
+    it('rejects messages from an untrusted origin with HydraSecurityError', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -147,7 +147,7 @@ describe('PostMessageTransport', () => {
       }
     });
 
-    it('từ chối bản tin khi source window không phải là window.parent trong ngữ cảnh iframe', () => {
+    it('rejects messages whose source window is not window.parent in an iframe context', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -157,7 +157,7 @@ describe('PostMessageTransport', () => {
 
       const invalidSourceEvent = {
         origin: TRUSTED_ORIGIN,
-        source: { name: 'FakeOrSelfWindow' }, // Khác mockParent
+        source: { name: 'FakeOrSelfWindow' }, // Differs from mockParent
         data: {
           id: 'test-2',
           type: 'HOST_ACK',
@@ -169,7 +169,7 @@ describe('PostMessageTransport', () => {
       expect(() => transport.handleMessageEvent(invalidSourceEvent)).toThrow(HydraSecurityError);
     });
 
-    it('chấp nhận bản tin hợp lệ từ trusted origin và đúng source parent', () => {
+    it('accepts valid messages from a trusted origin and the correct parent source', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -195,7 +195,7 @@ describe('PostMessageTransport', () => {
       expect(messageReceived[0]?.id).toBe('valid-msg-1');
     });
 
-    it('bỏ qua an toàn dữ liệu không phải BridgeMessage (null, non-object, thiếu id/type)', () => {
+    it('safely ignores data that is not a BridgeMessage (null, non-object, missing id/type)', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -216,8 +216,8 @@ describe('PostMessageTransport', () => {
     });
   });
 
-  describe('Gửi bản tin qua send()', () => {
-    it('gửi bản tin qua targetWindow.postMessage với targetOrigin chính xác', async () => {
+  describe('Sending via send()', () => {
+    it('posts via targetWindow.postMessage with the exact targetOrigin', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -242,7 +242,7 @@ describe('PostMessageTransport', () => {
       });
     });
 
-    it('tự động sinh id, timestamp và source nếu chưa có trong send()', async () => {
+    it('generates id, timestamp and source in send() when missing', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -263,10 +263,10 @@ describe('PostMessageTransport', () => {
       expect(sent.source).toBe('hydra-client');
     });
 
-    it('ném HydraTransportError khi không tìm thấy target window', async () => {
+    it('throws HydraTransportError when no target window is found', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
-        // Không truyền targetWindow và môi trường Node không có window
+        // No targetWindow is passed and the Node environment has no window
       });
 
       await expect(
@@ -275,8 +275,8 @@ describe('PostMessageTransport', () => {
     });
   });
 
-  describe('Multiplexing Correlation ID & In-Flight Map với request()', () => {
-    it('gửi request và resolve thành công khi nhận phản hồi khớp requestId', async () => {
+  describe('Correlation ID multiplexing & in-flight map with request()', () => {
+    it('sends a request and resolves when a response with the matching requestId arrives', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -292,7 +292,7 @@ describe('PostMessageTransport', () => {
       const inFlight = transport.getInFlightEntry('req-get-balance-1');
       expect(inFlight?.state).toBe('Pending');
 
-      // Giả lập Host phản hồi
+      // Simulate the host responding
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -314,7 +314,7 @@ describe('PostMessageTransport', () => {
       expect(transport.getInFlightCount()).toBe(0);
     });
 
-    it('multiplexing đồng thời nhiều requests và ghép nối phản hồi chính xác khi đến out-of-order', async () => {
+    it('multiplexes concurrent requests and matches out-of-order responses correctly', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -327,7 +327,7 @@ describe('PostMessageTransport', () => {
 
       expect(transport.getInFlightCount()).toBe(3);
 
-      // Phản hồi req-2 về trước
+      // req-2 responds first
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -344,7 +344,7 @@ describe('PostMessageTransport', () => {
       expect((res2.payload as any).result).toEqual(['utxo_data']);
       expect(transport.getInFlightCount()).toBe(2);
 
-      // Phản hồi req-3 về tiếp
+      // then req-3
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -361,7 +361,7 @@ describe('PostMessageTransport', () => {
       expect((res3.payload as any).result).toEqual(['collateral_data']);
       expect(transport.getInFlightCount()).toBe(1);
 
-      // Phản hồi req-1 về cuối cùng
+      // req-1 responds last
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -379,7 +379,7 @@ describe('PostMessageTransport', () => {
       expect(transport.getInFlightCount()).toBe(0);
     });
 
-    it('reject promise với HydraBridgeError khi nhận phản hồi RPC_ERROR hoặc có error payload', async () => {
+    it('rejects with HydraBridgeError on an RPC_ERROR response or an error payload', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -416,7 +416,7 @@ describe('PostMessageTransport', () => {
   });
 
   describe('Tiered Timeouts & Silent Drop', () => {
-    it('reject với HydraTimeoutError khi request vượt quá thời gian timeout và dọn sạch map', async () => {
+    it('rejects with HydraTimeoutError when a request times out and clears the map', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -427,14 +427,14 @@ describe('PostMessageTransport', () => {
 
       expect(transport.getInFlightCount()).toBe(1);
 
-      // Tua nhanh thời gian thêm 3001ms
+      // Advance time by another 3001ms
       vi.advanceTimersByTime(3001);
 
       await expect(requestPromise).rejects.toThrow(HydraTimeoutError);
       expect(transport.getInFlightCount()).toBe(0);
     });
 
-    it('loại bỏ trong im lặng (silent drop) phản hồi muộn đến sau khi timeout đã kích hoạt', async () => {
+    it('silently drops a late response that arrives after the timeout fired', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -443,11 +443,11 @@ describe('PostMessageTransport', () => {
 
       const requestPromise = transport.request({ id: 'req-late-1', type: 'GET_BALANCE' }, 1000);
 
-      // Kích hoạt timeout
+      // Trigger the timeout
       vi.advanceTimersByTime(1001);
       await expect(requestPromise).rejects.toThrow(HydraTimeoutError);
 
-      // Giờ Host mới gửi phản hồi muộn
+      // Now the host sends its late response
       expect(() => {
         mockSource.dispatch('message', {
           origin: TRUSTED_ORIGIN,
@@ -465,13 +465,13 @@ describe('PostMessageTransport', () => {
         });
       }).not.toThrow();
 
-      // Không có unhandled rejection hay lỗi phát sinh
+      // No unhandled rejection or error occurs
       expect(transport.getInFlightCount()).toBe(0);
     });
   });
 
   describe('Lifecycle, Unsubscribe & Destroy', () => {
-    it('hủy đăng ký listener onMessage thành công và an toàn khi gọi nhiều lần (idempotent)', () => {
+    it('unsubscribes an onMessage listener and is safe to call repeatedly (idempotent)', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -481,7 +481,7 @@ describe('PostMessageTransport', () => {
       const handler = vi.fn();
       const unsub = transport.onMessage(handler);
 
-      // Nhận tin lần 1
+      // First message received
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -489,11 +489,11 @@ describe('PostMessageTransport', () => {
       });
       expect(handler).toHaveBeenCalledTimes(1);
 
-      // Hủy đăng ký
+      // Unsubscribe
       unsub();
-      unsub(); // Gọi lần 2 không gây lỗi
+      unsub(); // Second call does not throw
 
-      // Nhận tin lần 2 -> handler không được gọi thêm
+      // Second message -> handler is not called again
       mockSource.dispatch('message', {
         origin: TRUSTED_ORIGIN,
         source: mockParent,
@@ -502,7 +502,7 @@ describe('PostMessageTransport', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it('destroy() gỡ bỏ listener, hủy toàn bộ in-flight requests và từ chối các lệnh gọi tiếp theo', async () => {
+    it('destroy() removes the listener, aborts all in-flight requests and rejects later calls', async () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -512,27 +512,27 @@ describe('PostMessageTransport', () => {
       const p1 = transport.request({ id: 'pending-1', type: 'GET_BALANCE' });
       expect(transport.getInFlightCount()).toBe(1);
 
-      // Gọi destroy
+      // Call destroy
       transport.destroy();
 
       expect(transport.isClosed()).toBe(true);
       expect(transport.getInFlightCount()).toBe(0);
 
-      // Pending promise phải bị reject với HydraTransportError
+      // The pending promise must reject with HydraTransportError
       await expect(p1).rejects.toThrow(HydraTransportError);
 
-      // Gọi send sau destroy phải ném lỗi
+      // Calling send after destroy must throw
       await expect(
         transport.send({ id: '2', type: 'PING', source: 'hydra-client', timestamp: Date.now() })
       ).rejects.toThrow(HydraTransportError);
 
-      // Gọi request sau destroy phải ném lỗi
+      // Calling request after destroy must throw
       await expect(transport.request({ type: 'PING' })).rejects.toThrow(HydraTransportError);
     });
   });
 
   describe('Edge-case & Review Patches', () => {
-    it('chuẩn hóa origin loại bỏ dấu gạch chéo cuối (trailing slash)', () => {
+    it('normalizes the origin by stripping the trailing slash', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: 'https://alpha.hydraone.app///',
         targetWindow: mockTarget,
@@ -544,7 +544,7 @@ describe('PostMessageTransport', () => {
       const handler = vi.fn();
       transport.onMessage(handler);
 
-      // Inbound event có origin không có gạch chéo cuối
+      // Inbound event whose origin has no trailing slash
       transport.handleMessageEvent({
         origin: 'https://alpha.hydraone.app',
         source: mockParent,
@@ -554,7 +554,7 @@ describe('PostMessageTransport', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it('xử lý an toàn khi payload của message là kiểu dữ liệu nguyên thủy (primitive) hoặc null', () => {
+    it('safely handles a message payload that is a primitive or null', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
@@ -595,7 +595,7 @@ describe('PostMessageTransport', () => {
       expect(handler).toHaveBeenCalledTimes(2);
     });
 
-    it('bọc lỗi ném từ targetWindow.postMessage thành HydraTransportError', async () => {
+    it('wraps errors thrown by targetWindow.postMessage in HydraTransportError', async () => {
       const throwingTarget: PostMessageTarget = {
         postMessage: () => {
           throw new Error('DataCloneError: failed to clone cyclic object');

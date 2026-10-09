@@ -17,7 +17,7 @@ import {
   HydraUserRejectedError,
 } from '../errors';
 
-/** Danh sách các key ví Cardano phổ biến được ưu tiên nhận diện */
+/** Well-known Cardano wallet keys, detected first */
 export const KNOWN_CARDANO_WALLETS = [
   'eternl',
   'lace',
@@ -30,7 +30,7 @@ export const KNOWN_CARDANO_WALLETS = [
 ] as const;
 
 /**
- * Sinh định danh ngẫu nhiên duy nhất cho bản tin
+ * Generates a unique random ID for a message
  */
 function generateId(): string {
   if (
@@ -44,7 +44,7 @@ function generateId(): string {
 }
 
 /**
- * Kiểm tra xem một đối tượng lỗi có phải do người dùng từ chối (CIP-30 UserDeclined = code 2) hay không
+ * Whether an error was caused by the user declining (CIP-30 UserDeclined, code 2)
  */
 function isUserRejectionError(err: unknown): boolean {
   if (!err) {
@@ -70,7 +70,7 @@ function isUserRejectionError(err: unknown): boolean {
 
   const anyErr = err as Record<string, any>;
 
-  // CIP-30 quy định mã lỗi 2 cho PaginateError / UserDeclined
+  // CIP-30 uses code 2 for PaginateError / UserDeclined
   if (anyErr.code === 2 || anyErr.code === 'ERR_USER_REJECTED') {
     return true;
   }
@@ -88,10 +88,10 @@ function isUserRejectionError(err: unknown): boolean {
 }
 
 /**
- * Quét và trả về danh sách các ví Cardano CIP-30 có sẵn trong provider hoặc window.cardano
+ * Returns the CIP-30 wallets available on the provider or window.cardano
  *
- * @param provider Đối tượng cardano provider (mặc định lấy từ window.cardano nếu có)
- * @returns Mảng tên các ví hợp lệ có phương thức enable()
+ * @param provider Cardano provider (defaults to window.cardano when present)
+ * @returns Names of wallets that expose enable()
  */
 export function detectCardanoWallets(provider?: Record<string, any>): string[] {
   const target =
@@ -106,7 +106,7 @@ export function detectCardanoWallets(provider?: Record<string, any>): string[] {
 
   const available: string[] = [];
 
-  // 1. Quét theo thứ tự ưu tiên các ví đã biết
+  // 1. Scan known wallets first, in priority order
   for (const wallet of KNOWN_CARDANO_WALLETS) {
     if (
       target[wallet] &&
@@ -117,7 +117,7 @@ export function detectCardanoWallets(provider?: Record<string, any>): string[] {
     }
   }
 
-  // 2. Quét thêm các ví khác chưa có trong danh sách KNOWN_CARDANO_WALLETS
+  // 2. Then scan remaining wallets not in KNOWN_CARDANO_WALLETS
   for (const key of Object.keys(target)) {
     if (
       !available.includes(key) &&
@@ -133,10 +133,10 @@ export function detectCardanoWallets(provider?: Record<string, any>): string[] {
 }
 
 /**
- * Adapter DirectExtensionTransport - Hiện thực hóa port ITransport cho môi trường Standalone
+ * DirectExtensionTransport - ITransport implementation for standalone mode
  *
- * Cho phép game chạy độc lập ngoài iframe kết nối trực tiếp với ví trình duyệt qua window.cardano,
- * định tuyến toàn bộ truy vấn CIP-30 và ký giao dịch trực tiếp tới API extension.
+ * Lets a game running outside an iframe talk directly to the browser wallet via window.cardano,
+ * routing all CIP-30 queries and signing to the extension API.
  */
 export class DirectExtensionTransport implements ITransport {
   public readonly walletName: string;
@@ -169,7 +169,7 @@ export class DirectExtensionTransport implements ITransport {
       return;
     }
 
-    // Tự động tìm ví nếu chỉ truyền walletName hoặc không truyền gì
+    // Auto-detect a wallet when only walletName, or nothing, is given
     const availableWallets = detectCardanoWallets(provider);
 
     if (options.walletName) {
@@ -196,7 +196,7 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Kích hoạt và kết nối với CIP-30 Extension
+   * Enables and connects to the CIP-30 extension
    */
   public async enable(): Promise<CIP30Api> {
     this.assertNotDestroyed();
@@ -248,14 +248,14 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Trả về đối tượng API CIP-30 đang được kích hoạt
+   * Returns the active CIP-30 API
    */
   public getApi(): CIP30Api | undefined {
     return this.api;
   }
 
   /**
-   * Đăng ký lắng nghe bản tin phát từ Transport
+   * Registers a handler for messages emitted by the transport
    */
   public onMessage(handler: MessageHandler): UnsubscribeFn {
     this.handlers.add(handler);
@@ -265,11 +265,11 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Gửi một bản tin bất đồng bộ
+   * Sends a message asynchronously
    */
   public async send(message: BridgeMessage): Promise<void> {
     this.assertNotDestroyed();
-    // Chạy xử lý ngầm và phát bản tin phản hồi tới các handler
+    // Process in the background and dispatch the response to handlers
     this.handleMessageInternally(message).then(
       (responseMsg) => {
         if (responseMsg) {
@@ -297,7 +297,7 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Thực hiện yêu cầu RPC hai chiều với kiểm soát timeout
+   * Performs a two-way RPC request with a timeout
    */
   public async request<T>(message: BridgeMessage, timeoutMs?: number): Promise<BridgeMessage<T>> {
     this.assertNotDestroyed();
@@ -351,7 +351,7 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Xử lý bản tin nội bộ và ánh xạ sang CIP-30 API
+   * Handles a message internally and maps it to the CIP-30 API
    */
   private async handleMessageInternally(message: BridgeMessage): Promise<BridgeMessage<any>> {
     if (message.type === 'CLIENT_READY') {
@@ -383,7 +383,7 @@ export class DirectExtensionTransport implements ITransport {
       return hostAck;
     }
 
-    // Với tất cả các tác vụ CIP-30, yêu cầu extension đã enable
+    // Every CIP-30 operation requires the extension to be enabled
     if (!this.api) {
       await this.enable();
     }
@@ -476,20 +476,20 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Phát bản tin tới các handlers đã đăng ký
+   * Dispatches a message to registered handlers
    */
   private emitMessage(message: BridgeMessage): void {
     for (const handler of this.handlers) {
       try {
         handler(message);
       } catch {
-        // Tránh exception từ subscriber làm crash transport
+        // Keep a throwing subscriber from crashing the transport
       }
     }
   }
 
   /**
-   * Hủy transport và giải phóng tài nguyên
+   * Destroys the transport and releases resources
    */
   public destroy(): void {
     this.isDestroyed = true;
@@ -497,7 +497,7 @@ export class DirectExtensionTransport implements ITransport {
   }
 
   /**
-   * Kiểm tra transport đã bị hủy chưa
+   * Whether the transport has been destroyed
    */
   public isClosed(): boolean {
     return this.isDestroyed;

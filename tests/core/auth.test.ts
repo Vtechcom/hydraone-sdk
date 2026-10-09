@@ -28,8 +28,8 @@ function createTestJwt(payload: Record<string, any>): string {
   return `${base64UrlEncode(header)}.${base64UrlEncode(payload)}.signature_bytes_mock`;
 }
 
-describe('Tiện ích mã hóa & JWT (Pure Utilities)', () => {
-  it('chuyển đổi chuỗi UTF-8 sang Hex và ngược lại thành công (stringToHex / hexToString)', () => {
+describe('Encoding & JWT utilities (pure functions)', () => {
+  it('converts UTF-8 strings to hex and back (stringToHex / hexToString)', () => {
     const text = 'HydraOne Game Login Nonce 12345! 🚀';
     const hex = stringToHex(text);
     expect(hex).toBeTypeOf('string');
@@ -39,18 +39,18 @@ describe('Tiện ích mã hóa & JWT (Pure Utilities)', () => {
     expect(decoded).toBe(text);
   });
 
-  it('hexToString hỗ trợ tiền tố 0x', () => {
+  it('hexToString supports the 0x prefix', () => {
     const hex = '0x68656c6c6f'; // "hello"
     expect(hexToString(hex)).toBe('hello');
   });
 
-  it('stringToHex và hexToString ném lỗi khi tham số đầu vào không hợp lệ', () => {
+  it('stringToHex and hexToString throw on invalid input', () => {
     expect(() => stringToHex(123 as any)).toThrow();
     expect(() => hexToString(null as any)).toThrow();
     expect(() => hexToString('abc')).toThrow('Invalid hex string length');
   });
 
-  it('parseJwt giải mã chính xác claims trong payload JWT', () => {
+  it('parseJwt decodes the claims in a JWT payload', () => {
     const claims = {
       sub: 'stake1uxabc123',
       name: 'Player One',
@@ -66,42 +66,42 @@ describe('Tiện ích mã hóa & JWT (Pure Utilities)', () => {
     expect(parsed.roles).toEqual(['gamer', 'admin']);
   });
 
-  it('parseJwt ném lỗi khi JWT không hợp lệ hoặc sai cấu trúc', () => {
+  it('parseJwt throws on an invalid or malformed JWT', () => {
     expect(() => parseJwt('')).toThrow('Invalid JWT token');
     expect(() => parseJwt('invalid-single-part')).toThrow('Invalid JWT format');
     expect(() => parseJwt('header.invalid_base64_json!@#.sig')).toThrow();
   });
 
-  it('isJwtExpired trả về false khi token còn hạn (exp trong tương lai)', () => {
-    const futureExp = Math.floor(Date.now() / 1000) + 3600; // Còn 1 giờ
+  it('isJwtExpired returns false for an unexpired token (exp in the future)', () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600; // Expires in 1 hour
     const token = createTestJwt({ sub: 'user_1', exp: futureExp });
     expect(isJwtExpired(token)).toBe(false);
   });
 
-  it('isJwtExpired trả về true khi token đã hết hạn (exp trong quá khứ)', () => {
-    const pastExp = Math.floor(Date.now() / 1000) - 300; // Hết hạn 5 phút trước
+  it('isJwtExpired returns true for an expired token (exp in the past)', () => {
+    const pastExp = Math.floor(Date.now() / 1000) - 300; // Expired 5 minutes ago
     const token = createTestJwt({ sub: 'user_1', exp: pastExp });
     expect(isJwtExpired(token)).toBe(true);
   });
 
-  it('isJwtExpired trả về false khi token không chứa claim exp (không giới hạn hạn sử dụng)', () => {
+  it('isJwtExpired returns false when the token has no exp claim (never expires)', () => {
     const token = createTestJwt({ sub: 'permanent_api_key' });
     expect(isJwtExpired(token)).toBe(false);
   });
 
-  it('isJwtExpired bắt lỗi an toàn và trả về true khi token malformed', () => {
+  it('isJwtExpired returns true instead of throwing for a malformed token', () => {
     expect(isJwtExpired('invalid_token')).toBe(true);
     expect(isJwtExpired('')).toBe(true);
     expect(isJwtExpired(null as any)).toBe(true);
     expect(isJwtExpired('a.b.c')).toBe(true);
   });
 
-  it('isJwtExpired tính toán chính xác với clockToleranceSeconds', () => {
+  it('isJwtExpired honors clockToleranceSeconds', () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = createTestJwt({ sub: 'user_1', exp: now - 5 }); // hết hạn 5s trước
-    // Nếu dung sai là 10s -> chưa coi là hết hạn
+    const token = createTestJwt({ sub: 'user_1', exp: now - 5 }); // expired 5s ago
+    // A 10s tolerance means it is not yet considered expired
     expect(isJwtExpired(token, 10)).toBe(false);
-    // Nếu dung sai là 2s -> đã hết hạn
+    // A 2s tolerance means it is expired
     expect(isJwtExpired(token, 2)).toBe(true);
   });
 });
@@ -133,11 +133,11 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     };
   });
 
-  it('GameAuthManager là alias tương thích ngược trỏ đến AuthManager', () => {
+  it('GameAuthManager is a backward-compatible alias of AuthManager', () => {
     expect(GameAuthManager).toBe(AuthManager);
   });
 
-  it('khởi tạo AuthManager thành công với các tùy chọn mặc định', () => {
+  it('creates an AuthManager with default options', () => {
     const authManager = new AuthManager({
       client: mockClient,
       storage,
@@ -148,13 +148,13 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(authManager.state.token).toBeNull();
   });
 
-  it('ném lỗi khi khởi tạo AuthManager thiếu client hoặc storage', () => {
+  it('throws when constructing an AuthManager without a client or storage', () => {
     expect(() => new AuthManager(null as any)).toThrow();
     expect(() => new AuthManager({ client: null as any, storage })).toThrow('requires a client instance');
     expect(() => new AuthManager({ client: mockClient, storage: null as any })).toThrow('requires an IStorage instance');
   });
 
-  it('thực hiện 1-click signIn thành công kèm callback exchangeToken', async () => {
+  it('completes 1-click signIn with an exchangeToken callback', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 7200;
     const testJwt = createTestJwt({
       sub: 'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2',
@@ -176,7 +176,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       exchangeToken: exchangeTokenMock,
     });
 
-    // 1. Kiểm tra gọi signData
+    // 1. signData was called
     expect(mockClient.getUsedAddresses).toHaveBeenCalled();
     const expectedHex = stringToHex(challenge);
     expect(mockClient.signData).toHaveBeenCalledWith(
@@ -185,7 +185,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       undefined
     );
 
-    // 2. Kiểm tra gọi exchangeToken
+    // 2. exchangeToken was called
     expect(exchangeTokenMock).toHaveBeenCalledWith({
       address: 'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2',
       signature: 'cose_sign1_hex_abcdef',
@@ -194,13 +194,13 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       payloadHex: expectedHex,
     });
 
-    // 3. Kiểm tra lưu trữ trong IStorage
+    // 3. Values were persisted in IStorage
     const storedToken = await storage.getItem('hydra:sdk:auth:token');
     expect(storedToken).toBe(testJwt);
     const storedAddress = await storage.getItem('hydra:sdk:auth:address');
     expect(storedAddress).toBe('addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2');
 
-    // 4. Kiểm tra phát sự kiện AUTH_STATE_CHANGED
+    // 4. AUTH_STATE_CHANGED was emitted
     expect(authStateListener).toHaveBeenCalledWith(
       expect.objectContaining({
         isAuthenticated: true,
@@ -209,14 +209,14 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       })
     );
 
-    // 5. Kết quả trả về
+    // 5. Returned session
     expect(session.token).toBe(testJwt);
     expect(session.signature).toBe('cose_sign1_hex_abcdef');
     expect(session.claims?.sub).toBe('addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2');
     expect(await authManager.isAuthenticated()).toBe(true);
   });
 
-  it('thực hiện 1-click signIn thành công khi truyền sẵn JWT token', async () => {
+  it('completes 1-click signIn when a JWT is passed in', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const testJwt = createTestJwt({ sub: 'user_direct', exp: futureExp });
 
@@ -235,7 +235,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(await authManager.isAuthenticated()).toBe(true);
   });
 
-  it('sử dụng địa chỉ cụ thể nếu người dùng truyền address trong signIn', async () => {
+  it('uses the explicit address passed to signIn', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const testJwt = createTestJwt({ sub: 'custom_addr', exp: futureExp });
 
@@ -258,7 +258,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(await authManager.getAuthAddress()).toBe('addr_custom_123');
   });
 
-  it('ném HydraBridgeError với ERR_NOT_CONNECTED khi không có địa chỉ ví khả dụng', async () => {
+  it('throws HydraBridgeError with ERR_NOT_CONNECTED when no wallet address is available', async () => {
     (mockClient.getUsedAddresses as any).mockResolvedValue([]);
     (mockClient.getChangeAddress as any).mockResolvedValue(null);
 
@@ -275,7 +275,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     }
   });
 
-  it('truyền lỗi HydraUserRejectedError khi người chơi từ chối ký ví trong popup CIP-8', async () => {
+  it('propagates HydraUserRejectedError when the player rejects the CIP-8 signing popup', async () => {
     (mockClient.signData as any).mockRejectedValue(
       new HydraUserRejectedError('User declined CIP-8 signData')
     );
@@ -292,7 +292,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(authManager.state.isAuthenticated).toBe(false);
   });
 
-  it('truyền lỗi HydraTimeoutError khi quá thời gian chờ ký ví', async () => {
+  it('propagates HydraTimeoutError when wallet signing times out', async () => {
     (mockClient.signData as any).mockRejectedValue(
       new HydraTimeoutError('Signing timed out')
     );
@@ -307,7 +307,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
-  it('ném HydraAuthError nếu token nhận được từ exchangeToken đã hết hạn', async () => {
+  it('throws HydraAuthError when the token returned by exchangeToken is expired', async () => {
     const expiredExp = Math.floor(Date.now() / 1000) - 100;
     const expiredJwt = createTestJwt({ sub: 'expired_user', exp: expiredExp });
 
@@ -326,7 +326,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
   });
 
-  it('tự động xóa token và phát AUTH_STATE_CHANGED khi truy vấn getToken() gặp token hết hạn', async () => {
+  it('clears the token and emits AUTH_STATE_CHANGED when getToken() finds an expired token', async () => {
     const pastExp = Math.floor(Date.now() / 1000) - 60;
     const expiredJwt = createTestJwt({ sub: 'player_expired', exp: pastExp });
 
@@ -355,7 +355,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
-  it('setSession thiết lập phiên đăng nhập thành công và ném lỗi nếu token hết hạn', async () => {
+  it('setSession establishes a session and throws for an expired token', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 5000;
     const validJwt = createTestJwt({ sub: 'set_session_user', exp: futureExp });
 
@@ -374,7 +374,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     await expect(authManager.setSession(expiredJwt)).rejects.toThrow(HydraAuthError);
   });
 
-  it('signOut xóa sạch token và địa chỉ khỏi storage và phát AUTH_STATE_CHANGED', async () => {
+  it('signOut clears the token and address from storage and emits AUTH_STATE_CHANGED', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const testJwt = createTestJwt({ exp: futureExp });
 
@@ -402,7 +402,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
-  it('getClaims trả về đúng claims hoặc null khi chưa đăng nhập', async () => {
+  it('getClaims returns the claims, or null when logged out', async () => {
     const authManager = new GameAuthManager({
       client: mockClient,
       storage,
@@ -418,7 +418,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(claims?.score).toBe(9999);
   });
 
-  it('onAuthStateChanged trả về hàm unsubscribe hoạt động chính xác', async () => {
+  it('onAuthStateChanged returns a working unsubscribe function', async () => {
     const authManager = new GameAuthManager({
       client: mockClient,
       storage,
@@ -434,10 +434,10 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     unsubscribe();
 
     await authManager.signOut();
-    expect(listener).toHaveBeenCalledTimes(1); // không gọi thêm sau khi unsubscribe
+    expect(listener).toHaveBeenCalledTimes(1); // not called again after unsubscribe
   });
 
-  it('tự động signOut khi Host Shell phát sự kiện AUTH_STATE_CHANGED với isAuthenticated = false', async () => {
+  it('signs out automatically when the Host Shell emits AUTH_STATE_CHANGED with isAuthenticated = false', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const testJwt = createTestJwt({ exp: futureExp });
 
@@ -449,18 +449,18 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     await authManager.setSession(testJwt);
     expect(await authManager.isAuthenticated()).toBe(true);
 
-    // Giả lập Host Shell gửi thông báo đăng xuất
+    // Simulate the Host Shell sending a logout notification
     const hostHandler = hostEventListeners.get('AUTH_STATE_CHANGED');
     expect(hostHandler).toBeDefined();
 
     hostHandler!({ isAuthenticated: false });
 
-    // Đợi async signOut chạy
+    // Wait for the async signOut to run
     await new Promise((r) => setTimeout(r, 50));
     expect(await authManager.isAuthenticated()).toBe(false);
   });
 
-  it('phương thức destroy() gỡ bỏ đăng ký host event và dọn dẹp listeners', () => {
+  it('destroy() removes the host event subscription and clears listeners', () => {
     const unsubscribeHostMock = vi.fn();
     (mockClient.onHostEvent as any).mockReturnValue(unsubscribeHostMock);
 
@@ -476,37 +476,37 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
     expect(unsubscribeHostMock).toHaveBeenCalledTimes(1);
 
-    // Sau khi destroy, listener nội bộ không còn nhận sự kiện
+    // After destroy, the internal listener no longer receives events
     authManager.signOut();
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('isJwtExpired tự động chuẩn hóa khi claim exp ở dạng milliseconds (13 chữ số)', () => {
+  it('isJwtExpired normalizes an exp claim given in milliseconds (13 digits)', () => {
     const nowMs = Date.now();
-    const futureMs = nowMs + 1000 * 3600; // 1 giờ sau tính bằng ms
+    const futureMs = nowMs + 1000 * 3600; // 1 hour from now, in ms
     const futureMsToken = createTestJwt({ sub: 'user_ms', exp: futureMs });
     expect(isJwtExpired(futureMsToken)).toBe(false);
 
-    const pastMs = nowMs - 1000 * 300; // 5 phút trước tính bằng ms
+    const pastMs = nowMs - 1000 * 300; // 5 minutes ago, in ms
     const pastMsToken = createTestJwt({ sub: 'user_ms', exp: pastMs });
     expect(isJwtExpired(pastMsToken)).toBe(true);
   });
 
-  it('parseJwt giải mã chính xác các ký tự UTF-8 có dấu và emoji trong claims', () => {
+  it('parseJwt decodes accented UTF-8 characters and emoji in claims', () => {
     const claims = {
-      name: 'Nguyễn Văn Ánh',
-      gameTitle: 'Chiến Binh Rồng 🐉',
-      guild: 'HydraOne Việt Nam',
+      name: 'Zoë Müller',
+      gameTitle: 'Dragon Knight 🐉',
+      guild: 'HydraOne Köln',
     };
     const jwt = createTestJwt(claims);
     const parsed = parseJwt(jwt);
 
-    expect(parsed.name).toBe('Nguyễn Văn Ánh');
-    expect(parsed.gameTitle).toBe('Chiến Binh Rồng 🐉');
-    expect(parsed.guild).toBe('HydraOne Việt Nam');
+    expect(parsed.name).toBe('Zoë Müller');
+    expect(parsed.gameTitle).toBe('Dragon Knight 🐉');
+    expect(parsed.guild).toBe('HydraOne Köln');
   });
 
-  it('hỗ trợ cấu hình tùy biến tokenStorageKey và addressStorageKey', async () => {
+  it('supports custom tokenStorageKey and addressStorageKey', async () => {
     const customAuthManager = new GameAuthManager({
       client: mockClient,
       storage,
@@ -524,22 +524,22 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(await customAuthManager.getToken()).toBe(testJwt);
   });
 
-  it('hexToString ném lỗi khi chuỗi hex chứa ký tự phi hex', () => {
+  it('hexToString throws when the string contains non-hex characters', () => {
     expect(() => hexToString('0xgg')).toThrow('contains non-hex characters');
     expect(() => hexToString('12zz')).toThrow('contains non-hex characters');
   });
 
-  it('parseJwt bắt lỗi an toàn khi base64 chứa ký tự không hợp lệ', () => {
+  it('parseJwt throws a controlled error on invalid base64 characters', () => {
     expect(() => parseJwt('header.invalid!!base64.sig')).toThrow('Failed to parse JWT payload JSON');
   });
 
-  it('signIn xử lý challenge bắt đầu bằng 0x: giữ nguyên nếu là hex hợp lệ, fallback stringToHex nếu lẻ hoặc phi hex', async () => {
+  it('signIn handles a challenge starting with 0x: keeps valid hex as-is, falls back to stringToHex when odd-length or non-hex', async () => {
     const authManager = new GameAuthManager({
       client: mockClient,
       storage,
     });
 
-    // 1. 0x kèm hex chẵn hợp lệ -> giữ nguyên hex
+    // 1. 0x with valid even-length hex -> kept as-is
     await authManager.signIn({ challenge: '0xabcd' });
     expect(mockClient.signData).toHaveBeenCalledWith(
       expect.any(String),
@@ -547,7 +547,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       undefined
     );
 
-    // 2. 0x lẻ ký tự (ví dụ 0xabc) -> fallback mã hóa chuỗi
+    // 2. 0x with odd length (e.g. 0xabc) -> falls back to string encoding
     await authManager.signIn({ challenge: '0xabc' });
     expect(mockClient.signData).toHaveBeenCalledWith(
       expect.any(String),
@@ -555,7 +555,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       undefined
     );
 
-    // 3. 0x chứa ký tự phi hex (ví dụ 0xhello) -> fallback mã hóa chuỗi
+    // 3. 0x with non-hex characters (e.g. 0xhello) -> falls back to string encoding
     await authManager.signIn({ challenge: '0xhello' });
     expect(mockClient.signData).toHaveBeenCalledWith(
       expect.any(String),
@@ -564,7 +564,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
-  it('signOut luôn xóa sạch trạng thái xác thực trong RAM kể cả khi storage.removeItem bị lỗi', async () => {
+  it('signOut always clears in-memory auth state even when storage.removeItem fails', async () => {
     const errorStorage = {
       getItem: vi.fn().mockResolvedValue(null),
       setItem: vi.fn().mockResolvedValue(undefined),
@@ -586,7 +586,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
     await expect(authManager.signOut()).rejects.toThrow('Storage disk I/O failure');
 
-    // Mặc dù storage ném lỗi, state RAM vẫn phải đảm bảo isAuthenticated = false
+    // Even though storage throws, in-memory state must still have isAuthenticated = false
     expect(authManager.state.isAuthenticated).toBe(false);
     expect(authManager.state.token).toBeNull();
     expect(listener).toHaveBeenCalledWith(
@@ -594,7 +594,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
-  it('getToken và checkSession cập nhật lại currentState khi token trong storage thay đổi', async () => {
+  it('getToken and checkSession refresh currentState when the stored token changes', async () => {
     const authManager = new GameAuthManager({
       client: mockClient,
       storage,
@@ -604,7 +604,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     await authManager.setSession(jwt1, 'addr_1');
     expect(authManager.state.token).toBe(jwt1);
 
-    // Giả lập storage token được refresh / cập nhật từ tab khác
+    // Simulate the stored token being refreshed from another tab
     const jwt2 = createTestJwt({ sub: 'user_2', exp: Math.floor(Date.now() / 1000) + 7200 });
     await storage.setItem('hydra:sdk:auth:token', jwt2);
 
@@ -614,7 +614,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(authManager.state.claims?.sub).toBe('user_2');
   });
 
-  it('updateAuthState an toàn khi listener đăng ký listener mới trong lúc dispatch', async () => {
+  it('updateAuthState is safe when a listener registers a new listener during dispatch', async () => {
     const authManager = new GameAuthManager({
       client: mockClient,
       storage,
@@ -632,7 +632,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     await authManager.setSession(jwt);
 
     expect(primaryCalled).toBe(true);
-    // secondaryListener được đăng ký trong callback không được gọi ngay trong dispatch hiện tại
+    // A listener registered inside a callback must not be called in the current dispatch
     expect(secondaryListener).not.toHaveBeenCalled();
   });
 });

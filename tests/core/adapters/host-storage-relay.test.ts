@@ -14,7 +14,7 @@ import {
   type MessageEventSource,
 } from '../../../src';
 
-// Mock Transport thuần chỉ hiện thực send và onMessage (không có request)
+// Plain mock transport implementing only send and onMessage (no request)
 class MockGenericTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
   public handlers: Set<MessageHandler> = new Set();
@@ -89,20 +89,20 @@ describe('HostStorageRelayAdapter', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Khởi tạo và cấu hình', () => {
-    it('ném HydraStorageError khi không truyền transport hợp lệ', () => {
+  describe('Construction and configuration', () => {
+    it('throws HydraStorageError when no valid transport is given', () => {
       expect(() => new HostStorageRelayAdapter(null as any)).toThrow(HydraStorageError);
       expect(() => new HostStorageRelayAdapter({} as any)).toThrow(HydraStorageError);
     });
 
-    it('khởi tạo thành công với ITransport trực tiếp', () => {
+    it('constructs with an ITransport directly', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport);
       expect(adapter).toBeDefined();
       expect(adapter.isDestroyed).toBe(false);
     });
 
-    it('khởi tạo thành công với HostStorageRelayAdapterOptions', () => {
+    it('constructs with HostStorageRelayAdapterOptions', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter({
         transport,
@@ -112,8 +112,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Đọc dữ liệu qua getItem (Generic ITransport)', () => {
-    it('đọc thành công token từ Host Shell khi Host trả về RPC_RESPONSE với result', async () => {
+  describe('Reading via getItem (generic ITransport)', () => {
+    it('reads a token from the Host Shell when the host returns an RPC_RESPONSE with a result', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -124,7 +124,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(sent.type).toBe('HOST_STORAGE_GET');
       expect(sent.payload).toEqual({ key: 'hydra:sdk:auth:token' });
 
-      // Host Shell gửi RPC_RESPONSE phản hồi
+      // The Host Shell sends an RPC_RESPONSE
       transport.simulateHostResponse({
         id: 'host-resp-1',
         type: 'RPC_RESPONSE',
@@ -140,7 +140,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(result).toBe('jwt_token_sample_123');
     });
 
-    it('đọc thành công khi Host trả về payload chứa { value: string }', async () => {
+    it('reads successfully when the host returns a payload containing { value: string }', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -162,7 +162,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(result).toBe('dark');
     });
 
-    it('trả về null khi Host báo khóa không tồn tại (null hoặc undefined)', async () => {
+    it('returns null when the host reports a missing key (null or undefined)', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -184,7 +184,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(result).toBeNull();
     });
 
-    it('trả về chuỗi rỗng "" khi Host lưu chuỗi rỗng', async () => {
+    it('returns an empty string "" when the host stored an empty string', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -207,8 +207,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Ghi dữ liệu qua setItem (Generic ITransport)', () => {
-    it('gửi HOST_STORAGE_SET và resolve khi Host xác nhận thành công', async () => {
+  describe('Writing via setItem (generic ITransport)', () => {
+    it('sends HOST_STORAGE_SET and resolves when the host confirms', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -237,8 +237,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Xóa dữ liệu qua removeItem và clear (Generic ITransport)', () => {
-    it('removeItem gửi HOST_STORAGE_REMOVE và resolve khi Host hoàn tất', async () => {
+  describe('Removing via removeItem and clear (generic ITransport)', () => {
+    it('removeItem sends HOST_STORAGE_REMOVE and resolves when the host finishes', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -263,7 +263,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(removePromise).resolves.toBeUndefined();
     });
 
-    it('clear gửi HOST_STORAGE_CLEAR với prefix hydra:sdk: và resolve', async () => {
+    it('clear sends HOST_STORAGE_CLEAR with the hydra:sdk: prefix and resolves', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -289,8 +289,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Xử lý lỗi & Edge-Case Matrix theo chính sách bảo mật AD-3', () => {
-    it('ném HydraStorageError với code ERR_STORAGE_UNAVAILABLE khi Host phản hồi timeout', async () => {
+  describe('Error handling & edge-case matrix', () => {
+    it('throws HydraStorageError with code ERR_STORAGE_UNAVAILABLE when the host times out', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 50 });
 
@@ -304,7 +304,7 @@ describe('HostStorageRelayAdapter', () => {
       }
     });
 
-    it('ném HydraStorageError khi Transport gặp lỗi mất kết nối (send failure)', async () => {
+    it('throws HydraStorageError when the transport loses connection (send failure)', async () => {
       const transport = new MockGenericTransport();
       transport.shouldFailSend = true;
       const adapter = new HostStorageRelayAdapter(transport);
@@ -321,7 +321,7 @@ describe('HostStorageRelayAdapter', () => {
       }
     });
 
-    it('ném HydraStorageError khi Host trả về bản tin RPC_ERROR', async () => {
+    it('throws HydraStorageError when the host returns an RPC_ERROR message', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -352,7 +352,7 @@ describe('HostStorageRelayAdapter', () => {
       }
     });
 
-    it('ném HydraStorageError khi thực hiện thao tác sau khi adapter đã bị destroy', async () => {
+    it('throws HydraStorageError for operations after the adapter is destroyed', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport);
 
@@ -369,7 +369,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(adapter.clear()).rejects.toThrow(HydraStorageError);
     });
 
-    it('hủy bỏ tất cả các in-flight requests khi gọi destroy()', async () => {
+    it('aborts all in-flight requests on destroy()', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 5000 });
 
@@ -387,8 +387,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Tương thích với PostMessageTransport (sử dụng transport.request)', () => {
-    it('thực hiện luồng getItem và setItem thành công qua PostMessageTransport', async () => {
+  describe('PostMessageTransport compatibility (uses transport.request)', () => {
+    it('completes getItem and setItem over PostMessageTransport', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -403,13 +403,13 @@ describe('HostStorageRelayAdapter', () => {
 
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
 
-      // 1. Thao tác setItem
+      // 1. setItem
       const setPromise = adapter.setItem('hydra:sdk:auth:token', 'postmessage_jwt');
       expect(targetWindow.sentMessages.length).toBe(1);
       const setSent = targetWindow.sentMessages[0].message as BridgeMessage;
       expect(setSent.type).toBe('HOST_STORAGE_SET');
 
-      // Giả lập Host gửi phản hồi RPC_RESPONSE qua postMessage
+      // Simulate the host sending an RPC_RESPONSE via postMessage
       sourceWindow.dispatch('message', {
         origin: 'https://host.hydraone.app',
         source: parentWindow,
@@ -427,7 +427,7 @@ describe('HostStorageRelayAdapter', () => {
 
       await expect(setPromise).resolves.toBeUndefined();
 
-      // 2. Thao tác getItem
+      // 2. getItem
       const getPromise = adapter.getItem('hydra:sdk:auth:token');
       expect(targetWindow.sentMessages.length).toBe(2);
       const getSent = targetWindow.sentMessages[1].message as BridgeMessage;
@@ -452,7 +452,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(token).toBe('postmessage_jwt');
     });
 
-    it('bọc lỗi timeout từ PostMessageTransport thành HydraStorageError', async () => {
+    it('wraps a PostMessageTransport timeout in HydraStorageError', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -470,7 +470,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
     });
 
-    it('thực hiện removeItem và clear thành công qua PostMessageTransport', async () => {
+    it('completes removeItem and clear over PostMessageTransport', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -534,7 +534,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(clearPromise).resolves.toBeUndefined();
     });
 
-    it('bọc lỗi RPC_ERROR từ Host Shell qua PostMessageTransport thành HydraStorageError', async () => {
+    it('wraps an RPC_ERROR from the Host Shell in HydraStorageError over PostMessageTransport', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -580,8 +580,8 @@ describe('HostStorageRelayAdapter', () => {
     });
   });
 
-  describe('Tương thích với Sub-Namespace Policy', () => {
-    it('hoạt động chuẩn xác với các khóa sinh ra từ buildStorageKey', async () => {
+  describe('Sub-namespace policy compatibility', () => {
+    it('works with keys produced by buildStorageKey', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
@@ -608,7 +608,7 @@ describe('HostStorageRelayAdapter', () => {
   });
 
   describe('Review Findings Test Coverage', () => {
-    it('ném lỗi khi truyền key rỗng hoặc không phải chuỗi trong getItem/setItem/removeItem', async () => {
+    it('throws for an empty or non-string key in getItem/setItem/removeItem', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport);
 
@@ -618,11 +618,11 @@ describe('HostStorageRelayAdapter', () => {
       await expect(adapter.removeItem('')).rejects.toThrow(HydraStorageError);
     });
 
-    it('trích xuất chính xác giá trị khi Host trả về số nguyên hoặc boolean nguyên thủy', async () => {
+    it('extracts the value when the host returns a primitive number or boolean', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      // Trả về số nguyên 42
+      // Return the number 42
       const getItemPromise1 = adapter.getItem('hydra:sdk:auth:count');
       const sent1 = transport.sentMessages[0];
       transport.simulateHostResponse({
@@ -637,7 +637,7 @@ describe('HostStorageRelayAdapter', () => {
       });
       expect(await getItemPromise1).toBe('42');
 
-      // Trả về boolean true
+      // Return boolean true
       const getItemPromise2 = adapter.getItem('hydra:sdk:auth:verified');
       const sent2 = transport.sentMessages[1];
       transport.simulateHostResponse({
@@ -653,7 +653,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(await getItemPromise2).toBe('true');
     });
 
-    it('hủy tức thì (immediate abort) in-flight request trên PostMessageTransport khi gọi destroy() mà không cần chờ phản hồi Host', async () => {
+    it('immediately aborts an in-flight PostMessageTransport request on destroy() without waiting for the host', async () => {
       const targetWindow = new MockTargetWindow();
       const parentWindow = new MockSourceWindow();
       const sourceWindow = new MockSourceWindow(parentWindow);
@@ -671,7 +671,7 @@ describe('HostStorageRelayAdapter', () => {
       const inFlightPromise = adapter.getItem('hydra:sdk:auth:token');
       expect(targetWindow.sentMessages.length).toBe(1);
 
-      // Gọi destroy() ngay lập tức, không dispatch bất kỳ response nào từ Host
+      // Call destroy() right away without dispatching any host response
       adapter.destroy();
 
       await expect(inFlightPromise).rejects.toThrow(HydraStorageError);
@@ -683,14 +683,14 @@ describe('HostStorageRelayAdapter', () => {
       }
     });
 
-    it('trích xuất an toàn dữ liệu dạng object/array bằng JSON.stringify trong extractValue', async () => {
+    it('extracts object/array data via JSON.stringify in extractValue', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
       const getItemPromise = adapter.getItem('hydra:sdk:session:state');
       const sent = transport.sentMessages[0];
 
-      // Host trả về một object phức tạp
+      // The host returns a complex object
       transport.simulateHostResponse({
         id: 'resp-obj',
         type: 'RPC_RESPONSE',
@@ -706,7 +706,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(extracted).toBe(JSON.stringify({ score: 100, level: 3, items: ['sword', 'shield'] }));
     });
 
-    it('bảo toàn thông điệp lỗi chuỗi trực tiếp từ Host Shell khi nhận RPC_ERROR', async () => {
+    it('preserves a plain-string error message from the Host Shell on RPC_ERROR', async () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 

@@ -52,20 +52,20 @@ describe('DirectExtensionTransport', () => {
   });
 
   describe('detectCardanoWallets', () => {
-    it('phát hiện đúng các ví Cardano hợp lệ trong provider theo thứ tự ưu tiên', () => {
+    it('detects valid Cardano wallets in the provider in priority order', () => {
       const wallets = detectCardanoWallets(mockProvider);
       expect(wallets).toContain('eternl');
       expect(wallets).toContain('nami');
       expect(wallets[0]).toBe('eternl');
     });
 
-    it('trả về mảng rỗng khi provider rỗng hoặc không có ví hợp lệ', () => {
+    it('returns an empty array for an empty provider or when no wallet is valid', () => {
       expect(detectCardanoWallets({})).toEqual([]);
       expect(detectCardanoWallets(undefined)).toEqual([]);
       expect(detectCardanoWallets({ dummyWallet: { foo: 'bar' } })).toEqual([]);
     });
 
-    it('phát hiện cả ví tùy biến ngoài KNOWN_CARDANO_WALLETS có method enable', () => {
+    it('also detects custom wallets outside KNOWN_CARDANO_WALLETS that expose enable', () => {
       const customProvider = {
         custom_wallet: {
           enable: vi.fn(),
@@ -76,14 +76,14 @@ describe('DirectExtensionTransport', () => {
     });
   });
 
-  describe('Khởi tạo Transport', () => {
-    it('khởi tạo thành công khi truyền trực tiếp CIP30Api instance', () => {
+  describe('Transport construction', () => {
+    it('constructs when given a CIP30Api instance directly', () => {
       const transport = new DirectExtensionTransport({ api: mockApi, walletName: 'custom' });
       expect(transport.walletName).toBe('custom');
       expect(transport.getApi()).toBe(mockApi);
     });
 
-    it('khởi tạo thành công khi truyền trực tiếp extension instance', () => {
+    it('constructs when given an extension instance directly', () => {
       const transport = new DirectExtensionTransport({
         walletName: 'eternl',
         extension: mockExtension,
@@ -91,12 +91,12 @@ describe('DirectExtensionTransport', () => {
       expect(transport.walletName).toBe('eternl');
     });
 
-    it('tự động phát hiện ví đầu tiên khi không chỉ định walletName', () => {
+    it('auto-detects the first wallet when walletName is not specified', () => {
       const transport = new DirectExtensionTransport({ cardanoProvider: mockProvider });
       expect(transport.walletName).toBe('eternl');
     });
 
-    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi ví chỉ định không tồn tại trong provider', () => {
+    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when the named wallet is not in the provider', () => {
       expect(() => {
         new DirectExtensionTransport({
           walletName: 'non_existent_wallet',
@@ -114,7 +114,7 @@ describe('DirectExtensionTransport', () => {
       }
     });
 
-    it('ném HydraTransportError (ERR_NOT_IN_IFRAME) khi provider không có bất kỳ ví nào', () => {
+    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when the provider has no wallets', () => {
       expect(() => {
         new DirectExtensionTransport({ cardanoProvider: {} });
       }).toThrowError(HydraTransportError);
@@ -122,7 +122,7 @@ describe('DirectExtensionTransport', () => {
   });
 
   describe('Handshake (CLIENT_READY)', () => {
-    it('thực hiện enable() extension và phản hồi HOST_ACK với hostInfo chính xác', async () => {
+    it('calls enable() on the extension and replies HOST_ACK with correct hostInfo', async () => {
       const transport = new DirectExtensionTransport({
         walletName: 'eternl',
         extension: mockExtension,
@@ -148,7 +148,7 @@ describe('DirectExtensionTransport', () => {
       });
     });
 
-    it('nhận diện đúng network testnet khi getNetworkId() trả về 0', async () => {
+    it('identifies testnet when getNetworkId() returns 0', async () => {
       (mockApi.getNetworkId as any).mockResolvedValueOnce(0);
       const transport = new DirectExtensionTransport({ api: mockApi, walletName: 'eternl' });
 
@@ -162,7 +162,7 @@ describe('DirectExtensionTransport', () => {
       expect(response.payload.hostInfo.network).toBe('testnet');
     });
 
-    it('ném HydraUserRejectedError khi người dùng từ chối cấp quyền enable() extension', async () => {
+    it('throws HydraUserRejectedError when the user declines enable()', async () => {
       const rejectedExtension: CardanoWalletExtension = {
         name: 'eternl',
         icon: '',
@@ -186,12 +186,12 @@ describe('DirectExtensionTransport', () => {
       ).rejects.toThrowError(HydraUserRejectedError);
     });
 
-    it('ném lỗi HydraBridgeError (ERR_WALLET_ENABLE_FAILED) khi enable() trả về giá trị không hợp lệ', async () => {
+    it('throws HydraBridgeError (ERR_WALLET_ENABLE_FAILED) when enable() returns an invalid value', async () => {
       const invalidExtension = {
         name: 'bad_wallet',
         icon: '',
         version: '1.0.0',
-        enable: vi.fn().mockResolvedValue(null), // null hoặc không phải object
+        enable: vi.fn().mockResolvedValue(null), // null or not an object
         isEnabled: vi.fn().mockResolvedValue(false),
       };
 
@@ -220,7 +220,7 @@ describe('DirectExtensionTransport', () => {
       transport = new DirectExtensionTransport({ api: mockApi, walletName: 'eternl' });
     });
 
-    it('xử lý GET_USED_ADDRESSES chính xác', async () => {
+    it('handles GET_USED_ADDRESSES', async () => {
       const res = await transport.request<any>({
         id: 'req_addr',
         type: 'GET_USED_ADDRESSES',
@@ -234,7 +234,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toEqual(['addr_cbor_1']);
     });
 
-    it('xử lý GET_UTXOS chính xác', async () => {
+    it('handles GET_UTXOS', async () => {
       const res = await transport.request<any>({
         id: 'req_utxo',
         type: 'GET_UTXOS',
@@ -247,7 +247,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toEqual(['utxo_cbor_1']);
     });
 
-    it('xử lý GET_BALANCE chính xác', async () => {
+    it('handles GET_BALANCE', async () => {
       const res = await transport.request<any>({
         id: 'req_balance',
         type: 'GET_BALANCE',
@@ -259,7 +259,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toBe('100000000');
     });
 
-    it('xử lý GET_COLLATERAL chính xác', async () => {
+    it('handles GET_COLLATERAL', async () => {
       const res = await transport.request<any>({
         id: 'req_collat',
         type: 'GET_COLLATERAL',
@@ -272,7 +272,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toEqual(['collateral_cbor_1']);
     });
 
-    it('chuẩn hóa GET_COLLATERAL thành null khi API trả về undefined', async () => {
+    it('normalizes GET_COLLATERAL to null when the API returns undefined', async () => {
       (mockApi.getCollateral as any).mockResolvedValueOnce(undefined);
       const res = await transport.request<any>({
         id: 'req_collat_undef',
@@ -293,7 +293,7 @@ describe('DirectExtensionTransport', () => {
       transport = new DirectExtensionTransport({ api: mockApi, walletName: 'eternl' });
     });
 
-    it('xử lý SIGN_TX chính xác', async () => {
+    it('handles SIGN_TX', async () => {
       const res = await transport.request<any>({
         id: 'req_sign_tx',
         type: 'SIGN_TX',
@@ -306,7 +306,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toBe('witness_set_cbor');
     });
 
-    it('xử lý SUBMIT_TX chính xác', async () => {
+    it('handles SUBMIT_TX', async () => {
       const res = await transport.request<any>({
         id: 'req_submit_tx',
         type: 'SUBMIT_TX',
@@ -319,7 +319,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toBe('tx_hash_1234567890');
     });
 
-    it('xử lý SIGN_DATA chính xác', async () => {
+    it('handles SIGN_DATA', async () => {
       const res = await transport.request<any>({
         id: 'req_sign_data',
         type: 'SIGN_DATA',
@@ -332,7 +332,7 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toEqual({ signature: 'sig_hex', key: 'key_hex' });
     });
 
-    it('ném HydraUserRejectedError khi extension reject với UserDeclined', async () => {
+    it('throws HydraUserRejectedError when the extension rejects with UserDeclined', async () => {
       (mockApi.signTx as any).mockRejectedValueOnce({
         code: 2,
         info: 'User declined to sign transaction',
@@ -351,7 +351,7 @@ describe('DirectExtensionTransport', () => {
   });
 
   describe('Timeout, Send & Destroy', () => {
-    it('ném HydraTimeoutError khi request vượt quá timeoutMs', async () => {
+    it('throws HydraTimeoutError when a request exceeds timeoutMs', async () => {
       const slowApi = {
         ...mockApi,
         getBalance: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100))),
@@ -371,7 +371,7 @@ describe('DirectExtensionTransport', () => {
       ).rejects.toThrowError(HydraTimeoutError);
     });
 
-    it('send() phát bản tin phản hồi tới callback onMessage', async () => {
+    it('send() delivers the response message to the onMessage callback', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       const received: BridgeMessage[] = [];
 
@@ -386,7 +386,7 @@ describe('DirectExtensionTransport', () => {
         source: 'hydra-client',
       });
 
-      // Đợi microtask
+      // Wait for microtasks
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(received.length).toBe(1);
@@ -396,7 +396,7 @@ describe('DirectExtensionTransport', () => {
       unsubscribe();
     });
 
-    it('send() xử lý an toàn bản tin SET_ORIENTATION và TRIGGER_HAPTIC trả về success', async () => {
+    it('send() handles SET_ORIENTATION and TRIGGER_HAPTIC messages and returns success', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       const received: BridgeMessage[] = [];
 
@@ -431,7 +431,7 @@ describe('DirectExtensionTransport', () => {
       unsubscribe();
     });
 
-    it('send() và request() xử lý an toàn bản tin REQUEST_DEPOSIT_MODAL và GET_PLAYER_PROFILE', async () => {
+    it('send() and request() handle REQUEST_DEPOSIT_MODAL and GET_PLAYER_PROFILE messages', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       const received: BridgeMessage[] = [];
 
@@ -468,7 +468,7 @@ describe('DirectExtensionTransport', () => {
         adaHandle: undefined,
       });
 
-      // Kiểm tra gọi qua request()
+      // Check via request()
       const modalRes = await transport.request({
         id: 'sa_modal_2',
         type: 'REQUEST_DEPOSIT_MODAL',
@@ -496,7 +496,7 @@ describe('DirectExtensionTransport', () => {
       unsubscribe();
     });
 
-    it('destroy() đóng transport và chặn các yêu cầu tiếp theo', async () => {
+    it('destroy() closes the transport and rejects subsequent requests', async () => {
       const transport = new DirectExtensionTransport({ api: mockApi });
       expect(transport.isClosed()).toBe(false);
 
