@@ -42,7 +42,13 @@
   "files": [
     "dist",
     "bin",
-    "templates"
+    "templates",
+    "!templates/**/node_modules",
+    "!templates/**/.next",
+    "!templates/**/.nuxt",
+    "!templates/**/.output",
+    "!templates/**/dist",
+    "!templates/**/next-env.d.ts"
   ],
   "sideEffects": false,
   "repository": {
