@@ -5,6 +5,7 @@
  */
 
 import { MockBridgeHost } from './mock-host';
+import { escapeHtml } from './escape-html';
 import type {
   DevToolsPosition,
   DevToolsTheme,
@@ -594,7 +595,7 @@ export class DevToolsWidget {
                 <polyline points="2 12 12 17 22 12"></polyline>
               </svg>
             </div>
-            <span>${this.title}</span>
+            <span>${escapeHtml(this.title)}</span>
             <span class="status-chip" style="border-color: ${connectionColor}; color: ${connectionColor};">
               <span class="dot" style="background-color: ${connectionColor};"></span>
               ${connectionText}
@@ -610,7 +611,7 @@ export class DevToolsWidget {
 
         ${
           this.statusToastMessage
-            ? `<div class="toast-bar">${this.statusToastMessage}</div>`
+            ? `<div class="toast-bar">${escapeHtml(this.statusToastMessage)}</div>`
             : ''
         }
 
@@ -618,7 +619,7 @@ export class DevToolsWidget {
         <div class="info-card">
           <div class="info-row">
             <span class="info-label">Wallet</span>
-            <span class="info-value" title="${state.address}">${shortAddress}</span>
+            <span class="info-value" title="${escapeHtml(state.address)}">${shortAddress}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Balance</span>

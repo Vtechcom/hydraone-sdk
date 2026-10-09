@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import { DevShellBridgeController } from "./shell-bridge";
 import { HYDRA_LOGO_SRC } from "./assets";
+import { escapeHtml } from "../escape-html";
 
 /** Shortens an address for display */
 function formatId(id: string | null | undefined, begin = 6, last = 4): string {
@@ -664,7 +665,7 @@ export class HydraDevShellUI {
             <iframe
               id="hydra-game-iframe"
               class="the-game-iframe"
-              src="${targetUrl}"
+              src="${escapeHtml(targetUrl)}"
               loading="eager"
               fetchpriority="high"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"

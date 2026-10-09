@@ -67,6 +67,14 @@ describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
       expect(widget.shadowRoot?.textContent).toContain('Custom Game DevTools');
     });
 
+    it('renders a markup-bearing title as text instead of injecting elements', () => {
+      widget = new DevToolsWidget({ host, title: '<img src=x id="injected">' });
+      widget.mount();
+
+      expect(widget.shadowRoot?.querySelector('#injected')).toBeNull();
+      expect(widget.shadowRoot?.textContent).toContain('<img src=x id="injected">');
+    });
+
     it('mounting repeatedly is safe (idempotent)', () => {
       widget = new DevToolsWidget({ host });
       widget.mount();
