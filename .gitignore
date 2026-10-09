@@ -1,9 +1,22 @@
 node_modules/
 dist/
+coverage/
 *.log
+*.tgz
+*.tsbuildinfo
 .DS_Store
+.env
+.env.*
+!.env.example
+
+# Template build output
 .nuxt/
 .next/
 .output/
 next-env.d.ts
-*.tsbuildinfo
+
+# Local AI/agent tooling
+.agent/
+.claude/
+_bmad/
+_bmad-output/
