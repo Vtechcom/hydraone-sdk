@@ -1,43 +1,97 @@
 {
   "name": "@hydraone/sdk",
   "version": "0.1.0",
-  "description": "Official Game & dApp Developer Toolkit for HydraOne on Cardano",
+  "description": "Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth, React/Vue adapters and a local simulator",
+  "keywords": [
+    "cardano",
+    "hydra",
+    "hydraone",
+    "web3",
+    "sdk",
+    "game-sdk",
+    "cip-30",
+    "cip-8",
+    "wallet-bridge"
+  ],
+  "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Vtechcom/hydraone-sdk/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "HydraOne Team",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vtechcom/hydraone-sdk.git"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./cardano": {
-      "types": "./dist/cardano/index.d.ts",
-      "import": "./dist/cardano/index.js",
-      "require": "./dist/cardano/index.cjs"
+      "import": {
+        "types": "./dist/cardano/index.d.ts",
+        "default": "./dist/cardano/index.js"
+      },
+      "require": {
+        "types": "./dist/cardano/index.d.cts",
+        "default": "./dist/cardano/index.cjs"
+      }
     },
     "./vue": {
-      "types": "./dist/vue/index.d.ts",
-      "import": "./dist/vue/index.js",
-      "require": "./dist/vue/index.cjs"
+      "import": {
+        "types": "./dist/vue/index.d.ts",
+        "default": "./dist/vue/index.js"
+      },
+      "require": {
+        "types": "./dist/vue/index.d.cts",
+        "default": "./dist/vue/index.cjs"
+      }
     },
     "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.js",
-      "require": "./dist/react/index.cjs"
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
     },
     "./simulator": {
-      "types": "./dist/simulator/index.d.ts",
-      "import": "./dist/simulator/index.js",
-      "require": "./dist/simulator/index.cjs"
+      "import": {
+        "types": "./dist/simulator/index.d.ts",
+        "default": "./dist/simulator/index.js"
+      },
+      "require": {
+        "types": "./dist/simulator/index.d.cts",
+        "default": "./dist/simulator/index.cjs"
+      }
     },
     "./diagnostics": {
-      "types": "./dist/diagnostics/index.d.ts",
-      "import": "./dist/diagnostics/index.js",
-      "require": "./dist/diagnostics/index.cjs"
+      "import": {
+        "types": "./dist/diagnostics/index.d.ts",
+        "default": "./dist/diagnostics/index.js"
+      },
+      "require": {
+        "types": "./dist/diagnostics/index.d.cts",
+        "default": "./dist/diagnostics/index.cjs"
+      }
     },
     "./package.json": "./package.json"
+  },
+  "bin": {
+    "create-hydraone-game": "./bin/create-hydraone-game.js"
   },
   "files": [
     "dist",
@@ -51,9 +105,12 @@
     "!templates/**/next-env.d.ts"
   ],
   "sideEffects": false,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Vtechcom/hydraone-sdk.git"
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsup",
@@ -65,19 +122,6 @@
     "dev:nuxt": "pnpm --filter @hydraone/template-nuxt-3 dev",
     "dev:phaser": "pnpm --filter @hydraone/template-phaser-3 dev"
   },
-  "keywords": [
-    "cardano",
-    "hydra",
-    "hydraone",
-    "web3",
-    "sdk",
-    "game-sdk",
-    "cip-30",
-    "cip-8",
-    "wallet-bridge"
-  ],
-  "author": "HydraOne Team",
-  "license": "MIT",
   "peerDependencies": {
     "phaser": ">=3.60.0",
     "react": ">=18.0.0",
@@ -93,9 +137,6 @@
     "vue": {
       "optional": true
     }
-  },
-  "bin": {
-    "create-hydraone-game": "./bin/create-hydraone-game.js"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",

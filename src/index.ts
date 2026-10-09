@@ -2,7 +2,8 @@
  * @hydraone/sdk — Official Game & dApp Developer Toolkit for HydraOne on Cardano
  */
 
-export const SDK_VERSION = '0.1.0';
+/** Version of this SDK, injected from package.json at build time. */
+export const SDK_VERSION: string = __SDK_VERSION__;
 
 // Core Types
 export * from './core/types';
