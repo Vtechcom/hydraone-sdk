@@ -108,10 +108,10 @@ describe('Storage Module & Sub-Namespace Policy', () => {
 
     it('should throw an error if subNamespace is not auth or session', () => {
       expect(() => buildStorageKey('invalid' as any, 'token')).toThrow(
-        "Storage subNamespace must be 'auth' or 'session'"
+        "Storage subNamespace must be 'auth' or 'session'",
       );
       expect(() => buildStorageKey('' as any, 'token')).toThrow(
-        "Storage subNamespace must be 'auth' or 'session'"
+        "Storage subNamespace must be 'auth' or 'session'",
       );
     });
   });
@@ -400,10 +400,10 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       new SafeLocalStorageAdapter({ storage: mockStorage });
       expect(setItemSpy).toHaveBeenCalledWith(
         expect.stringMatching(new RegExp(`^${STORAGE_PREFIX}__probe_`)),
-        '1'
+        '1',
       );
       expect(removeItemSpy).toHaveBeenCalledWith(
-        expect.stringMatching(new RegExp(`^${STORAGE_PREFIX}__probe_`))
+        expect.stringMatching(new RegExp(`^${STORAGE_PREFIX}__probe_`)),
       );
     });
 

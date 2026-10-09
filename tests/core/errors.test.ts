@@ -65,7 +65,9 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(detailsOnlyError.details).toEqual({ attempts: 3 });
 
     // Pass custom code as 2nd argument
-    const customError = new HydraTransportError('Connection reset', 'ERR_TRANSPORT_DISCONNECTED', { port: 8080 });
+    const customError = new HydraTransportError('Connection reset', 'ERR_TRANSPORT_DISCONNECTED', {
+      port: 8080,
+    });
     expect(customError.code).toBe('ERR_TRANSPORT_DISCONNECTED');
     expect(customError.details).toEqual({ port: 8080 });
     expect(customError).toBeInstanceOf(HydraBridgeError);

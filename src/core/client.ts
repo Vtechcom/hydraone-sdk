@@ -70,7 +70,7 @@ interface PendingRequest<T = unknown> {
 
 /**
  * WalletBridgeClient - the game-side entry point for talking to the host shell and the wallet.
- * 
+ *
  * Manages the connection lifecycle (CLIENT_READY ⇄ HOST_ACK handshake),
  * dispatches RPC calls over an ITransport port, applies tiered timeouts
  * and runs CIP-30 wallet state queries.
@@ -103,7 +103,7 @@ export class WalletBridgeClient {
     if (!options || (!options.transport && !options.fallbackToExtension)) {
       throw new HydraBridgeError(
         'Transport must be provided to WalletBridgeClient unless fallbackToExtension is enabled',
-        'ERR_INVALID_OPTIONS'
+        'ERR_INVALID_OPTIONS',
       );
     }
 
@@ -314,7 +314,9 @@ export class WalletBridgeClient {
     // Silently drop responses for requests that already timed out.
     if (this.expiredRequestIds.has(correlationId)) {
       if (this.debug) {
-        this.logger.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
+        this.logger.warn(
+          `[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`,
+        );
       }
       this.expiredRequestIds.delete(correlationId);
       return;
@@ -325,7 +327,9 @@ export class WalletBridgeClient {
 
       if (pending.isExpired) {
         if (this.debug) {
-          this.logger.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
+          this.logger.warn(
+            `[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`,
+          );
         }
         this.pendingRequests.delete(correlationId);
         return;
@@ -419,13 +423,16 @@ export class WalletBridgeClient {
 
   /**
    * Starts the two-way handshake with the host shell.
-   * 
+   *
    * Sends CLIENT_READY and waits for HOST_ACK within the configured timeout (default 3,000 ms).
    */
   public init(): Promise<void> {
     if (this._isDestroyed) {
       return Promise.reject(
-        new HydraBridgeError('WalletBridgeClient has been destroyed', ERROR_CODES.ERR_NOT_CONNECTED)
+        new HydraBridgeError(
+          'WalletBridgeClient has been destroyed',
+          ERROR_CODES.ERR_NOT_CONNECTED,
+        ),
       );
     }
 
@@ -446,7 +453,7 @@ export class WalletBridgeClient {
           if (!this.fallbackToExtension) {
             throw new HydraTransportError(
               'SDK is running outside an iframe without fallbackToExtension enabled',
-              ERROR_CODES.ERR_NOT_IN_IFRAME
+              ERROR_CODES.ERR_NOT_IN_IFRAME,
             );
           }
 
@@ -456,7 +463,7 @@ export class WalletBridgeClient {
           if (availableWallets.length === 0) {
             throw new HydraTransportError(
               'No Cardano wallet extension found and not running in Host iframe',
-              ERROR_CODES.ERR_NOT_IN_IFRAME
+              ERROR_CODES.ERR_NOT_IN_IFRAME,
             );
           }
 
@@ -485,7 +492,7 @@ export class WalletBridgeClient {
           if (!this.transport) {
             throw new HydraBridgeError(
               'Transport must be provided when running inside an iframe',
-              'ERR_INVALID_OPTIONS'
+              'ERR_INVALID_OPTIONS',
             );
           }
         }
@@ -523,7 +530,7 @@ export class WalletBridgeClient {
         if (err instanceof HydraTimeoutError) {
           throw new HydraTimeoutError(
             `Handshake with Host Shell (CLIENT_READY) timed out (${this.handshakeTimeoutMs}ms)`,
-            { timeoutMs: this.handshakeTimeoutMs }
+            { timeoutMs: this.handshakeTimeoutMs },
           );
         }
         throw err;
@@ -545,15 +552,9 @@ export class WalletBridgeClient {
   /**
    * Sends an RPC request over the transport and waits for the result with a bounded timeout.
    */
-  private async executeRpc<T = unknown>(
-    message: BridgeMessage,
-    timeoutMs: number
-  ): Promise<T> {
+  private async executeRpc<T = unknown>(message: BridgeMessage, timeoutMs: number): Promise<T> {
     if (!this.transport) {
-      throw new HydraBridgeError(
-        'Transport is not initialized',
-        'ERR_TRANSPORT_UNAVAILABLE'
-      );
+      throw new HydraBridgeError('Transport is not initialized', 'ERR_TRANSPORT_UNAVAILABLE');
     }
     // Prefer the transport own request() when it has one (e.g. PostMessageTransport).
     if (typeof this.transport.request === 'function') {
@@ -571,15 +572,15 @@ export class WalletBridgeClient {
       } catch (err) {
         const code = errorCode(err);
         if (code === ERROR_CODES.ERR_TIMEOUT) {
-          throw new HydraTimeoutError(
-            `Request [${message.type}] timed out (${timeoutMs}ms)`,
-            { messageType: message.type, timeoutMs }
-          );
+          throw new HydraTimeoutError(`Request [${message.type}] timed out (${timeoutMs}ms)`, {
+            messageType: message.type,
+            timeoutMs,
+          });
         }
         if (code === ERROR_CODES.ERR_USER_REJECTED) {
           throw new HydraUserRejectedError(
             errorMessage(err, 'User rejected the wallet operation'),
-            (err as { details?: unknown }).details
+            (err as { details?: unknown }).details,
           );
         }
         throw err;
@@ -607,10 +608,10 @@ export class WalletBridgeClient {
             this.expiredRequestIds.delete(message.id);
           }, 60000);
           reject(
-            new HydraTimeoutError(
-              `Request [${message.type}] timed out (${timeoutMs}ms)`,
-              { messageType: message.type, timeoutMs }
-            )
+            new HydraTimeoutError(`Request [${message.type}] timed out (${timeoutMs}ms)`, {
+              messageType: message.type,
+              timeoutMs,
+            }),
           );
         }, timeoutMs);
       }
@@ -643,13 +644,13 @@ export class WalletBridgeClient {
     if (this._isDestroyed) {
       throw new HydraBridgeError(
         'WalletBridgeClient has been destroyed',
-        ERROR_CODES.ERR_NOT_CONNECTED
+        ERROR_CODES.ERR_NOT_CONNECTED,
       );
     }
     if (!this.isConnected) {
       throw new HydraBridgeError(
         'Client is not connected to Host Shell. Please call await client.init() first.',
-        ERROR_CODES.ERR_NOT_CONNECTED
+        ERROR_CODES.ERR_NOT_CONNECTED,
       );
     }
   }
@@ -660,15 +661,12 @@ export class WalletBridgeClient {
 
   /**
    * Gets the wallet used addresses.
-   * 
+   *
    * @param paginate Optional pagination { page, limit }.
    * @param options Query options (timeoutMs).
    * @returns Addresses as CBOR hex strings.
    */
-  public async getUsedAddresses(
-    paginate?: Paginate,
-    options?: QueryOptions
-  ): Promise<string[]> {
+  public async getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
@@ -685,7 +683,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the wallet UTxOs.
-   * 
+   *
    * @param amount Optional CBOR hex value used to filter by amount.
    * @param paginate Optional pagination { page, limit }.
    * @param options Query options (timeoutMs).
@@ -694,7 +692,7 @@ export class WalletBridgeClient {
   public async getUtxos(
     amount?: string,
     paginate?: Paginate,
-    options?: QueryOptions
+    options?: QueryOptions,
   ): Promise<string[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
@@ -712,7 +710,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the wallet total balance (a CBOR Value with lovelace and multi-assets).
-   * 
+   *
    * @param options Query options (timeoutMs).
    * @returns Hex-encoded CBOR Value.
    */
@@ -732,14 +730,14 @@ export class WalletBridgeClient {
 
   /**
    * Gets the UTxOs reserved as collateral.
-   * 
+   *
    * @param params Collateral request, for example { amount?: string }.
    * @param options Query options (timeoutMs).
    * @returns Collateral UTxOs as CBOR hex strings, or null.
    */
   public async getCollateral(
     params?: { amount?: string },
-    options?: QueryOptions
+    options?: QueryOptions,
   ): Promise<string[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
@@ -757,7 +755,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the wallet unused addresses.
-   * 
+   *
    * @param options Query options (timeoutMs).
    */
   public async getUnusedAddresses(options?: QueryOptions): Promise<string[]> {
@@ -777,7 +775,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the change address.
-   * 
+   *
    * @param options Query options (timeoutMs).
    */
   public async getChangeAddress(options?: QueryOptions): Promise<string> {
@@ -796,7 +794,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the staking reward addresses.
-   * 
+   *
    * @param options Query options (timeoutMs).
    */
   public async getRewardAddresses(options?: QueryOptions): Promise<string[]> {
@@ -816,7 +814,7 @@ export class WalletBridgeClient {
 
   /**
    * Gets the network ID of the connected wallet (0: testnet, 1: mainnet).
-   * 
+   *
    * @param options Query options (timeoutMs).
    */
   public async getNetworkId(options?: QueryOptions): Promise<number> {
@@ -839,7 +837,7 @@ export class WalletBridgeClient {
 
   /**
    * Asks the user to sign a Cardano transaction (witness set).
-   * 
+   *
    * @param cbor Hex-encoded CBOR of the transaction to sign.
    * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignOptions} object (default: `false`).
    * @param options Signing options (timeoutMs, default 120,000 ms) when `partialSignOrOptions` is a boolean.
@@ -850,7 +848,7 @@ export class WalletBridgeClient {
   public async signTx(
     cbor: string,
     partialSignOrOptions?: boolean | SignOptions,
-    options?: SignOptions
+    options?: SignOptions,
   ): Promise<string> {
     this.assertConnected();
     if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
@@ -883,16 +881,13 @@ export class WalletBridgeClient {
 
   /**
    * Submits a fully signed transaction to the Cardano network through the host shell.
-   * 
+   *
    * @param cbor Hex-encoded CBOR of the complete transaction.
    * @param options Submit options (timeoutMs, default 120,000 ms).
    * @returns Transaction hash (32 bytes, hex).
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
    */
-  public async submitTx(
-    cbor: string,
-    options?: SignOptions
-  ): Promise<string> {
+  public async submitTx(cbor: string, options?: SignOptions): Promise<string> {
     this.assertConnected();
     if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
@@ -914,7 +909,7 @@ export class WalletBridgeClient {
 
   /**
    * Signs arbitrary data as defined by CIP-8 / CIP-30.
-   * 
+   *
    * @param address Address (Bech32 or CBOR hex) used to sign.
    * @param payloadHex Hex-encoded data to sign.
    * @param options Signing options (timeoutMs, default 120,000 ms).
@@ -925,7 +920,7 @@ export class WalletBridgeClient {
   public async signData(
     address: string,
     payloadHex: string,
-    options?: SignOptions
+    options?: SignOptions,
   ): Promise<DataSignature> {
     this.assertConnected();
     if (!address || typeof address !== 'string' || address.trim().length === 0) {
@@ -956,17 +951,14 @@ export class WalletBridgeClient {
 
   /**
    * Subscribes to events from the host shell (such as AUDIO_MUTED_CHANGED or THEME_CHANGED).
-   * 
+   *
    * @param type Event message type.
    * @param handler Callback invoked when the event arrives.
    * @returns A function that removes the subscription.
    */
   // T defaults to any so existing call sites can read the payload without annotating it.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public onHostEvent<T = any>(
-    type: string,
-    handler: (payload: T) => void
-  ): UnsubscribeFn {
+  public onHostEvent<T = any>(type: string, handler: (payload: T) => void): UnsubscribeFn {
     if (!type || typeof handler !== 'function') {
       return () => {};
     }
@@ -991,16 +983,13 @@ export class WalletBridgeClient {
    * Short alias for onHostEvent.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public on<T = any>(
-    type: string,
-    handler: (payload: T) => void
-  ): UnsubscribeFn {
+  public on<T = any>(type: string, handler: (payload: T) => void): UnsubscribeFn {
     return this.onHostEvent(type, handler);
   }
 
   /**
    * Subscribes to audio mute changes coming from the host shell.
-   * 
+   *
    * @param handler Callback receiving a boolean (true when muted).
    * @returns A function that removes the subscription.
    */
@@ -1021,7 +1010,7 @@ export class WalletBridgeClient {
 
   /**
    * Subscribes to theme (dark/light) changes coming from the host shell.
-   * 
+   *
    * @param handler Callback receiving 'dark' | 'light'.
    * @returns A function that removes the subscription.
    */
@@ -1062,14 +1051,14 @@ export class WalletBridgeClient {
     if (!orientation || typeof orientation !== 'string') {
       throw new HydraBridgeError(
         `Invalid orientation: "${orientation}". Expected a valid OrientationLockType string.`,
-        ERROR_CODES.ERR_INVALID_PARAMS
+        ERROR_CODES.ERR_INVALID_PARAMS,
       );
     }
     const normalized = orientation.trim().toLowerCase();
     if (!WalletBridgeClient.VALID_ORIENTATIONS.has(normalized)) {
       throw new HydraBridgeError(
         `Invalid orientation: "${orientation}". Allowed values: any, natural, landscape, portrait, portrait-primary, portrait-secondary, landscape-primary, landscape-secondary.`,
-        ERROR_CODES.ERR_INVALID_PARAMS
+        ERROR_CODES.ERR_INVALID_PARAMS,
       );
     }
     return normalized as OrientationLockType;
@@ -1078,9 +1067,10 @@ export class WalletBridgeClient {
   /**
    * Validates and normalizes haptic parameters.
    */
-  private resolveHapticParams(
-    typeOrPattern?: HapticFeedbackType | number | number[]
-  ): { type?: HapticFeedbackType; pattern: number | number[] } {
+  private resolveHapticParams(typeOrPattern?: HapticFeedbackType | number | number[]): {
+    type?: HapticFeedbackType;
+    pattern: number | number[];
+  } {
     if (typeOrPattern === undefined) {
       return {
         type: 'medium',
@@ -1098,7 +1088,7 @@ export class WalletBridgeClient {
       }
       throw new HydraBridgeError(
         `Invalid haptic feedback preset: "${typeOrPattern}". Allowed values: light, medium, heavy, selection, success, warning, error.`,
-        ERROR_CODES.ERR_INVALID_PARAMS
+        ERROR_CODES.ERR_INVALID_PARAMS,
       );
     }
 
@@ -1106,7 +1096,7 @@ export class WalletBridgeClient {
       if (!Number.isFinite(typeOrPattern) || typeOrPattern < 0) {
         throw new HydraBridgeError(
           `Invalid vibration duration: ${typeOrPattern}. Must be a non-negative finite number.`,
-          ERROR_CODES.ERR_INVALID_PARAMS
+          ERROR_CODES.ERR_INVALID_PARAMS,
         );
       }
       return {
@@ -1121,7 +1111,7 @@ export class WalletBridgeClient {
       ) {
         throw new HydraBridgeError(
           `Invalid vibration pattern: must be a non-empty array of non-negative finite numbers.`,
-          ERROR_CODES.ERR_INVALID_PARAMS
+          ERROR_CODES.ERR_INVALID_PARAMS,
         );
       }
       return {
@@ -1131,15 +1121,15 @@ export class WalletBridgeClient {
 
     throw new HydraBridgeError(
       `Invalid haptic parameter type. Expected a string preset, number, or array of numbers.`,
-      ERROR_CODES.ERR_INVALID_PARAMS
+      ERROR_CODES.ERR_INVALID_PARAMS,
     );
   }
 
   /**
    * Locks the screen orientation on mobile devices.
-   * 
+   *
    * Sends SET_ORIENTATION to the host shell, or falls back to the ScreenOrientation API in standalone mode.
-   * 
+   *
    * @param orientation Orientation to lock ('landscape', 'portrait', 'any', ...).
    */
   public async setOrientation(orientation: OrientationLockType): Promise<void> {
@@ -1161,7 +1151,10 @@ export class WalletBridgeClient {
         }
       } catch (err) {
         if (this.debug) {
-          this.logger.warn('[WalletBridgeClient] ScreenOrientation lock/unlock failed in standalone mode:', err);
+          this.logger.warn(
+            '[WalletBridgeClient] ScreenOrientation lock/unlock failed in standalone mode:',
+            err,
+          );
         }
       }
 
@@ -1200,13 +1193,13 @@ export class WalletBridgeClient {
 
   /**
    * Triggers haptic feedback (vibration) on mobile devices.
-   * 
+   *
    * Sends TRIGGER_HAPTIC with a vibration pattern to the host shell, or calls navigator.vibrate directly in standalone mode.
-   * 
+   *
    * @param typeOrPattern A preset ('light', 'medium', 'heavy', 'selection', 'success', 'warning', 'error'), a duration in ms, or a [vibrate, pause, vibrate] pattern array.
    */
   public async triggerHaptic(
-    typeOrPattern?: HapticFeedbackType | number | number[]
+    typeOrPattern?: HapticFeedbackType | number | number[],
   ): Promise<void> {
     const { type, pattern } = this.resolveHapticParams(typeOrPattern);
 
@@ -1217,7 +1210,10 @@ export class WalletBridgeClient {
         }
       } catch (err) {
         if (this.debug) {
-          this.logger.warn('[WalletBridgeClient] navigator.vibrate failed in standalone mode:', err);
+          this.logger.warn(
+            '[WalletBridgeClient] navigator.vibrate failed in standalone mode:',
+            err,
+          );
         }
       }
 
@@ -1270,7 +1266,7 @@ export class WalletBridgeClient {
     if (typeof options !== 'object' || options === null || Array.isArray(options)) {
       throw new HydraBridgeError(
         'Invalid deposit modal options. Expected an options object.',
-        ERROR_CODES.ERR_INVALID_PARAMS
+        ERROR_CODES.ERR_INVALID_PARAMS,
       );
     }
 
@@ -1280,7 +1276,7 @@ export class WalletBridgeClient {
       if (typeof options.token !== 'string' || options.token.trim().length === 0) {
         throw new HydraBridgeError(
           'Invalid token: must be a non-empty string.',
-          ERROR_CODES.ERR_INVALID_PARAMS
+          ERROR_CODES.ERR_INVALID_PARAMS,
         );
       }
       validated.token = options.token.trim();
@@ -1291,14 +1287,14 @@ export class WalletBridgeClient {
         if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) {
           throw new HydraBridgeError(
             `Invalid minAmount: ${options.minAmount}. Must be a positive finite number.`,
-            ERROR_CODES.ERR_INVALID_PARAMS
+            ERROR_CODES.ERR_INVALID_PARAMS,
           );
         }
       } else if (typeof options.minAmount === 'bigint') {
         if (options.minAmount <= 0n) {
           throw new HydraBridgeError(
             `Invalid minAmount: ${options.minAmount.toString()}. Must be a positive bigint.`,
-            ERROR_CODES.ERR_INVALID_PARAMS
+            ERROR_CODES.ERR_INVALID_PARAMS,
           );
         }
       } else if (typeof options.minAmount === 'string') {
@@ -1307,14 +1303,14 @@ export class WalletBridgeClient {
         if (trimmed.length === 0 || !Number.isFinite(parsed) || parsed <= 0) {
           throw new HydraBridgeError(
             `Invalid minAmount: "${options.minAmount}". Must be a valid positive numeric string.`,
-            ERROR_CODES.ERR_INVALID_PARAMS
+            ERROR_CODES.ERR_INVALID_PARAMS,
           );
         }
         validated.minAmount = trimmed;
       } else {
         throw new HydraBridgeError(
           'Invalid minAmount type. Expected number, bigint, or string.',
-          ERROR_CODES.ERR_INVALID_PARAMS
+          ERROR_CODES.ERR_INVALID_PARAMS,
         );
       }
     }
@@ -1324,9 +1320,9 @@ export class WalletBridgeClient {
 
   /**
    * Asks the host shell to show a deposit or token swap modal on top of the game iframe.
-   * 
+   *
    * Sends REQUEST_DEPOSIT_MODAL to the host shell over the ITransport.
-   * 
+   *
    * @param options Deposit options { token, minAmount, ... }.
    */
   public async requestDepositModal(options?: DepositModalOptions): Promise<void> {
@@ -1335,7 +1331,7 @@ export class WalletBridgeClient {
     if (this.isStandaloneBrowser()) {
       throw new HydraBridgeError(
         'Host deposit modal overlay is not available outside App Center iframe',
-        ERROR_CODES.ERR_NOT_IN_IFRAME
+        ERROR_CODES.ERR_NOT_IN_IFRAME,
       );
     }
 
@@ -1354,9 +1350,9 @@ export class WalletBridgeClient {
 
   /**
    * Fetches the player profile from the host shell (nickname, avatar, VIP level, ADA handle).
-   * 
+   *
    * Runs the GET_PLAYER_PROFILE RPC with the query timeout (default 15 s).
-   * 
+   *
    * @param options Query options { timeoutMs }.
    * @returns The PlayerProfile.
    */
@@ -1364,7 +1360,7 @@ export class WalletBridgeClient {
     if (this.isStandaloneBrowser()) {
       throw new HydraBridgeError(
         'Player profile relay is not available outside App Center iframe',
-        ERROR_CODES.ERR_NOT_IN_IFRAME
+        ERROR_CODES.ERR_NOT_IN_IFRAME,
       );
     }
 
@@ -1392,7 +1388,7 @@ export class WalletBridgeClient {
 
   /**
    * Sends PING to the host shell and waits for the reply to measure round-trip latency.
-   * 
+   *
    * @param options Query options { timeoutMs }.
    * @returns The pong response and its timestamp.
    */
@@ -1400,7 +1396,7 @@ export class WalletBridgeClient {
     if (this.isStandaloneBrowser()) {
       throw new HydraBridgeError(
         'PostMessage Host Shell is not available outside App Center iframe',
-        ERROR_CODES.ERR_NOT_IN_IFRAME
+        ERROR_CODES.ERR_NOT_IN_IFRAME,
       );
     }
 
@@ -1424,12 +1420,12 @@ export class WalletBridgeClient {
 
   /**
    * Runs a full self-diagnosis of the HydraOne bridge connection.
-   * 
+   *
    * Runs three automatic checks:
    * 1. iframe sandbox permissions (`allow-scripts`, `allow-same-origin`)
    * 2. postMessage round-trip latency (ping-pong)
    * 3. Storage read/write availability (Local Storage and Host Storage Relay)
-   * 
+   *
    * @param options Health check options.
    * @returns The detailed BridgeHealthReport.
    */
@@ -1458,7 +1454,7 @@ export class WalletBridgeClient {
         this.expiredRequestIds.delete(pending.id);
       }, 60000);
       pending.reject(
-        new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED)
+        new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED),
       );
     }
     this.pendingRequests.clear();

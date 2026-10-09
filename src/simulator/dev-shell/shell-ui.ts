@@ -4,21 +4,18 @@
  * animated logo and wallet button, wallet connection modal and the game iframe container.
  */
 
-import type {
-  HydraDevShellOptions,
-  DevShellWalletState,
-} from "./types";
-import { DevShellBridgeController } from "./shell-bridge";
-import { HYDRA_LOGO_SRC } from "./assets";
-import { escapeHtml } from "../escape-html";
-import { ERROR_CODES } from "../../core/errors";
-import { errorCode, errorMessage } from "../../core/error-utils";
+import type { HydraDevShellOptions, DevShellWalletState } from './types';
+import { DevShellBridgeController } from './shell-bridge';
+import { HYDRA_LOGO_SRC } from './assets';
+import { escapeHtml } from '../escape-html';
+import { ERROR_CODES } from '../../core/errors';
+import { errorCode, errorMessage } from '../../core/error-utils';
 
 /** Shortens an address for display */
 function formatId(id: string | null | undefined, begin = 6, last = 4): string {
-  if (!id) return "";
+  if (!id) return '';
   if (id.length <= begin + last) return id;
-  return id.substring(0, begin) + "..." + id.substring(id.length - last);
+  return id.substring(0, begin) + '...' + id.substring(id.length - last);
 }
 
 // Standard Cardano icon (SVG)
@@ -560,7 +557,7 @@ export class HydraDevShellUI {
 
   constructor(options: HydraDevShellOptions) {
     this.options = {
-      projectName: "Cardano Web3 Game",
+      projectName: 'Cardano Web3 Game',
       enableMockWallet: true,
       enableRealWallet: true,
       networkId: 0,
@@ -586,12 +583,12 @@ export class HydraDevShellUI {
   }
 
   public mount(): void {
-    if (typeof document === "undefined") return;
+    if (typeof document === 'undefined') return;
 
     // 1. Inject Styles
-    if (!document.getElementById("hydra-webclient-exact-styles")) {
-      const styleEl = document.createElement("style");
-      styleEl.id = "hydra-webclient-exact-styles";
+    if (!document.getElementById('hydra-webclient-exact-styles')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'hydra-webclient-exact-styles';
       styleEl.textContent = EXACT_WEB_CLIENT_CSS;
       document.head.appendChild(styleEl);
     }
@@ -641,7 +638,7 @@ export class HydraDevShellUI {
               <div class="popover-row">
                 <span class="popover-addr" id="popover-addr-full">addr_test1...9q2a</span>
                 <button class="btn-copy" id="btn-popover-copy">Copy</button>
-                <span class="net-badge">${this.options.networkId === 1 ? "Mainnet" : "Preprod"}</span>
+                <span class="net-badge">${this.options.networkId === 1 ? 'Mainnet' : 'Preprod'}</span>
               </div>
               <div class="popover-divider"></div>
               <div class="popover-row">
@@ -730,45 +727,43 @@ export class HydraDevShellUI {
       </div>
     `;
 
-    this.iframeEl = document.getElementById(
-      "hydra-game-iframe",
-    ) as HTMLIFrameElement;
-    this.loaderEl = document.getElementById("game-loader-overlay");
+    this.iframeEl = document.getElementById('hydra-game-iframe') as HTMLIFrameElement;
+    this.loaderEl = document.getElementById('game-loader-overlay');
 
     this.bindEvents();
     this.updateWalletUI(this.bridge.state);
 
     // Reconnect automatically if a wallet was stored in localStorage (Eternl, Lace or Mock)
     this.bridge.autoReconnect().catch((err) => {
-      console.warn("[HydraDevShell] autoReconnect error:", err);
+      console.warn('[HydraDevShell] autoReconnect error:', err);
     });
   }
 
   private buildStandaloneGameUrl(): string {
-    if (typeof window === "undefined") return "";
+    if (typeof window === 'undefined') return '';
     const url = new URL(window.location.href);
-    url.searchParams.set("hydra_standalone", "true");
+    url.searchParams.set('hydra_standalone', 'true');
     return url.toString();
   }
 
   private dismissLoader(): void {
-    if (this.loaderEl && !this.loaderEl.classList.contains("hidden")) {
-      this.loaderEl.classList.add("hidden");
+    if (this.loaderEl && !this.loaderEl.classList.contains('hidden')) {
+      this.loaderEl.classList.add('hidden');
     }
   }
 
   private openConnectModal(): void {
-    document.getElementById("wallet-connect-modal")?.classList.add("open");
+    document.getElementById('wallet-connect-modal')?.classList.add('open');
   }
 
   private closeConnectModal(): void {
-    document.getElementById("wallet-connect-modal")?.classList.remove("open");
+    document.getElementById('wallet-connect-modal')?.classList.remove('open');
   }
 
   private bindEvents(): void {
     // 1. Iframe load & early handshake
     if (this.iframeEl) {
-      this.iframeEl.addEventListener("load", () => {
+      this.iframeEl.addEventListener('load', () => {
         this.dismissLoader();
         if (this.iframeEl?.contentWindow) {
           this.bridge.registerIframe(
@@ -781,174 +776,171 @@ export class HydraDevShellUI {
     }
 
     // 2. Wallet Pill click -> Toggle Popover
-    const pill = document.getElementById("btn-wallet-pill");
-    const popover = document.getElementById("wallet-popover");
-    pill?.addEventListener("click", (e) => {
+    const pill = document.getElementById('btn-wallet-pill');
+    const popover = document.getElementById('wallet-popover');
+    pill?.addEventListener('click', (e) => {
       e.stopPropagation();
-      popover?.classList.toggle("open");
+      popover?.classList.toggle('open');
     });
 
-    document.addEventListener("click", (e) => {
+    document.addEventListener('click', (e) => {
       if (popover && !popover.contains(e.target as Node)) {
-        popover.classList.remove("open");
+        popover.classList.remove('open');
       }
     });
 
     // 5. Connect Button click -> Open Modal
-    document
-      .getElementById("btn-top-connect")
-      ?.addEventListener("click", () => {
-        this.openConnectModal();
-      });
+    document.getElementById('btn-top-connect')?.addEventListener('click', () => {
+      this.openConnectModal();
+    });
 
     // 6. Close Modal
-    document
-      .getElementById("btn-close-wallet-modal")
-      ?.addEventListener("click", () => {
-        this.closeConnectModal();
-      });
+    document.getElementById('btn-close-wallet-modal')?.addEventListener('click', () => {
+      this.closeConnectModal();
+    });
 
-    const modal = document.getElementById("wallet-connect-modal");
-    modal?.addEventListener("click", (e) => {
+    const modal = document.getElementById('wallet-connect-modal');
+    modal?.addEventListener('click', (e) => {
       if (e.target === modal) this.closeConnectModal();
     });
 
     // 7. Choose Wallet
-    document.getElementById("modal-opt-mock")?.addEventListener("click", () => {
+    document.getElementById('modal-opt-mock')?.addEventListener('click', () => {
       this.bridge.switchToMockWallet();
       this.closeConnectModal();
     });
 
-    document
-      .getElementById("modal-opt-eternl")
-      ?.addEventListener("click", async () => {
-        const item = document.getElementById("modal-opt-eternl");
-        const statusSpan = item?.querySelector("span:last-child");
-        const prevText = statusSpan?.textContent || "Connect";
-        if (statusSpan) statusSpan.textContent = "Connecting...";
+    document.getElementById('modal-opt-eternl')?.addEventListener('click', async () => {
+      const item = document.getElementById('modal-opt-eternl');
+      const statusSpan = item?.querySelector('span:last-child');
+      const prevText = statusSpan?.textContent || 'Connect';
+      if (statusSpan) statusSpan.textContent = 'Connecting...';
 
-        try {
-          await this.bridge.connectRealExtension("eternl");
-          this.closeConnectModal();
-        } catch (err) {
-          if (statusSpan) statusSpan.textContent = prevText;
-          const msg = errorMessage(err) || String(err);
-          if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
-            const openStore = confirm(
-              msg + "\n\nDo you want to open the Chrome Web Store to install the Eternl extension?"
+      try {
+        await this.bridge.connectRealExtension('eternl');
+        this.closeConnectModal();
+      } catch (err) {
+        if (statusSpan) statusSpan.textContent = prevText;
+        const msg = errorMessage(err) || String(err);
+        if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
+          const openStore = confirm(
+            msg + '\n\nDo you want to open the Chrome Web Store to install the Eternl extension?',
+          );
+          if (openStore && typeof window !== 'undefined') {
+            window.open(
+              'https://chromewebstore.google.com/detail/eternl/kmhcihpebfmpgmihbkipmjlmmioameka',
+              '_blank',
             );
-            if (openStore && typeof window !== "undefined") {
-              window.open(
-                "https://chromewebstore.google.com/detail/eternl/kmhcihpebfmpgmihbkipmjlmmioameka",
-                "_blank"
-              );
-            }
-          } else {
-            alert("Eternl connection error: " + msg);
           }
+        } else {
+          alert('Eternl connection error: ' + msg);
         }
-      });
+      }
+    });
 
-    document
-      .getElementById("modal-opt-lace")
-      ?.addEventListener("click", async () => {
-        const item = document.getElementById("modal-opt-lace");
-        const statusSpan = item?.querySelector("span:last-child");
-        const prevText = statusSpan?.textContent || "Connect";
-        if (statusSpan) statusSpan.textContent = "Connecting...";
+    document.getElementById('modal-opt-lace')?.addEventListener('click', async () => {
+      const item = document.getElementById('modal-opt-lace');
+      const statusSpan = item?.querySelector('span:last-child');
+      const prevText = statusSpan?.textContent || 'Connect';
+      if (statusSpan) statusSpan.textContent = 'Connecting...';
 
-        try {
-          await this.bridge.connectRealExtension("lace");
-          this.closeConnectModal();
-        } catch (err) {
-          if (statusSpan) statusSpan.textContent = prevText;
-          const msg = errorMessage(err) || String(err);
-          if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
-            const openStore = confirm(
-              msg + "\n\nDo you want to open the Chrome Web Store to install the Lace extension?"
+      try {
+        await this.bridge.connectRealExtension('lace');
+        this.closeConnectModal();
+      } catch (err) {
+        if (statusSpan) statusSpan.textContent = prevText;
+        const msg = errorMessage(err) || String(err);
+        if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_FOUND) {
+          const openStore = confirm(
+            msg + '\n\nDo you want to open the Chrome Web Store to install the Lace extension?',
+          );
+          if (openStore && typeof window !== 'undefined') {
+            window.open(
+              'https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhbcfljipggfmcm',
+              '_blank',
             );
-            if (openStore && typeof window !== "undefined") {
-              window.open(
-                "https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhbcfljipggfmcm",
-                "_blank"
-              );
-            }
-          } else {
-            alert("Lace connection error: " + msg);
           }
+        } else {
+          alert('Lace connection error: ' + msg);
         }
-      });
+      }
+    });
 
     // 8. Copy Address
-    document
-      .getElementById("btn-popover-copy")
-      ?.addEventListener("click", () => {
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(this.bridge.state.address);
-          alert("Address copied: " + this.bridge.state.address);
-        }
-      });
+    document.getElementById('btn-popover-copy')?.addEventListener('click', () => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(this.bridge.state.address);
+        alert('Address copied: ' + this.bridge.state.address);
+      }
+    });
 
     // 9. Disconnect
-    document
-      .getElementById("btn-popover-disconnect")
-      ?.addEventListener("click", () => {
-        this.bridge.disconnectWallet();
-        popover?.classList.remove("open");
-      });
+    document.getElementById('btn-popover-disconnect')?.addEventListener('click', () => {
+      this.bridge.disconnectWallet();
+      popover?.classList.remove('open');
+    });
   }
 
   private updateWalletUI(state: DevShellWalletState): void {
-    const btnConnect = document.getElementById("btn-top-connect");
-    const pill = document.getElementById("btn-wallet-pill");
-    const balText = document.getElementById("header-balance-text");
-    const addrText = document.getElementById("header-addr-text");
-    const popoverAddr = document.getElementById("popover-addr-full");
-    const popoverBal = document.getElementById("popover-balance-full");
-    const popoverNet = document.querySelector(".net-badge");
+    const btnConnect = document.getElementById('btn-top-connect');
+    const pill = document.getElementById('btn-wallet-pill');
+    const balText = document.getElementById('header-balance-text');
+    const addrText = document.getElementById('header-addr-text');
+    const popoverAddr = document.getElementById('popover-addr-full');
+    const popoverBal = document.getElementById('popover-balance-full');
+    const popoverNet = document.querySelector('.net-badge');
 
     if (!state.isConnected) {
-      if (btnConnect) btnConnect.style.display = "block";
-      if (pill) pill.style.display = "none";
+      if (btnConnect) btnConnect.style.display = 'block';
+      if (pill) pill.style.display = 'none';
     } else {
-      if (btnConnect) btnConnect.style.display = "none";
-      if (pill) pill.style.display = "flex";
+      if (btnConnect) btnConnect.style.display = 'none';
+      if (pill) pill.style.display = 'flex';
 
       const ada = Number(state.balanceLovelace) / 1_000_000;
-      const formattedBal = `${ada.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ADA`;
+      const formattedBal = `${ada.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ADA`;
 
       if (balText) balText.textContent = formattedBal;
       if (addrText) addrText.textContent = formatId(state.address, 6, 4);
       if (popoverAddr) popoverAddr.textContent = formatId(state.address, 6, 6);
       if (popoverBal) popoverBal.textContent = formattedBal;
       if (popoverNet) {
-        const netName = state.networkId === 1 ? "Mainnet" : "Preprod";
-        const walletName = state.walletType === 'extension' ? (state.extensionName === 'eternl' ? 'Eternl' : state.extensionName === 'lace' ? 'Lace' : state.extensionName) : 'Mock';
+        const netName = state.networkId === 1 ? 'Mainnet' : 'Preprod';
+        const walletName =
+          state.walletType === 'extension'
+            ? state.extensionName === 'eternl'
+              ? 'Eternl'
+              : state.extensionName === 'lace'
+                ? 'Lace'
+                : state.extensionName
+            : 'Mock';
         popoverNet.textContent = `${walletName} (${netName})`;
       }
     }
 
     // Update the display state inside the wallet connection modal
-    const mockBadge = document.querySelector("#modal-opt-mock span:last-child");
-    const eternlBadge = document.querySelector("#modal-opt-eternl span:last-child");
-    const laceBadge = document.querySelector("#modal-opt-lace span:last-child");
+    const mockBadge = document.querySelector('#modal-opt-mock span:last-child');
+    const eternlBadge = document.querySelector('#modal-opt-eternl span:last-child');
+    const laceBadge = document.querySelector('#modal-opt-lace span:last-child');
 
     if (mockBadge) {
       const isMockActive = state.isConnected && state.walletType === 'mock';
-      mockBadge.textContent = isMockActive ? "Active" : "Select";
-      (mockBadge as HTMLElement).style.color = isMockActive ? "#38b8fc" : "#94a3b8";
+      mockBadge.textContent = isMockActive ? 'Active' : 'Select';
+      (mockBadge as HTMLElement).style.color = isMockActive ? '#38b8fc' : '#94a3b8';
     }
 
     if (eternlBadge) {
-      const isEternlActive = state.isConnected && state.walletType === 'extension' && state.extensionName === 'eternl';
-      eternlBadge.textContent = isEternlActive ? "Connected" : "Connect";
-      (eternlBadge as HTMLElement).style.color = isEternlActive ? "#81fc30" : "#94a3b8";
+      const isEternlActive =
+        state.isConnected && state.walletType === 'extension' && state.extensionName === 'eternl';
+      eternlBadge.textContent = isEternlActive ? 'Connected' : 'Connect';
+      (eternlBadge as HTMLElement).style.color = isEternlActive ? '#81fc30' : '#94a3b8';
     }
 
     if (laceBadge) {
-      const isLaceActive = state.isConnected && state.walletType === 'extension' && state.extensionName === 'lace';
-      laceBadge.textContent = isLaceActive ? "Connected" : "Connect";
-      (laceBadge as HTMLElement).style.color = isLaceActive ? "#81fc30" : "#94a3b8";
+      const isLaceActive =
+        state.isConnected && state.walletType === 'extension' && state.extensionName === 'lace';
+      laceBadge.textContent = isLaceActive ? 'Connected' : 'Connect';
+      (laceBadge as HTMLElement).style.color = isLaceActive ? '#81fc30' : '#94a3b8';
     }
   }
 }

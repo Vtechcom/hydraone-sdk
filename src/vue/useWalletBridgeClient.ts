@@ -13,10 +13,7 @@ import type {
 } from '../core/types';
 import { WalletBridgeClient } from '../core/client';
 import { getTotalLovelace, getAdaBalance } from '../cardano';
-import type {
-  UseWalletBridgeClientOptions,
-  UseWalletBridgeClientReturn,
-} from './types';
+import type { UseWalletBridgeClientOptions, UseWalletBridgeClientReturn } from './types';
 
 /**
  * Shared default WalletBridgeClient used when no instance is passed
@@ -27,7 +24,7 @@ let sharedClientInstance: WalletBridgeClient | null = null;
  * Returns the shared default WalletBridgeClient, creating it on first use
  */
 export function getSharedWalletBridgeClient(
-  options?: UseWalletBridgeClientOptions
+  options?: UseWalletBridgeClientOptions,
 ): WalletBridgeClient {
   if (!sharedClientInstance) {
     const clientOptions = {
@@ -46,7 +43,6 @@ export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): 
   sharedClientInstance = client;
 }
 
-
 /**
  * Headless useWalletBridgeClient composable for Vue 3.5+ and Nuxt 3 / Nuxt 4
  *
@@ -58,11 +54,10 @@ export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): 
  * @returns Object with reactive refs, computed values and actions
  */
 export function useWalletBridgeClient(
-  options?: UseWalletBridgeClientOptions
+  options?: UseWalletBridgeClientOptions,
 ): UseWalletBridgeClientReturn {
   // 1. Resolve the client (options.client, then the shared client)
-  const client: WalletBridgeClient =
-    options?.client ?? getSharedWalletBridgeClient(options);
+  const client: WalletBridgeClient = options?.client ?? getSharedWalletBridgeClient(options);
 
   // 2. Create the reactive refs with safe initial values
   const connectionState = ref<ConnectionState>(client.connectionState);
@@ -76,7 +71,6 @@ export function useWalletBridgeClient(
   const isAudioMuted = ref<boolean>(client.isAudioMuted ?? false);
   const theme = ref<ThemeMode | null>(client.theme ?? null);
   const error = ref<Error | null>(null);
-
 
   // 4. Internal state update helpers
   const refreshAddress = async (): Promise<string | null> => {
@@ -202,8 +196,16 @@ export function useWalletBridgeClient(
     cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
     cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
     cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
-    cleanups.push(client.onAudioMutedChanged((muted) => { isAudioMuted.value = muted; }));
-    cleanups.push(client.onThemeChanged((newTheme) => { theme.value = newTheme; }));
+    cleanups.push(
+      client.onAudioMutedChanged((muted) => {
+        isAudioMuted.value = muted;
+      }),
+    );
+    cleanups.push(
+      client.onThemeChanged((newTheme) => {
+        theme.value = newTheme;
+      }),
+    );
     cleanups.push(client.on('DISCONNECTED', onDisconnected));
 
     // Sync current state if the client was already connected
@@ -276,7 +278,7 @@ export function useWalletBridgeClient(
   const signTx = async (
     tx: string,
     partialSign?: boolean,
-    signOptions?: SignOptions
+    signOptions?: SignOptions,
   ): Promise<string> => {
     try {
       return await client.signTx(tx, partialSign, signOptions);
@@ -300,7 +302,7 @@ export function useWalletBridgeClient(
   const signData = async (
     addr: string,
     payload: string,
-    signOptions?: SignOptions
+    signOptions?: SignOptions,
   ): Promise<DataSignature> => {
     try {
       return await client.signData(addr, payload, signOptions);

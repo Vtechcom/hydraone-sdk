@@ -22,7 +22,8 @@ export function validateProjectName(name: string): { valid: boolean; reason?: st
   if (!npmPackageRegex.test(trimmed)) {
     return {
       valid: false,
-      reason: 'Project name may only contain lowercase letters, digits, hyphens (-), underscores (_) and dots (.), following npm naming rules.',
+      reason:
+        'Project name may only contain lowercase letters, digits, hyphens (-), underscores (_) and dots (.), following npm naming rules.',
     };
   }
 
@@ -31,7 +32,7 @@ export function validateProjectName(name: string): { valid: boolean; reason?: st
 
 export function checkTargetDir(
   targetDir: string,
-  force = false
+  force = false,
 ): { valid: boolean; reason?: string } {
   if (!fs.existsSync(targetDir)) {
     return { valid: true };
@@ -60,9 +61,8 @@ export function resolveTemplatesDir(): string {
   // 3. fallback: process.cwd()/templates
   let candidate = '';
   try {
-    const currentDir = typeof __dirname !== 'undefined'
-      ? __dirname
-      : path.dirname(fileURLToPath(import.meta.url));
+    const currentDir =
+      typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
     candidate = path.resolve(currentDir, '../../templates');
     if (fs.existsSync(candidate)) return candidate;
 
@@ -83,7 +83,7 @@ export function resolveTemplatesDir(): string {
 export async function copyTemplateDir(
   sourceDir: string,
   targetDir: string,
-  replacements: Record<string, string>
+  replacements: Record<string, string>,
 ): Promise<void> {
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
@@ -122,14 +122,17 @@ export async function copyTemplateDir(
 }
 
 export async function scaffoldProject(
-  options: ScaffoldOptions
+  options: ScaffoldOptions,
 ): Promise<{ projectDir: string; template: TemplateType }> {
   const { projectName, targetDir, template, force } = options;
 
   // 1. Resolve the target directory and project name
   const resolvedTarget = path.resolve(process.cwd(), targetDir);
   let actualProjectName = projectName;
-  if (projectName && /^@[a-z0-9-*~][a-z0-9-*._~]*\/[a-z0-9-~][a-z0-9-._~]*$/.test(projectName.trim())) {
+  if (
+    projectName &&
+    /^@[a-z0-9-*~][a-z0-9-*._~]*\/[a-z0-9-~][a-z0-9-._~]*$/.test(projectName.trim())
+  ) {
     actualProjectName = projectName.trim();
   } else if (projectName && (projectName.includes('/') || projectName.includes('\\'))) {
     actualProjectName = path.basename(resolvedTarget);
@@ -145,7 +148,7 @@ export async function scaffoldProject(
   // 2. Validate the template
   if (!SUPPORTED_TEMPLATES.includes(template)) {
     throw new Error(
-      `Template "${template}" is not supported. Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}`
+      `Template "${template}" is not supported. Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}`,
     );
   }
 

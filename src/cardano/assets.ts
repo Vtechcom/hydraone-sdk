@@ -7,14 +7,22 @@ function toSafeBigInt(val: unknown, fieldName = 'quantity'): bigint {
   if (typeof val === 'bigint') return val;
   if (typeof val === 'number') {
     if (!Number.isFinite(val) || !Number.isInteger(val)) {
-      throw new HydraBridgeError(`Invalid numeric value for ${fieldName}: must be a finite integer`, 'ERR_INVALID_PARAMS', { val });
+      throw new HydraBridgeError(
+        `Invalid numeric value for ${fieldName}: must be a finite integer`,
+        'ERR_INVALID_PARAMS',
+        { val },
+      );
     }
     return BigInt(val);
   }
   if (typeof val === 'string') {
     const trimmed = val.trim();
     if (!/^-?\d+$/.test(trimmed)) {
-      throw new HydraBridgeError(`Invalid integer string for ${fieldName}: "${val}"`, 'ERR_INVALID_PARAMS', { val });
+      throw new HydraBridgeError(
+        `Invalid integer string for ${fieldName}: "${val}"`,
+        'ERR_INVALID_PARAMS',
+        { val },
+      );
     }
     return BigInt(trimmed);
   }
@@ -23,7 +31,7 @@ function toSafeBigInt(val: unknown, fieldName = 'quantity'): bigint {
 
 /**
  * Parses and normalizes any UTxO or Value representation into a CardanoValue
- * 
+ *
  * @param input UTxO object, CBOR hex string, integer or bigint
  * @returns CardanoValue with coins (bigint) and assets (Record<string, bigint>)
  */
@@ -40,7 +48,9 @@ export function parseValue(input: unknown): CardanoValue {
   // 2. Integer number
   if (typeof input === 'number') {
     if (!Number.isFinite(input) || !Number.isInteger(input)) {
-      throw new HydraBridgeError('Lovelace coin amount must be an integer', 'ERR_INVALID_PARAMS', { input });
+      throw new HydraBridgeError('Lovelace coin amount must be an integer', 'ERR_INVALID_PARAMS', {
+        input,
+      });
     }
     return { coins: BigInt(input), assets: {} };
   }
@@ -57,7 +67,11 @@ export function parseValue(input: unknown): CardanoValue {
     if (/^[0-9a-fA-F]+$/.test(cleanHex)) {
       return parseCborUtxoOrValue(cleanHex);
     }
-    throw new HydraBridgeError('Invalid string representation for Cardano Value or UTxO', 'ERR_INVALID_PARAMS', { input });
+    throw new HydraBridgeError(
+      'Invalid string representation for Cardano Value or UTxO',
+      'ERR_INVALID_PARAMS',
+      { input },
+    );
   }
 
   // 4. JavaScript object
@@ -87,11 +101,21 @@ export function parseValue(input: unknown): CardanoValue {
 
     // Nested value property
     if (utxo.value !== undefined) {
-      if (typeof utxo.value === 'object' && utxo.value !== null && !('coins' in utxo.value) && !('lovelace' in utxo.value) && !('assets' in utxo.value)) {
+      if (
+        typeof utxo.value === 'object' &&
+        utxo.value !== null &&
+        !('coins' in utxo.value) &&
+        !('lovelace' in utxo.value) &&
+        !('assets' in utxo.value)
+      ) {
         // May be a nested UTxO
         return parseValue(utxo.value);
       }
-      if (typeof utxo.value === 'bigint' || typeof utxo.value === 'number' || typeof utxo.value === 'string') {
+      if (
+        typeof utxo.value === 'bigint' ||
+        typeof utxo.value === 'number' ||
+        typeof utxo.value === 'string'
+      ) {
         return parseValue(utxo.value);
       }
 
@@ -145,12 +169,14 @@ export function parseValue(input: unknown): CardanoValue {
     }
   }
 
-  throw new HydraBridgeError('Unrecognized Cardano UTxO or Value format', 'ERR_INVALID_PARAMS', { input });
+  throw new HydraBridgeError('Unrecognized Cardano UTxO or Value format', 'ERR_INVALID_PARAMS', {
+    input,
+  });
 }
 
 /**
  * Sums the lovelace of a list of Cardano UTxOs using native bigint
- * 
+ *
  * @param utxos UTxOs (objects or CBOR hex strings)
  * @returns Total lovelace as a bigint
  */
@@ -174,16 +200,16 @@ export function getTotalLovelace(utxos?: CardanoUtxoInput[] | null): bigint {
 
 /**
  * Converts lovelace to an ADA decimal string without floating-point math
- * 
+ *
  * 1 ADA = 1,000,000 lovelace (6 decimal places)
- * 
+ *
  * @param lovelace Lovelace amount (bigint, integer string or number)
  * @param options Decimal formatting options (minDecimals, maxDecimals, trimTrailingZeros)
  * @returns Exact ADA decimal string
  */
 export function lovelaceToAda(
   lovelace: bigint | string | number,
-  options?: FormatAdaOptions
+  options?: FormatAdaOptions,
 ): string {
   let val: bigint;
   if (typeof lovelace === 'bigint') {
@@ -194,7 +220,7 @@ export function lovelaceToAda(
       throw new HydraBridgeError(
         'Invalid Lovelace amount string: must be an integer without decimal point',
         'ERR_INVALID_PARAMS',
-        { lovelace }
+        { lovelace },
       );
     }
     val = BigInt(trimmed);
@@ -203,12 +229,14 @@ export function lovelaceToAda(
       throw new HydraBridgeError(
         'Lovelace number amount must be a finite integer',
         'ERR_INVALID_PARAMS',
-        { lovelace }
+        { lovelace },
       );
     }
     val = BigInt(lovelace);
   } else {
-    throw new HydraBridgeError('Unsupported Lovelace input type', 'ERR_INVALID_PARAMS', { lovelace });
+    throw new HydraBridgeError('Unsupported Lovelace input type', 'ERR_INVALID_PARAMS', {
+      lovelace,
+    });
   }
 
   const minDecimals = Math.max(0, Math.min(6, options?.minDecimals ?? 0));
@@ -240,7 +268,7 @@ export function lovelaceToAda(
 
 /**
  * Converts an ADA decimal string to lovelace (bigint)
- * 
+ *
  * @param ada ADA as a string or number (e.g. "12.5" or 12.5)
  * @returns Equivalent lovelace (bigint)
  */
@@ -267,7 +295,7 @@ export function adaToLovelace(ada: string | number): bigint {
     throw new HydraBridgeError(
       'ADA amount cannot have more than 6 decimal places (Lovelace is indivisible beyond 6 decimals)',
       'ERR_INVALID_PARAMS',
-      { ada }
+      { ada },
     );
   }
 
@@ -279,14 +307,14 @@ export function adaToLovelace(ada: string | number): bigint {
 
 /**
  * Returns the total ADA balance of a list of UTxOs as a decimal string
- * 
+ *
  * @param utxos UTxOs (objects or CBOR hex strings)
  * @param options Decimal formatting options
  * @returns Exact ADA decimal string
  */
 export function getAdaBalance(
   utxos?: CardanoUtxoInput[] | null,
-  options?: FormatAdaOptions
+  options?: FormatAdaOptions,
 ): string {
   const totalLovelace = getTotalLovelace(utxos);
   return lovelaceToAda(totalLovelace, options);
@@ -294,7 +322,7 @@ export function getAdaBalance(
 
 /**
  * Returns the total quantity of a native token (multi-asset) across a list of UTxOs
- * 
+ *
  * @param utxos UTxOs
  * @param policyId Token policy ID (56-character hex string)
  * @param assetName Token name (hex string, UTF-8 string or Uint8Array)
@@ -303,7 +331,7 @@ export function getAdaBalance(
 export function getAssetQuantity(
   utxos: CardanoUtxoInput[] | null | undefined,
   policyId: string,
-  assetName: string | Uint8Array = ''
+  assetName: string | Uint8Array = '',
 ): bigint {
   if (utxos === null || utxos === undefined) {
     return 0n;
@@ -314,12 +342,20 @@ export function getAssetQuantity(
   }
 
   if (typeof policyId !== 'string' || !policyId.trim()) {
-    throw new HydraBridgeError('Invalid policyId: must be a non-empty string', 'ERR_INVALID_PARAMS', { policyId });
+    throw new HydraBridgeError(
+      'Invalid policyId: must be a non-empty string',
+      'ERR_INVALID_PARAMS',
+      { policyId },
+    );
   }
 
   const cleanPolicyId = policyId.trim().toLowerCase().replace(/^0x/, '');
   if (!cleanPolicyId) {
-    throw new HydraBridgeError('Invalid policyId: must be a non-empty hex policy ID', 'ERR_INVALID_PARAMS', { policyId });
+    throw new HydraBridgeError(
+      'Invalid policyId: must be a non-empty hex policy ID',
+      'ERR_INVALID_PARAMS',
+      { policyId },
+    );
   }
 
   // Normalize assetName: a Uint8Array becomes hex; a string yields both raw-hex and UTF-8-hex candidates
@@ -346,7 +382,11 @@ export function getAssetQuantity(
       }
     }
   } else {
-    throw new HydraBridgeError('Invalid assetName: must be a string or Uint8Array', 'ERR_INVALID_PARAMS', { assetName });
+    throw new HydraBridgeError(
+      'Invalid assetName: must be a string or Uint8Array',
+      'ERR_INVALID_PARAMS',
+      { assetName },
+    );
   }
 
   let totalQuantity = 0n;

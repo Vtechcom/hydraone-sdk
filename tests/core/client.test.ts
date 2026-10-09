@@ -56,9 +56,7 @@ describe('WalletBridgeClient', () => {
   describe('Constructor & Configuration', () => {
     it('throws when no transport is provided', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
-      expect(() => new WalletBridgeClient({} as any)).toThrow(
-        'Transport must be provided'
-      );
+      expect(() => new WalletBridgeClient({} as any)).toThrow('Transport must be provided');
     });
 
     it('initializes with the default timeout values', () => {
@@ -247,7 +245,7 @@ describe('WalletBridgeClient', () => {
       const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
       await expect(disconnectedClient.getUsedAddresses()).rejects.toThrow(
-        'Client is not connected'
+        'Client is not connected',
       );
       await expect(disconnectedClient.getUsedAddresses()).rejects.toMatchObject({
         code: ERROR_CODES.ERR_NOT_CONNECTED,
@@ -1907,7 +1905,9 @@ describe('WalletBridgeClient', () => {
       it('throws ERR_NOT_CONNECTED when setOrientation is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
-        await expect(disconnectedClient.setOrientation('landscape')).rejects.toThrow(HydraBridgeError);
+        await expect(disconnectedClient.setOrientation('landscape')).rejects.toThrow(
+          HydraBridgeError,
+        );
         await expect(disconnectedClient.setOrientation('landscape')).rejects.toMatchObject({
           code: ERROR_CODES.ERR_NOT_CONNECTED,
         });
@@ -2889,6 +2889,3 @@ describe('WalletBridgeClient', () => {
     });
   });
 });
-
-
-

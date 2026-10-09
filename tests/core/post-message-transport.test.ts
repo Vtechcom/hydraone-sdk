@@ -69,10 +69,10 @@ describe('PostMessageTransport', () => {
   describe('Construction & zero-trust origin configuration', () => {
     it('requires a valid appCenterOrigin', () => {
       expect(() => new PostMessageTransport({ appCenterOrigin: '' } as any)).toThrow(
-        HydraTransportError
+        HydraTransportError,
       );
       expect(() => new PostMessageTransport({ appCenterOrigin: '   ' } as any)).toThrow(
-        HydraTransportError
+        HydraTransportError,
       );
     });
 
@@ -102,7 +102,7 @@ describe('PostMessageTransport', () => {
             env: 'production',
             targetWindow: mockTarget,
             sourceWindow: mockSource,
-          })
+          }),
       ).toThrowError(HydraSecurityError);
 
       try {
@@ -208,9 +208,17 @@ describe('PostMessageTransport', () => {
       // Null data
       transport.handleMessageEvent({ origin: TRUSTED_ORIGIN, source: mockParent, data: null });
       // Non-object data
-      transport.handleMessageEvent({ origin: TRUSTED_ORIGIN, source: mockParent, data: 'string-msg' });
+      transport.handleMessageEvent({
+        origin: TRUSTED_ORIGIN,
+        source: mockParent,
+        data: 'string-msg',
+      });
       // Missing id or type
-      transport.handleMessageEvent({ origin: TRUSTED_ORIGIN, source: mockParent, data: { foo: 'bar' } });
+      transport.handleMessageEvent({
+        origin: TRUSTED_ORIGIN,
+        source: mockParent,
+        data: { foo: 'bar' },
+      });
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -270,7 +278,7 @@ describe('PostMessageTransport', () => {
       });
 
       await expect(
-        transport.send({ id: '1', type: 'PING', timestamp: Date.now(), source: 'hydra-client' })
+        transport.send({ id: '1', type: 'PING', timestamp: Date.now(), source: 'hydra-client' }),
       ).rejects.toThrow(HydraTransportError);
     });
   });
@@ -523,7 +531,7 @@ describe('PostMessageTransport', () => {
 
       // Calling send after destroy must throw
       await expect(
-        transport.send({ id: '2', type: 'PING', source: 'hydra-client', timestamp: Date.now() })
+        transport.send({ id: '2', type: 'PING', source: 'hydra-client', timestamp: Date.now() }),
       ).rejects.toThrow(HydraTransportError);
 
       // Calling request after destroy must throw
@@ -609,7 +617,12 @@ describe('PostMessageTransport', () => {
       });
 
       await expect(
-        transport.send({ id: 'throw-msg', type: 'PING', source: 'hydra-client', timestamp: Date.now() })
+        transport.send({
+          id: 'throw-msg',
+          type: 'PING',
+          source: 'hydra-client',
+          timestamp: Date.now(),
+        }),
       ).rejects.toThrow(HydraTransportError);
     });
   });

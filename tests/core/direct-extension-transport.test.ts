@@ -182,7 +182,7 @@ describe('DirectExtensionTransport', () => {
           type: 'CLIENT_READY',
           timestamp: Date.now(),
           source: 'hydra-client',
-        })
+        }),
       ).rejects.toThrowError(HydraUserRejectedError);
     });
 
@@ -206,7 +206,7 @@ describe('DirectExtensionTransport', () => {
           type: 'CLIENT_READY',
           timestamp: Date.now(),
           source: 'hydra-client',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'ERR_WALLET_ENABLE_FAILED',
       });
@@ -345,7 +345,7 @@ describe('DirectExtensionTransport', () => {
           payload: { cbor: 'tx_hex' },
           timestamp: Date.now(),
           source: 'hydra-client',
-        })
+        }),
       ).rejects.toThrowError(HydraUserRejectedError);
     });
   });
@@ -354,7 +354,9 @@ describe('DirectExtensionTransport', () => {
     it('throws HydraTimeoutError when a request exceeds timeoutMs', async () => {
       const slowApi = {
         ...mockApi,
-        getBalance: vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100))),
+        getBalance: vi
+          .fn()
+          .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100))),
       };
       const transport = new DirectExtensionTransport({ api: slowApi, defaultTimeoutMs: 15000 });
 
@@ -366,8 +368,8 @@ describe('DirectExtensionTransport', () => {
             timestamp: Date.now(),
             source: 'hydra-client',
           },
-          20 // 20ms timeout
-        )
+          20, // 20ms timeout
+        ),
       ).rejects.toThrowError(HydraTimeoutError);
     });
 
@@ -509,7 +511,7 @@ describe('DirectExtensionTransport', () => {
           type: 'GET_BALANCE',
           timestamp: Date.now(),
           source: 'hydra-client',
-        })
+        }),
       ).rejects.toThrowError(HydraTransportError);
     });
   });

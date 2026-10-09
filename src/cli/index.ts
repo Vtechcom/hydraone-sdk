@@ -92,7 +92,7 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
 
   if (args.template && !SUPPORTED_TEMPLATES.includes(args.template)) {
     console.error(
-      `\n${style('Error:', 'red')} Invalid template "${args.template}". Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}\n`
+      `\n${style('Error:', 'red')} Invalid template "${args.template}". Supported templates: ${SUPPORTED_TEMPLATES.join(', ')}\n`,
     );
     process.exit(1);
   }
@@ -107,7 +107,7 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
           const inputName = await askQuestion(
             rl,
             'What is your project directory name?',
-            'hydraone-game-starter'
+            'hydraone-game-starter',
           );
           const validation = validateProjectName(inputName);
           if (validation.valid) {
@@ -138,21 +138,17 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
               value: 'phaser-3',
               description: 'Includes a Phaser scene and WalletBridgeClient',
             },
-          ]
+          ],
         );
       }
 
       if (!args.packageManager) {
-        pm = await selectOption<PackageManager>(
-          rl,
-          'Select a package manager:',
-          [
-            { label: 'pnpm (recommended)', value: 'pnpm' },
-            { label: 'npm', value: 'npm' },
-            { label: 'yarn', value: 'yarn' },
-            { label: 'bun', value: 'bun' },
-          ]
-        );
+        pm = await selectOption<PackageManager>(rl, 'Select a package manager:', [
+          { label: 'pnpm (recommended)', value: 'pnpm' },
+          { label: 'npm', value: 'npm' },
+          { label: 'yarn', value: 'yarn' },
+          { label: 'bun', value: 'bun' },
+        ]);
       }
     } finally {
       rl.close();
@@ -166,9 +162,10 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
     }
   }
 
-  const targetDirName = projectName?.startsWith('@') && projectName.includes('/')
-    ? projectName.split('/')[1]
-    : projectName;
+  const targetDirName =
+    projectName?.startsWith('@') && projectName.includes('/')
+      ? projectName.split('/')[1]
+      : projectName;
   const targetDir = path.resolve(process.cwd(), targetDirName);
 
   console.log(`\n${style('Creating project...', 'yellow')}`);
@@ -193,14 +190,14 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
     console.log(
       style(
         'Host shell: in dev mode the HydraOne host UI (header, CIP-30 wallet bridge and viewport frame) is embedded around your game via an iframe.',
-        'green'
-      )
+        'green',
+      ),
     );
     console.log(
       style(
         'Production build: the host shell code is stripped out; only the game bundle is emitted, ready to plug into the real HydraOne host.\n',
-        'dim'
-      )
+        'dim',
+      ),
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

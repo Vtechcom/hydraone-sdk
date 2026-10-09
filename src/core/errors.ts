@@ -88,14 +88,18 @@ export class HydraTransportError extends HydraBridgeError {
   constructor(
     message = 'No matching Host Shell or Extension environment found',
     codeOrDetails?: string | unknown,
-    details?: unknown
+    details?: unknown,
   ) {
     let resolvedCode: string = ERROR_CODES.ERR_NOT_IN_IFRAME;
     let resolvedDetails: unknown = details;
 
     if (typeof codeOrDetails === 'string' && codeOrDetails.trim().length > 0) {
       resolvedCode = codeOrDetails.trim();
-    } else if (codeOrDetails !== undefined && typeof codeOrDetails !== 'string' && details === undefined) {
+    } else if (
+      codeOrDetails !== undefined &&
+      typeof codeOrDetails !== 'string' &&
+      details === undefined
+    ) {
       resolvedDetails = codeOrDetails;
     }
 

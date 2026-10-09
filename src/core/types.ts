@@ -72,12 +72,7 @@ export type UnsubscribeFn = () => void;
  * Lifecycle states of an RPC request.
  */
 export type RequestState =
-  | 'Pending'
-  | 'Fulfilled'
-  | 'Rejected'
-  | 'TimedOut'
-  | 'Cancelled'
-  | 'TransportFailed';
+  'Pending' | 'Fulfilled' | 'Rejected' | 'TimedOut' | 'Cancelled' | 'TransportFailed';
 
 /**
  * Bookkeeping record for a request that is still in flight.
@@ -492,13 +487,7 @@ export interface SetOrientationPayload {
  * Haptic feedback presets.
  */
 export type HapticFeedbackType =
-  | 'light'
-  | 'medium'
-  | 'heavy'
-  | 'selection'
-  | 'success'
-  | 'warning'
-  | 'error';
+  'light' | 'medium' | 'heavy' | 'selection' | 'success' | 'warning' | 'error';
 
 /**
  * Vibration patterns in milliseconds for each haptic preset.

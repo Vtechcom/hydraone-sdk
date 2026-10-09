@@ -38,7 +38,12 @@ function hrpExpand(hrp: string): number[] {
 /**
  * Converts a bit array between group sizes (8-bit to 5-bit or vice versa)
  */
-function convertBits(data: Uint8Array | number[], fromBits: number, toBits: number, pad: boolean): number[] {
+function convertBits(
+  data: Uint8Array | number[],
+  fromBits: number,
+  toBits: number,
+  pad: boolean,
+): number[] {
   let acc = 0;
   let bits = 0;
   const ret: number[] = [];
@@ -56,7 +61,7 @@ function convertBits(data: Uint8Array | number[], fromBits: number, toBits: numb
     if (bits > 0) {
       ret.push((acc << (toBits - bits)) & maxv);
     }
-  } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+  } else if (bits >= fromBits || (acc << (toBits - bits)) & maxv) {
     throw new Error('Invalid padding while converting bits');
   }
   return ret;
@@ -108,7 +113,7 @@ export function decodeBech32(bechString: string): { hrp: string; data: Uint8Arra
 
 /**
  * Converts a Cardano address from CIP-30 CBOR hex to a readable Bech32 string (addr1 / addr_test1 / stake1)
- * 
+ *
  * @param hexAddress Cardano address as hex or Bech32
  * @returns Standard Bech32 address (addr1... or addr_test1...)
  */

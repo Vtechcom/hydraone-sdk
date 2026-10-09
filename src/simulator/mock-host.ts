@@ -80,7 +80,7 @@ function encodeCborMapHeader(length: number): string {
  */
 export function encodeCardanoValueToCbor(
   lovelace: bigint,
-  assets?: Record<string, bigint>
+  assets?: Record<string, bigint>,
 ): string {
   const coinCbor = encodeLovelaceToCbor(lovelace);
   if (!assets || Object.keys(assets).length === 0) {
@@ -167,7 +167,7 @@ export class MockBridgeHost {
       address: options.walletState?.address ?? defaultAddress,
       balanceLovelace: options.walletState?.balanceLovelace ?? 1000000000n, // 1,000 ADA
       assets: options.walletState?.assets ?? {
-        'a0b1c2d3e4f50123456789abcdef0123456789abcdef0123456789ab4859445241': 1000000n, // 1,000 HYDRA tokens
+        a0b1c2d3e4f50123456789abcdef0123456789abcdef0123456789ab4859445241: 1000000n, // 1,000 HYDRA tokens
       },
       networkId: options.walletState?.networkId ?? 0, // 0 = Testnet, 1 = Mainnet
       utxos: options.walletState?.utxos ?? [
@@ -299,7 +299,7 @@ export class MockBridgeHost {
    */
   public setWalletBalance(
     lovelace: bigint | string | number,
-    assets?: Record<string, bigint | string | number>
+    assets?: Record<string, bigint | string | number>,
   ): void {
     this.walletState.balanceLovelace = BigInt(lovelace);
     if (assets) {
@@ -466,8 +466,7 @@ export class MockBridgeHost {
 
       this.handleClientMessage(data as BridgeMessage, (response) => {
         try {
-          const targetOrigin =
-            event.origin && event.origin !== 'null' ? event.origin : '*';
+          const targetOrigin = event.origin && event.origin !== 'null' ? event.origin : '*';
           const replyTarget = event.source as Partial<PostMessageTarget> | null;
           if (replyTarget && typeof replyTarget.postMessage === 'function') {
             replyTarget.postMessage(response, targetOrigin);
@@ -562,7 +561,8 @@ export class MockBridgeHost {
       const reason = this.rejectNextReason;
       this.rejectNextReason = undefined;
       this.notifyStateChange();
-      const validReason = reason && reason.trim().length > 0 ? reason : 'User rejected the wallet operation';
+      const validReason =
+        reason && reason.trim().length > 0 ? reason : 'User rejected the wallet operation';
       return { shouldReject: true, reason: validReason };
     }
     if (this.rejectionMode) {
@@ -576,7 +576,7 @@ export class MockBridgeHost {
    */
   public handleClientMessage(
     message: BridgeMessage,
-    reply: (response: BridgeMessage) => void
+    reply: (response: BridgeMessage) => void,
   ): Promise<void> {
     return new Promise((resolve) => {
       if (this.isDestroyed) {
@@ -602,7 +602,7 @@ export class MockBridgeHost {
           const errorResponse = this.createRpcError(
             message.id,
             ERROR_CODES.ERR_INVALID_PARAMS,
-            err instanceof Error ? err.message : 'Internal mock host error'
+            err instanceof Error ? err.message : 'Internal mock host error',
           );
           reply(errorResponse);
         }
@@ -690,7 +690,7 @@ export class MockBridgeHost {
     if (type === 'GET_BALANCE') {
       return this.createRpcResponse(
         id,
-        encodeCardanoValueToCbor(this.walletState.balanceLovelace, this.walletState.assets)
+        encodeCardanoValueToCbor(this.walletState.balanceLovelace, this.walletState.assets),
       );
     }
 
@@ -762,11 +762,11 @@ export class MockBridgeHost {
         return this.createRpcError(
           id,
           ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
-          'Safari ITP SecurityError: Host storage access blocked'
+          'Safari ITP SecurityError: Host storage access blocked',
         );
       }
       const key = (payload as { key?: string } | undefined)?.key;
-      const value = key ? this.storage.get(key) ?? null : null;
+      const value = key ? (this.storage.get(key) ?? null) : null;
       return this.createRpcResponse(id, value);
     }
 
@@ -775,7 +775,7 @@ export class MockBridgeHost {
         return this.createRpcError(
           id,
           ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
-          'Safari ITP SecurityError: Host storage access blocked'
+          'Safari ITP SecurityError: Host storage access blocked',
         );
       }
       const { key, value } = (payload as { key?: string; value?: unknown } | undefined) ?? {};
@@ -790,7 +790,7 @@ export class MockBridgeHost {
         return this.createRpcError(
           id,
           ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
-          'Safari ITP SecurityError: Host storage access blocked'
+          'Safari ITP SecurityError: Host storage access blocked',
         );
       }
       const key = (payload as { key?: string } | undefined)?.key;
@@ -805,7 +805,7 @@ export class MockBridgeHost {
         return this.createRpcError(
           id,
           ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
-          'Safari ITP SecurityError: Host storage access blocked'
+          'Safari ITP SecurityError: Host storage access blocked',
         );
       }
       const prefix = (payload as { prefix?: string } | undefined)?.prefix ?? 'hydra:sdk:';

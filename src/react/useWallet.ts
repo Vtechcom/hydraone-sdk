@@ -1,7 +1,7 @@
-import { useContext, useState, useEffect, useCallback, useRef } from "react";
-import { HydraOneContext } from "./context";
-import type { UseWalletOptions, UseWalletReturn } from "./types";
-import { getTotalLovelace, getAdaBalance } from "../cardano";
+import { useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { HydraOneContext } from './context';
+import type { UseWalletOptions, UseWalletReturn } from './types';
+import { getTotalLovelace, getAdaBalance } from '../cardano';
 import type {
   ConnectionState,
   HostInfo,
@@ -13,8 +13,8 @@ import type {
   HapticFeedbackType,
   DepositModalOptions,
   PlayerProfile,
-} from "../core/types";
-import type { WalletBridgeClient } from "../core/client";
+} from '../core/types';
+import type { WalletBridgeClient } from '../core/client';
 
 /**
  * React hook managing the Cardano wallet connection, BigInt balance and RPC actions
@@ -24,12 +24,11 @@ import type { WalletBridgeClient } from "../core/client";
  */
 export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const context = useContext(HydraOneContext);
-  const client: WalletBridgeClient | undefined =
-    options?.client ?? context?.client;
+  const client: WalletBridgeClient | undefined = options?.client ?? context?.client;
 
   if (!client) {
     throw new Error(
-      "useWallet must be used within a <HydraOneProvider> or passed a custom client option",
+      'useWallet must be used within a <HydraOneProvider> or passed a custom client option',
     );
   }
 
@@ -37,21 +36,15 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const [connectionState, setConnectionState] = useState<ConnectionState>(
     () => client.connectionState,
   );
-  const [isConnected, setIsConnected] = useState<boolean>(
-    () => client.isConnected,
-  );
+  const [isConnected, setIsConnected] = useState<boolean>(() => client.isConnected);
   const [address, setAddress] = useState<string | null>(null);
   const [usedAddresses, setUsedAddresses] = useState<string[]>([]);
   const [balanceADA, setBalanceADA] = useState<string | null>(null);
   const [balanceLovelace, setBalanceLovelace] = useState<bigint | null>(null);
   const [networkId, setNetworkId] = useState<number | null>(null);
-  const [hostInfo, setHostInfo] = useState<HostInfo | null>(
-    () => client.hostInfo ?? null,
-  );
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(
-    () => client.isAudioMuted ?? false,
-  );
-  const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? "dark");
+  const [hostInfo, setHostInfo] = useState<HostInfo | null>(() => client.hostInfo ?? null);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(() => client.isAudioMuted ?? false);
+  const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? 'dark');
 
   // Tracks unmount so state is never updated afterwards
   const isMountedRef = useRef<boolean>(true);
@@ -62,8 +55,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     };
   }, []);
 
-  const autoRefreshBalance =
-    options?.autoRefreshBalance ?? context?.autoRefreshBalance ?? true;
+  const autoRefreshBalance = options?.autoRefreshBalance ?? context?.autoRefreshBalance ?? true;
 
   // 3. Actions that update network, balance and wallet address
   const refreshNetwork = useCallback(async (): Promise<number | null> => {
@@ -126,7 +118,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
           setBalanceADA(null);
           setBalanceLovelace(null);
         }
-        return "0";
+        return '0';
       }
 
       // Prefer getUtxos() so total Lovelace and ADA are computed exactly with BigInt
@@ -155,7 +147,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         setBalanceADA(null);
         setBalanceLovelace(null);
       }
-      return "0";
+      return '0';
     }
   }, [client]);
 
@@ -182,18 +174,12 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         // Ignore errors
       }
     }
-  }, [
-    client,
-    autoRefreshBalance,
-    refreshNetwork,
-    refreshAddress,
-    refreshBalance,
-  ]);
+  }, [client, autoRefreshBalance, refreshNetwork, refreshAddress, refreshBalance]);
 
   const disconnect = useCallback(async (): Promise<void> => {
     await client.disconnect();
     if (isMountedRef.current) {
-      setConnectionState("disconnected");
+      setConnectionState('disconnected');
       setIsConnected(false);
       setAddress(null);
       setUsedAddresses([]);
@@ -205,11 +191,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   // 5. Proxy methods wrapped in useCallback
   const signTx = useCallback(
-    async (
-      txCbor: string,
-      partialSign?: boolean,
-      signOptions?: SignOptions,
-    ): Promise<string> => {
+    async (txCbor: string, partialSign?: boolean, signOptions?: SignOptions): Promise<string> => {
       return client.signTx(txCbor, partialSign, signOptions);
     },
     [client],
@@ -260,7 +242,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   // 6. Register event listeners with automatic cleanup in useEffect (SSR-safe)
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return;
     }
 
@@ -269,10 +251,10 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     const onConnStateChanged = (state: ConnectionState) => {
       if (!isMountedRef.current) return;
       setConnectionState(state);
-      setIsConnected(state === "connected");
+      setIsConnected(state === 'connected');
       setHostInfo(client.hostInfo ?? null);
 
-      if (state === "connected") {
+      if (state === 'connected') {
         if (client.theme !== undefined) {
           setTheme(client.theme);
         }
@@ -284,7 +266,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === "disconnected" || state === "error") {
+      } else if (state === 'disconnected' || state === 'error') {
         setAddress(null);
         setUsedAddresses([]);
         setBalanceADA(null);
@@ -311,7 +293,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
     const onDisconnected = () => {
       if (!isMountedRef.current) return;
-      setConnectionState("disconnected");
+      setConnectionState('disconnected');
       setIsConnected(false);
       setAddress(null);
       setUsedAddresses([]);
@@ -322,7 +304,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
     const onHostAck = (_payload: unknown) => {
       if (!isMountedRef.current) return;
-      setConnectionState("connected");
+      setConnectionState('connected');
       setIsConnected(true);
       setHostInfo(client.hostInfo ?? null);
       if (client.theme !== undefined) {
@@ -338,10 +320,10 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       }
     };
 
-    cleanups.push(client.on("HOST_ACK", onHostAck));
-    cleanups.push(client.on("CONNECTION_STATE_CHANGED", onConnStateChanged));
-    cleanups.push(client.on("ACCOUNT_CHANGED", onAccountChanged));
-    cleanups.push(client.on("NETWORK_CHANGED", onNetworkChanged));
+    cleanups.push(client.on('HOST_ACK', onHostAck));
+    cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
+    cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
+    cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
     cleanups.push(
       client.onAudioMutedChanged((muted) => {
         if (isMountedRef.current) setIsAudioMuted(muted);
@@ -352,7 +334,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (isMountedRef.current) setTheme(newTheme);
       }),
     );
-    cleanups.push(client.on("DISCONNECTED", onDisconnected));
+    cleanups.push(client.on('DISCONNECTED', onDisconnected));
 
     // Sync current state if the client was already connected
     if (client.isConnected) {

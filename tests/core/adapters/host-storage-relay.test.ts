@@ -310,7 +310,7 @@ describe('HostStorageRelayAdapter', () => {
       const adapter = new HostStorageRelayAdapter(transport);
 
       await expect(adapter.setItem('hydra:sdk:auth:token', 'val')).rejects.toThrow(
-        HydraStorageError
+        HydraStorageError,
       );
 
       try {
@@ -360,12 +360,8 @@ describe('HostStorageRelayAdapter', () => {
       expect(adapter.isDestroyed).toBe(true);
 
       await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
-      await expect(adapter.setItem('hydra:sdk:auth:token', '1')).rejects.toThrow(
-        HydraStorageError
-      );
-      await expect(adapter.removeItem('hydra:sdk:auth:token')).rejects.toThrow(
-        HydraStorageError
-      );
+      await expect(adapter.setItem('hydra:sdk:auth:token', '1')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.removeItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
       await expect(adapter.clear()).rejects.toThrow(HydraStorageError);
     });
 

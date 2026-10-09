@@ -38,7 +38,11 @@ export class PostMessageTransport implements ITransport {
   private isDestroyed = false;
 
   constructor(options: PostMessageTransportOptions) {
-    if (!options || typeof options.appCenterOrigin !== 'string' || options.appCenterOrigin.trim() === '') {
+    if (
+      !options ||
+      typeof options.appCenterOrigin !== 'string' ||
+      options.appCenterOrigin.trim() === ''
+    ) {
       throw new HydraTransportError('appCenterOrigin must be provided');
     }
 
@@ -46,14 +50,15 @@ export class PostMessageTransport implements ITransport {
     const normalizedOrigin = trimmedOrigin === '*' ? '*' : trimmedOrigin.replace(/\/+$/, '');
     const env =
       options.env ??
-      (typeof process !== 'undefined' && process.env?.NODE_ENV ? process.env.NODE_ENV : 'development');
+      (typeof process !== 'undefined' && process.env?.NODE_ENV
+        ? process.env.NODE_ENV
+        : 'development');
 
     // Reject wildcard origins in production
     if (normalizedOrigin === '*' && env === 'production') {
-      throw new HydraSecurityError(
-        'Wildcard origin "*" is not allowed in production environment',
-        { appCenterOrigin: '*' }
-      );
+      throw new HydraSecurityError('Wildcard origin "*" is not allowed in production environment', {
+        appCenterOrigin: '*',
+      });
     }
 
     this.appCenterOrigin = normalizedOrigin;
@@ -86,7 +91,7 @@ export class PostMessageTransport implements ITransport {
         {
           origin: event.origin,
           expectedOrigin: this.appCenterOrigin,
-        }
+        },
       );
     }
 
@@ -104,7 +109,7 @@ export class PostMessageTransport implements ITransport {
           'Invalid source window (message did not originate from window.parent)',
           {
             source: event.source,
-          }
+          },
         );
       }
     }
@@ -127,7 +132,9 @@ export class PostMessageTransport implements ITransport {
         ? (message.payload as RpcResponsePayload)
         : undefined;
     if (
-      (message.type === 'RPC_RESPONSE' || message.type === 'RPC_ERROR' || message.type === 'HOST_ACK') &&
+      (message.type === 'RPC_RESPONSE' ||
+        message.type === 'RPC_ERROR' ||
+        message.type === 'HOST_ACK') &&
       rpcPayload &&
       typeof rpcPayload.requestId === 'string'
     ) {
@@ -187,7 +194,7 @@ export class PostMessageTransport implements ITransport {
     if (!target) {
       throw new HydraTransportError(
         'Target window not found for sending postMessage (not in iframe or targetWindow missing)',
-        ERROR_CODES.ERR_NOT_IN_IFRAME
+        ERROR_CODES.ERR_NOT_IN_IFRAME,
       );
     }
 
@@ -208,7 +215,7 @@ export class PostMessageTransport implements ITransport {
       throw new HydraTransportError(
         `Failed to send postMessage: ${errorMessage(err, 'Unable to serialize message')}`,
         'ERR_POSTMESSAGE_FAILED',
-        err
+        err,
       );
     }
   }
@@ -219,7 +226,7 @@ export class PostMessageTransport implements ITransport {
    */
   public async request<T = unknown>(
     message: Partial<BridgeMessage>,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<BridgeMessage<T>> {
     if (this.isDestroyed) {
       throw new HydraTransportError('Transport has been destroyed');
@@ -246,14 +253,11 @@ export class PostMessageTransport implements ITransport {
             entry.state = 'TimedOut';
             this.inFlightMap.delete(id);
             reject(
-              new HydraTimeoutError(
-                `RPC request [${id}] timed out (${timeout}ms)`,
-                {
-                  requestId: id,
-                  timeoutMs: timeout,
-                  messageType: fullMessage.type,
-                }
-              )
+              new HydraTimeoutError(`RPC request [${id}] timed out (${timeout}ms)`, {
+                requestId: id,
+                timeoutMs: timeout,
+                messageType: fullMessage.type,
+              }),
             );
           }
         }, timeout);

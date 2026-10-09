@@ -166,14 +166,14 @@ export class DirectExtensionTransport implements ITransport {
         throw new HydraTransportError(
           `Specified Cardano wallet extension "${options.walletName}" was not found`,
           ERROR_CODES.ERR_NOT_IN_IFRAME,
-          { walletName: options.walletName }
+          { walletName: options.walletName },
         );
       }
     } else {
       if (availableWallets.length === 0) {
         throw new HydraTransportError(
           'No Cardano wallet extension found and not running in Host iframe',
-          ERROR_CODES.ERR_NOT_IN_IFRAME
+          ERROR_CODES.ERR_NOT_IN_IFRAME,
         );
       }
       this.walletName = availableWallets[0];
@@ -198,7 +198,7 @@ export class DirectExtensionTransport implements ITransport {
     if (!this.extension || typeof this.extension.enable !== 'function') {
       throw new HydraTransportError(
         `Wallet extension "${this.walletName}" does not provide an enable() method`,
-        ERROR_CODES.ERR_NOT_IN_IFRAME
+        ERROR_CODES.ERR_NOT_IN_IFRAME,
       );
     }
 
@@ -208,7 +208,7 @@ export class DirectExtensionTransport implements ITransport {
         if (!api || typeof api !== 'object') {
           throw new HydraBridgeError(
             `Wallet extension "${this.walletName}" enable() did not return a valid CIP-30 API object`,
-            'ERR_WALLET_ENABLE_FAILED'
+            'ERR_WALLET_ENABLE_FAILED',
           );
         }
         this.api = api;
@@ -216,14 +216,16 @@ export class DirectExtensionTransport implements ITransport {
       } catch (err) {
         if (isUserRejectionError(err)) {
           throw new HydraUserRejectedError(
-            errorInfo(err) || errorMessage(err) || `User rejected connection to wallet "${this.walletName}"`,
-            err
+            errorInfo(err) ||
+              errorMessage(err) ||
+              `User rejected connection to wallet "${this.walletName}"`,
+            err,
           );
         }
         throw new HydraBridgeError(
           errorMessage(err) || `Failed to enable wallet extension "${this.walletName}"`,
           'ERR_WALLET_ENABLE_FAILED',
-          err
+          err,
         );
       } finally {
         this.enablePromise = null;
@@ -278,7 +280,7 @@ export class DirectExtensionTransport implements ITransport {
           source: 'hydra-host',
         };
         this.emitMessage(errorResponse);
-      }
+      },
     );
   }
 
@@ -295,10 +297,10 @@ export class DirectExtensionTransport implements ITransport {
       if (effectiveTimeout > 0 && effectiveTimeout !== Infinity) {
         timeoutTimer = setTimeout(() => {
           reject(
-            new HydraTimeoutError(
-              `Request [${message.type}] timed out (${effectiveTimeout}ms)`,
-              { messageType: message.type, timeoutMs: effectiveTimeout }
-            )
+            new HydraTimeoutError(`Request [${message.type}] timed out (${effectiveTimeout}ms)`, {
+              messageType: message.type,
+              timeoutMs: effectiveTimeout,
+            }),
           );
         }, effectiveTimeout);
       }
@@ -312,7 +314,7 @@ export class DirectExtensionTransport implements ITransport {
         if (isUserRejectionError(err)) {
           throw new HydraUserRejectedError(
             errorInfo(err) || errorMessage(err) || 'User rejected the operation',
-            err
+            err,
           );
         }
         if (err instanceof HydraBridgeError) {
@@ -321,7 +323,7 @@ export class DirectExtensionTransport implements ITransport {
         throw new HydraBridgeError(
           errorMessage(err) || `Direct extension operation failed for [${message.type}]`,
           String(errorCode(err) || 'ERR_RPC_FAILED'),
-          err
+          err,
         );
       }
     })();
@@ -402,7 +404,7 @@ export class DirectExtensionTransport implements ITransport {
         case 'GET_COLLATERAL': {
           if (typeof api.getCollateral === 'function') {
             const collateralRes = await api.getCollateral(
-              payload.amount ? { amount: payload.amount } : undefined
+              payload.amount ? { amount: payload.amount } : undefined,
             );
             result = collateralRes ?? null;
           } else {
@@ -440,7 +442,7 @@ export class DirectExtensionTransport implements ITransport {
         default: {
           throw new HydraBridgeError(
             `Unsupported message type [${message.type}] in DirectExtensionTransport`,
-            'ERR_UNSUPPORTED_METHOD'
+            'ERR_UNSUPPORTED_METHOD',
           );
         }
       }
@@ -461,7 +463,7 @@ export class DirectExtensionTransport implements ITransport {
       if (isUserRejectionError(err)) {
         throw new HydraUserRejectedError(
           errorInfo(err) || errorMessage(err) || 'User rejected the wallet operation',
-          err
+          err,
         );
       }
       throw err;

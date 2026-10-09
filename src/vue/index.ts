@@ -12,8 +12,4 @@ export {
   setSharedWalletBridgeClient,
 } from './useWalletBridgeClient';
 
-export {
-  useGameAuth,
-  getSharedGameAuthManager,
-  setSharedGameAuthManager,
-} from './useGameAuth';
+export { useGameAuth, getSharedGameAuthManager, setSharedGameAuthManager } from './useGameAuth';

@@ -30,11 +30,9 @@ export function createReadline(): readline.Interface {
 export async function askQuestion(
   rl: readline.Interface,
   query: string,
-  defaultValue = ''
+  defaultValue = '',
 ): Promise<string> {
-  const prompt = defaultValue
-    ? `${query} ${style(`(${defaultValue})`, 'dim')}: `
-    : `${query}: `;
+  const prompt = defaultValue ? `${query} ${style(`(${defaultValue})`, 'dim')}: ` : `${query}: `;
   const answer = await rl.question(prompt);
   return answer.trim() || defaultValue;
 }
@@ -42,7 +40,7 @@ export async function askQuestion(
 export async function selectOption<T extends string>(
   rl: readline.Interface,
   title: string,
-  options: { label: string; value: T; description?: string }[]
+  options: { label: string; value: T; description?: string }[],
 ): Promise<T> {
   console.log(`\n${style('?', 'cyan')} ${style(title, 'bold')}`);
   options.forEach((opt, index) => {
@@ -53,14 +51,12 @@ export async function selectOption<T extends string>(
 
   while (true) {
     const answer = await rl.question(
-      `${style('Choose a number [1-' + options.length + ']', 'yellow')}: `
+      `${style('Choose a number [1-' + options.length + ']', 'yellow')}: `,
     );
     const chosenIndex = parseInt(answer.trim(), 10) - 1;
     if (chosenIndex >= 0 && chosenIndex < options.length) {
       return options[chosenIndex].value;
     }
-    console.log(
-      style(`Invalid choice. Enter a number from 1 to ${options.length}.`, 'red')
-    );
+    console.log(style(`Invalid choice. Enter a number from 1 to ${options.length}.`, 'red'));
   }
 }

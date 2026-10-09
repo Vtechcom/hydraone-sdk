@@ -105,7 +105,7 @@ export function HydraOneProvider({
       storage: activeStorage,
       autoRefreshBalance,
     }),
-    [activeClient, activeAuthManager, activeStorage, autoRefreshBalance]
+    [activeClient, activeAuthManager, activeStorage, autoRefreshBalance],
   );
 
   return <HydraOneContext.Provider value={contextValue}>{children}</HydraOneContext.Provider>;

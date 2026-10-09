@@ -140,7 +140,6 @@ export interface UseWalletReturn {
    */
   address: string | null;
 
-
   /**
    * All used addresses of the wallet
    */

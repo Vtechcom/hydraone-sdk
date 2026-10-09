@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type {
-  ITransport,
-  IStorage,
-  BridgeMessage,
-  MessageHandler,
-  UnsubscribeFn,
-} from '../../src';
+import type { ITransport, IStorage, BridgeMessage, MessageHandler, UnsubscribeFn } from '../../src';
 
 /**
  * Mock ITransport used to exercise the port contract.

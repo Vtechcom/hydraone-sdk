@@ -261,8 +261,12 @@ describe('Cardano Assets & Precision BigInt Math', () => {
     });
 
     it('throws when assetName has an invalid type', () => {
-      expect(() => getAssetQuantity([], policyA, 123 as unknown as string)).toThrow(HydraBridgeError);
-      expect(() => getAssetQuantity([], policyA, null as unknown as string)).toThrow(HydraBridgeError);
+      expect(() => getAssetQuantity([], policyA, 123 as unknown as string)).toThrow(
+        HydraBridgeError,
+      );
+      expect(() => getAssetQuantity([], policyA, null as unknown as string)).toThrow(
+        HydraBridgeError,
+      );
     });
   });
 
@@ -277,7 +281,9 @@ describe('Cardano Assets & Precision BigInt Math', () => {
 
     it('throws HydraBridgeError for a malformed quantity string inside a UTxO', () => {
       expect(() => parseValue({ coins: 'not-a-number' })).toThrow(HydraBridgeError);
-      expect(() => parseValue({ amount: [{ unit: 'lovelace', quantity: 'abc' }] })).toThrow(HydraBridgeError);
+      expect(() => parseValue({ amount: [{ unit: 'lovelace', quantity: 'abc' }] })).toThrow(
+        HydraBridgeError,
+      );
       try {
         parseValue({ coins: 'not-a-number' });
       } catch (err) {

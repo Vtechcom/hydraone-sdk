@@ -85,11 +85,11 @@ function generateId(): string {
 
 /**
  * HostStorageRelayAdapter - IStorage implementation that delegates storage to the Host Shell.
- * 
+ *
  * Works around Safari ITP (storage partitioning) blocking or wiping iframe storage
  * after a reload. Session data (JWT, user address) is kept on the App Center host's
  * first-party domain via a postMessage relay.
- * 
+ *
  * Security: when the Host Shell disconnects or times out, throws a HydraStorageError
  * (ERR_STORAGE_UNAVAILABLE) instead of falling back to writing sensitive tokens to unpartitioned storage.
  */
@@ -103,7 +103,7 @@ export class HostStorageRelayAdapter implements IStorage {
 
   constructor(
     transportOrOptions: ITransport | HostStorageRelayAdapterOptions,
-    options?: { timeoutMs?: number }
+    options?: { timeoutMs?: number },
   ) {
     let resolvedTransport: ITransport | undefined;
     let resolvedTimeoutMs = 15000;
@@ -124,9 +124,7 @@ export class HostStorageRelayAdapter implements IStorage {
     }
 
     if (!resolvedTransport || typeof resolvedTransport.send !== 'function') {
-      throw new HydraStorageError(
-        'HostStorageRelayAdapter requires a valid ITransport instance'
-      );
+      throw new HydraStorageError('HostStorageRelayAdapter requires a valid ITransport instance');
     }
 
     this.transport = resolvedTransport;
@@ -248,7 +246,7 @@ export class HostStorageRelayAdapter implements IStorage {
         clearTimeout(pending.timeoutTimer);
       }
       pending.reject(
-        new HydraStorageError('HostStorageRelayAdapter has been destroyed', { requestId: id })
+        new HydraStorageError('HostStorageRelayAdapter has been destroyed', { requestId: id }),
       );
     }
     this.pendingRequests.clear();
@@ -293,7 +291,7 @@ export class HostStorageRelayAdapter implements IStorage {
     if (typeof key !== 'string' || !key.trim()) {
       throw new HydraStorageError(
         `Host storage operation [${operation}] requires a non-empty string key`,
-        { operation, key }
+        { operation, key },
       );
     }
   }
@@ -305,7 +303,7 @@ export class HostStorageRelayAdapter implements IStorage {
     if (this._isDestroyed) {
       throw new HydraStorageError(
         `HostStorageRelayAdapter has been destroyed (operation: ${operation})`,
-        { operation, key }
+        { operation, key },
       );
     }
   }
@@ -316,7 +314,7 @@ export class HostStorageRelayAdapter implements IStorage {
   private async executeRpc(
     message: BridgeMessage,
     operation: string,
-    key?: string
+    key?: string,
   ): Promise<BridgeMessage> {
     this.assertNotDestroyed(operation, key);
 
@@ -350,7 +348,7 @@ export class HostStorageRelayAdapter implements IStorage {
       if (this._isDestroyed) {
         throw new HydraStorageError(
           `HostStorageRelayAdapter has been destroyed (operation: ${operation})`,
-          { operation, key, originalError: err }
+          { operation, key, originalError: err },
         );
       }
 
@@ -364,7 +362,7 @@ export class HostStorageRelayAdapter implements IStorage {
           operation,
           key,
           originalError: err,
-        }
+        },
       );
     } finally {
       if (cancelCallback) {
@@ -393,8 +391,8 @@ export class HostStorageRelayAdapter implements IStorage {
           reject(
             new HydraStorageError(
               `Host storage request [${message.type}] timed out (${this.timeoutMs}ms)`,
-              { messageType: message.type, timeoutMs: this.timeoutMs }
-            )
+              { messageType: message.type, timeoutMs: this.timeoutMs },
+            ),
           );
         }, this.timeoutMs);
       }
@@ -411,8 +409,8 @@ export class HostStorageRelayAdapter implements IStorage {
         reject(
           new HydraStorageError(
             `Failed to ${sync ? 'dispatch' : 'send'} storage message: ${errorMessage(err, 'Transport error')}`,
-            { originalError: err }
-          )
+            { originalError: err },
+          ),
         );
       };
 

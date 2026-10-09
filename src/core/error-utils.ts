@@ -6,7 +6,11 @@ export function errorMessage(err: unknown, fallback = ''): string {
   if (typeof err === 'string') {
     return err || fallback;
   }
-  if (err && typeof err === 'object' && typeof (err as { message?: unknown }).message === 'string') {
+  if (
+    err &&
+    typeof err === 'object' &&
+    typeof (err as { message?: unknown }).message === 'string'
+  ) {
     return (err as { message: string }).message || fallback;
   }
   return fallback;

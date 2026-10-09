@@ -19,16 +19,19 @@ import type {
  * by temporarily patching the storage methods to throw SecurityError
  */
 export class SafariItpStorageSimulator {
-  private originalMethods = new Map<Storage, {
-    methods: {
-      getItem?: (key: string) => string | null;
-      setItem?: (key: string, value: string) => void;
-      removeItem?: (key: string) => void;
-      clear?: () => void;
-      key?: (index: number) => string | null;
-    };
-    lengthDescriptor?: PropertyDescriptor;
-  }>();
+  private originalMethods = new Map<
+    Storage,
+    {
+      methods: {
+        getItem?: (key: string) => string | null;
+        setItem?: (key: string, value: string) => void;
+        removeItem?: (key: string) => void;
+        clear?: () => void;
+        key?: (index: number) => string | null;
+      };
+      lengthDescriptor?: PropertyDescriptor;
+    }
+  >();
 
   private _isActive = false;
 
@@ -80,11 +83,11 @@ export class SafariItpStorageSimulator {
         if (typeof DOMException !== 'undefined') {
           throw new DOMException(
             'The operation is insecure (Safari ITP / Private Browsing blocked storage access).',
-            'SecurityError'
+            'SecurityError',
           );
         }
         const err = new Error(
-          'The operation is insecure (Safari ITP / Private Browsing blocked storage access).'
+          'The operation is insecure (Safari ITP / Private Browsing blocked storage access).',
         );
         err.name = 'SecurityError';
         throw err;
@@ -441,7 +444,8 @@ export class DevToolsWidget {
    * Sets the simulated network latency (ms)
    */
   public setLatency(ms: number): void {
-    const clampedMs = typeof ms === 'number' && Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
+    const clampedMs =
+      typeof ms === 'number' && Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
     this.host.setLatency(clampedMs);
     this.showToast(`Latency set to ${clampedMs}ms`);
   }
@@ -545,7 +549,15 @@ export class DevToolsWidget {
     const styles = this.getStyles();
     const content = this._isCollapsed
       ? this.renderCollapsed(isConnected, isRejectActive, isItpActive)
-      : this.renderExpanded(state, isConnected, isRejectActive, isItpActive, currentLatency, currentAda, shortAddress);
+      : this.renderExpanded(
+          state,
+          isConnected,
+          isRejectActive,
+          isItpActive,
+          currentLatency,
+          currentAda,
+          shortAddress,
+        );
 
     this.shadow.innerHTML = `<style>${styles}</style>${content}`;
     this.bindEvents();
@@ -554,10 +566,20 @@ export class DevToolsWidget {
   private renderCollapsed(
     isConnected: boolean,
     isRejectActive: boolean,
-    isItpActive: boolean
+    isItpActive: boolean,
   ): string {
-    const statusColor = !isConnected ? '#ef4444' : isRejectActive || isItpActive ? '#f59e0b' : '#10b981';
-    const statusLabel = !isConnected ? 'DISCONNECTED' : isRejectActive ? 'REJECT' : isItpActive ? 'ITP' : 'READY';
+    const statusColor = !isConnected
+      ? '#ef4444'
+      : isRejectActive || isItpActive
+        ? '#f59e0b'
+        : '#10b981';
+    const statusLabel = !isConnected
+      ? 'DISCONNECTED'
+      : isRejectActive
+        ? 'REJECT'
+        : isItpActive
+          ? 'ITP'
+          : 'READY';
 
     return `
       <div class="hydra-devtools-badge" id="btn-expand" title="Open HydraOne DevTools">
@@ -581,7 +603,7 @@ export class DevToolsWidget {
     isItpActive: boolean,
     currentLatency: number,
     currentAda: number,
-    shortAddress: string
+    shortAddress: string,
   ): string {
     const connectionColor = isConnected ? '#10b981' : '#ef4444';
     const connectionText = isConnected ? 'Connected' : 'Disconnected';
@@ -747,7 +769,9 @@ export class DevToolsWidget {
     });
 
     const btnApplyLatency = this.shadow.getElementById('btn-apply-latency');
-    const inputCustomLatency = this.shadow.getElementById('input-custom-latency') as HTMLInputElement | null;
+    const inputCustomLatency = this.shadow.getElementById(
+      'input-custom-latency',
+    ) as HTMLInputElement | null;
     const applyCustomLatency = () => {
       if (inputCustomLatency) {
         const parsed = parseInt(inputCustomLatency.value, 10);

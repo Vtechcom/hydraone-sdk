@@ -65,7 +65,6 @@ export interface UseWalletBridgeClientReturn {
    */
   address: Ref<string | null>;
 
-
   /**
    * All used addresses of the wallet
    */

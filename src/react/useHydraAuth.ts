@@ -35,7 +35,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
 
   if (!authManager) {
     throw new Error(
-      'useHydraAuth must be used within a <HydraOneProvider> or passed an authManager/client option'
+      'useHydraAuth must be used within a <HydraOneProvider> or passed an authManager/client option',
     );
   }
 
@@ -102,7 +102,7 @@ export function useHydraAuth(options?: UseHydraAuthOptions): UseHydraAuthReturn 
         }
       }
     },
-    [authManager]
+    [authManager],
   );
 
   const login = signIn;

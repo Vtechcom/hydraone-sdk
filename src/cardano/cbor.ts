@@ -64,7 +64,10 @@ class CborReader {
       // Indefinite length marker
       return -1n;
     }
-    throw new HydraBridgeError(`Unsupported CBOR additional info: ${additionalInfo}`, 'ERR_INVALID_PARAMS');
+    throw new HydraBridgeError(
+      `Unsupported CBOR additional info: ${additionalInfo}`,
+      'ERR_INVALID_PARAMS',
+    );
   }
 
   public decodeItem(): unknown {
@@ -205,14 +208,17 @@ class CborReader {
         return null;
       }
       default:
-        throw new HydraBridgeError(`Unsupported CBOR major type: ${majorType}`, 'ERR_INVALID_PARAMS');
+        throw new HydraBridgeError(
+          `Unsupported CBOR major type: ${majorType}`,
+          'ERR_INVALID_PARAMS',
+        );
     }
   }
 }
 
 /**
  * Decodes a CBOR hex string into a JavaScript value
- * 
+ *
  * @param hex CBOR hex string
  * @returns The decoded value
  */
@@ -228,7 +234,7 @@ export function decodeCborHex(hex: string): unknown {
     throw new HydraBridgeError(
       `Failed to decode CBOR hex: ${err instanceof Error ? err.message : String(err)}`,
       'ERR_INVALID_PARAMS',
-      err
+      err,
     );
   }
 }
@@ -317,7 +323,7 @@ function parseValueTuple(coins: bigint, multiassetMap: Map<unknown, unknown>): C
 
 /**
  * Extracts a CardanoValue from the CBOR hex of a UTxO or Value
- * 
+ *
  * @param cborHex CBOR hex string
  * @returns The CardanoValue on success; throws HydraBridgeError otherwise
  */
@@ -328,7 +334,7 @@ export function parseCborUtxoOrValue(cborHex: string): CardanoValue {
     throw new HydraBridgeError(
       'Unable to parse Cardano Value from CBOR structure',
       'ERR_INVALID_PARAMS',
-      { cbor: cborHex }
+      { cbor: cborHex },
     );
   }
   return result;

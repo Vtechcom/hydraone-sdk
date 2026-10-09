@@ -151,16 +151,18 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
 
 /**
  * Measures the ping-pong roundtrip latency of the postMessage channel
- * 
+ *
  * @param clientOrTransport A WalletBridgeClient instance or an ITransport
  * @param options Timeout and warning-threshold options
  */
 export async function checkPostMessageLatency(
   clientOrTransport?: unknown,
-  options?: LatencyCheckOptions
+  options?: LatencyCheckOptions,
 ): Promise<DiagnosticCheckItem> {
   const timeoutMs =
-    typeof options?.timeoutMs === 'number' && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+    typeof options?.timeoutMs === 'number' &&
+    Number.isFinite(options.timeoutMs) &&
+    options.timeoutMs > 0
       ? options.timeoutMs
       : 3000;
   const warningThresholdMs =
@@ -216,7 +218,7 @@ export async function checkPostMessageLatency(
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        timeoutMs
+        timeoutMs,
       );
     }
     // Strategy 4: call request directly on the transport
@@ -228,7 +230,7 @@ export async function checkPostMessageLatency(
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        timeoutMs
+        timeoutMs,
       );
     } else {
       return {
@@ -333,13 +335,13 @@ export async function checkPostMessageLatency(
 
 /**
  * Checks that storage is readable and writable (Local Storage and Host Storage Relay)
- * 
+ *
  * @param clientOrStorage A WalletBridgeClient instance or a storage adapter
  * @param options Options for the temporary test key
  */
 export async function checkStorageHealth(
   clientOrStorage?: unknown,
-  options?: StorageCheckOptions
+  options?: StorageCheckOptions,
 ): Promise<DiagnosticCheckItem[]> {
   const checks: DiagnosticCheckItem[] = [];
   const testKey =
@@ -519,19 +521,19 @@ export function getDiagnosticEnvironmentInfo(): DiagnosticEnvironmentInfo {
 
 /**
  * Runs a full health diagnosis of the HydraOne bridge connection
- * 
+ *
  * Runs three checks:
  * 1. Iframe sandbox permissions (`allow-scripts`, `allow-same-origin`)
  * 2. postMessage ping-pong roundtrip latency
  * 3. Storage read/write readiness (Local Storage and Host Storage Relay)
- * 
+ *
  * @param clientOrTransport A WalletBridgeClient instance or an ITransport
  * @param options Diagnostic options, including which checks to skip
  * @returns A detailed `BridgeHealthReport` with actionable hints
  */
 export async function checkBridgeHealth(
   clientOrTransport?: unknown,
-  options?: CheckHealthOptions
+  options?: CheckHealthOptions,
 ): Promise<BridgeHealthReport> {
   const timestamp = Date.now();
   const environment = getDiagnosticEnvironmentInfo();

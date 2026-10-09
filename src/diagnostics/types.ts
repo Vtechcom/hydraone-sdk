@@ -12,11 +12,7 @@ export type DiagnosticStatus = 'PASS' | 'WARN' | 'FAIL';
  * Standard identifiers for diagnostic checks
  */
 export type DiagnosticCheckId =
-  | 'iframe-sandbox'
-  | 'postmessage-latency'
-  | 'storage-local'
-  | 'storage-relay'
-  | (string & {});
+  'iframe-sandbox' | 'postmessage-latency' | 'storage-local' | 'storage-relay' | (string & {});
 
 /**
  * Detailed result of a single diagnostic check

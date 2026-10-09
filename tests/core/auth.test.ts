@@ -120,9 +120,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
         signature: 'cose_sign1_hex_abcdef',
         key: 'cose_key_hex_123456',
       }),
-      getUsedAddresses: vi.fn().mockResolvedValue([
-        'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2',
-      ]),
+      getUsedAddresses: vi.fn().mockResolvedValue(['addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2']),
       getChangeAddress: vi.fn().mockResolvedValue('addr_test1change'),
       onHostEvent: vi.fn((type: string, handler: any) => {
         hostEventListeners.set(type, handler);
@@ -150,8 +148,12 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
   it('throws when constructing an AuthManager without a client or storage', () => {
     expect(() => new AuthManager(null as any)).toThrow();
-    expect(() => new AuthManager({ client: null as any, storage })).toThrow('requires a client instance');
-    expect(() => new AuthManager({ client: mockClient, storage: null as any })).toThrow('requires an IStorage instance');
+    expect(() => new AuthManager({ client: null as any, storage })).toThrow(
+      'requires a client instance',
+    );
+    expect(() => new AuthManager({ client: mockClient, storage: null as any })).toThrow(
+      'requires an IStorage instance',
+    );
   });
 
   it('completes 1-click signIn with an exchangeToken callback', async () => {
@@ -182,7 +184,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(mockClient.signData).toHaveBeenCalledWith(
       'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2',
       expectedHex,
-      undefined
+      undefined,
     );
 
     // 2. exchangeToken was called
@@ -206,7 +208,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
         isAuthenticated: true,
         token: testJwt,
         address: 'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2',
-      })
+      }),
     );
 
     // 5. Returned session
@@ -253,7 +255,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(mockClient.signData).toHaveBeenCalledWith(
       'addr_custom_123',
       stringToHex('my_challenge'),
-      undefined
+      undefined,
     );
     expect(await authManager.getAuthAddress()).toBe('addr_custom_123');
   });
@@ -277,7 +279,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
   it('propagates HydraUserRejectedError when the player rejects the CIP-8 signing popup', async () => {
     (mockClient.signData as any).mockRejectedValue(
-      new HydraUserRejectedError('User declined CIP-8 signData')
+      new HydraUserRejectedError('User declined CIP-8 signData'),
     );
 
     const authManager = new GameAuthManager({
@@ -286,16 +288,14 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     });
 
     await expect(authManager.signIn({ challenge: 'test_reject' })).rejects.toThrow(
-      HydraUserRejectedError
+      HydraUserRejectedError,
     );
     expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
     expect(authManager.state.isAuthenticated).toBe(false);
   });
 
   it('propagates HydraTimeoutError when wallet signing times out', async () => {
-    (mockClient.signData as any).mockRejectedValue(
-      new HydraTimeoutError('Signing timed out')
-    );
+    (mockClient.signData as any).mockRejectedValue(new HydraTimeoutError('Signing timed out'));
 
     const authManager = new GameAuthManager({
       client: mockClient,
@@ -303,7 +303,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     });
 
     await expect(authManager.signIn({ challenge: 'timeout_test' })).rejects.toThrow(
-      HydraTimeoutError
+      HydraTimeoutError,
     );
   });
 
@@ -320,7 +320,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       authManager.signIn({
         challenge: 'expired_test',
         exchangeToken: async () => expiredJwt,
-      })
+      }),
     ).rejects.toThrow(HydraAuthError);
 
     expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
@@ -351,7 +351,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
         isAuthenticated: false,
         token: null,
         error: expect.any(HydraAuthError),
-      })
+      }),
     );
   });
 
@@ -398,7 +398,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
       expect.objectContaining({
         isAuthenticated: false,
         token: null,
-      })
+      }),
     );
   });
 
@@ -530,7 +530,9 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
   });
 
   it('parseJwt throws a controlled error on invalid base64 characters', () => {
-    expect(() => parseJwt('header.invalid!!base64.sig')).toThrow('Failed to parse JWT payload JSON');
+    expect(() => parseJwt('header.invalid!!base64.sig')).toThrow(
+      'Failed to parse JWT payload JSON',
+    );
   });
 
   it('signIn handles a challenge starting with 0x: keeps valid hex as-is, falls back to stringToHex when odd-length or non-hex', async () => {
@@ -541,18 +543,14 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
     // 1. 0x with valid even-length hex -> kept as-is
     await authManager.signIn({ challenge: '0xabcd' });
-    expect(mockClient.signData).toHaveBeenCalledWith(
-      expect.any(String),
-      'abcd',
-      undefined
-    );
+    expect(mockClient.signData).toHaveBeenCalledWith(expect.any(String), 'abcd', undefined);
 
     // 2. 0x with odd length (e.g. 0xabc) -> falls back to string encoding
     await authManager.signIn({ challenge: '0xabc' });
     expect(mockClient.signData).toHaveBeenCalledWith(
       expect.any(String),
       stringToHex('0xabc'),
-      undefined
+      undefined,
     );
 
     // 3. 0x with non-hex characters (e.g. 0xhello) -> falls back to string encoding
@@ -560,7 +558,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(mockClient.signData).toHaveBeenCalledWith(
       expect.any(String),
       stringToHex('0xhello'),
-      undefined
+      undefined,
     );
   });
 
@@ -590,7 +588,7 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     expect(authManager.state.isAuthenticated).toBe(false);
     expect(authManager.state.token).toBeNull();
     expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({ isAuthenticated: false, token: null })
+      expect.objectContaining({ isAuthenticated: false, token: null }),
     );
   });
 

@@ -2,10 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import {
-  HydraOneProvider,
-  useHydraOneContext,
-} from '../../src/react/context';
+import { HydraOneProvider, useHydraOneContext } from '../../src/react/context';
 import { WalletBridgeClient } from '../../src/core/client';
 import { GameAuthManager } from '../../src/core/auth';
 import type { ITransport } from '../../src/core/ports/transport';
@@ -56,7 +53,7 @@ describe('HydraOneProvider and Context', () => {
     render(
       <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
         <ConsumerComponent />
-      </HydraOneProvider>
+      </HydraOneProvider>,
     );
 
     expect(screen.getByTestId('client-exists').textContent).toBe('yes');
@@ -85,13 +82,9 @@ describe('HydraOneProvider and Context', () => {
     }
 
     render(
-      <HydraOneProvider
-        client={customClient}
-        authManager={customAuth}
-        storage={customStorage}
-      >
+      <HydraOneProvider client={customClient} authManager={customAuth} storage={customStorage}>
         <CustomInspector />
-      </HydraOneProvider>
+      </HydraOneProvider>,
     );
 
     expect(screen.getByTestId('is-same-client').textContent).toBe('true');

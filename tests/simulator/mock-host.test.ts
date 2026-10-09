@@ -4,11 +4,7 @@ import {
   encodeLovelaceToCbor,
   encodeCardanoValueToCbor,
 } from '../../src/simulator';
-import {
-  WalletBridgeClient,
-  HydraUserRejectedError,
-  ERROR_CODES,
-} from '../../src';
+import { WalletBridgeClient, HydraUserRejectedError, ERROR_CODES } from '../../src';
 import { parseValue } from '../../src/cardano';
 
 describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () => {
@@ -333,7 +329,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        5000
+        5000,
       );
       expect(getRes).toBe('jwt_token_123');
 
@@ -346,7 +342,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        5000
+        5000,
       );
       expect(host.getStorage('hydra:sdk:session:state')).toBe('active');
 
@@ -359,7 +355,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        5000
+        5000,
       );
       expect(host.getStorage('hydra:sdk:session:state')).toBeUndefined();
     });
@@ -389,8 +385,8 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
             timestamp: Date.now(),
             source: 'hydra-client',
           },
-          5000
-        )
+          5000,
+        ),
       ).rejects.toMatchObject({
         code: ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
       });
@@ -404,8 +400,8 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
             timestamp: Date.now(),
             source: 'hydra-client',
           },
-          5000
-        )
+          5000,
+        ),
       ).rejects.toMatchObject({
         code: ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
       });
@@ -467,7 +463,9 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
     it('setOrientation, triggerHaptic, requestDepositModal do not throw', async () => {
       await expect(client.setOrientation('landscape')).resolves.not.toThrow();
       await expect(client.triggerHaptic('medium')).resolves.not.toThrow();
-      await expect(client.requestDepositModal({ token: 'ADA', minAmount: 10 })).resolves.not.toThrow();
+      await expect(
+        client.requestDepositModal({ token: 'ADA', minAmount: 10 }),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -544,7 +542,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           type: 'AUDIO_MUTED_CHANGED',
           payload: { muted: true },
         }),
-        '*'
+        '*',
       );
 
       host.broadcastTheme('light');
@@ -553,7 +551,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           type: 'THEME_CHANGED',
           payload: { theme: 'light' },
         }),
-        '*'
+        '*',
       );
 
       cleanup();
@@ -590,7 +588,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           type: 'CLIENT_READY',
           timestamp: Date.now(),
           source: 'hydra-client',
-        })
+        }),
       ).rejects.toThrow('Transport is destroyed');
     });
 
@@ -614,7 +612,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
         },
         () => {
           messageSent = true;
-        }
+        },
       );
 
       // Destroy the host while a timer is pending
@@ -641,7 +639,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
         },
         (res) => {
           receivedResponse = res;
-        }
+        },
       );
 
       expect(receivedResponse).toMatchObject({
@@ -668,7 +666,7 @@ describe('@hydraone/sdk/simulator — MockBridgeHost & MockClientTransport', () 
           timestamp: Date.now(),
           source: 'hydra-client',
         },
-        5000
+        5000,
       );
 
       expect(host.getStorage('prefix_a:1')).toBeUndefined();

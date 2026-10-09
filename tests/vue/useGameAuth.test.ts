@@ -9,13 +9,17 @@ import type { IAuthSignerClient } from '../../src/core/types';
  * Mock IAuthSignerClient for GameAuthManager tests
  */
 class MockAuthClient implements IAuthSignerClient {
-  public address = 'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
+  public address =
+    'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
 
   public async getUsedAddresses(): Promise<string[]> {
     return [this.address];
   }
 
-  public async signData(_addr: string, _payload: string): Promise<{ signature: string; key: string }> {
+  public async signData(
+    _addr: string,
+    _payload: string,
+  ): Promise<{ signature: string; key: string }> {
     return {
       signature: 'mock_sig_hex',
       key: 'mock_key_hex',
@@ -75,7 +79,9 @@ describe('useGameAuth', () => {
   });
 
   it('signs in with signIn() and updates the reactive isAuthenticated, jwtToken, claims and isExpired', async () => {
-    const { isAuthenticated, jwtToken, address, claims, isExpired, signIn } = useGameAuth({ authManager });
+    const { isAuthenticated, jwtToken, address, claims, isExpired, signIn } = useGameAuth({
+      authManager,
+    });
 
     const session = await signIn({ challenge: 'Sign into HydraOne 2026' });
 
@@ -87,7 +93,7 @@ describe('useGameAuth', () => {
       expect.objectContaining({
         sub: 'player_123',
         role: 'gamer',
-      })
+      }),
     );
     expect(isExpired.value).toBe(false);
   });
@@ -196,7 +202,8 @@ describe('useGameAuth', () => {
 
   it('honors a dedicated options.client passed to useGameAuth', () => {
     const customClient = new MockAuthClient();
-    customClient.address = 'addr1qcustomclient99999999999999999999999999999999999999999999999999999';
+    customClient.address =
+      'addr1qcustomclient99999999999999999999999999999999999999999999999999999';
 
     const { authManager: customAuthManager } = useGameAuth({ client: customClient as any });
     expect((customAuthManager as any).client).toBe(customClient);

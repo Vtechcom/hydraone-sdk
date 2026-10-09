@@ -24,7 +24,10 @@ export interface ITransport {
    * @param message Partial message; id and timestamp are filled in when absent.
    * @param timeoutMs Per-request timeout override.
    */
-  request?<T = unknown>(message: Partial<BridgeMessage>, timeoutMs?: number): Promise<BridgeMessage<T>>;
+  request?<T = unknown>(
+    message: Partial<BridgeMessage>,
+    timeoutMs?: number,
+  ): Promise<BridgeMessage<T>>;
 
   /**
    * Disconnects, removes listeners and releases resources.

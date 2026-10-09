@@ -149,7 +149,9 @@ describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
       expect(widget.shadowRoot?.textContent).toContain('1,000 ADA');
 
       const btnConnect = widget.shadowRoot?.querySelector('#btn-connect') as HTMLButtonElement;
-      const btnDisconnect = widget.shadowRoot?.querySelector('#btn-disconnect') as HTMLButtonElement;
+      const btnDisconnect = widget.shadowRoot?.querySelector(
+        '#btn-disconnect',
+      ) as HTMLButtonElement;
 
       expect(btnConnect.disabled).toBe(true);
       expect(btnDisconnect.disabled).toBe(false);
@@ -159,7 +161,9 @@ describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       const transport = host.createClientTransport();
 
-      const btnDisconnect = widget.shadowRoot?.querySelector('#btn-disconnect') as HTMLButtonElement;
+      const btnDisconnect = widget.shadowRoot?.querySelector(
+        '#btn-disconnect',
+      ) as HTMLButtonElement;
       btnDisconnect.click();
 
       expect(host.isWalletConnected()).toBe(false);
@@ -228,7 +232,9 @@ describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
 
       widget = mountDevTools({ host, client: mockClient, defaultCollapsed: false });
 
-      const btnDisconnect = widget.shadowRoot?.querySelector('#btn-disconnect') as HTMLButtonElement;
+      const btnDisconnect = widget.shadowRoot?.querySelector(
+        '#btn-disconnect',
+      ) as HTMLButtonElement;
       btnDisconnect.click();
       expect(mockClient.disconnect).toHaveBeenCalled();
 
@@ -368,13 +374,17 @@ describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
     it('clicking the 0ms, 500ms, 1000ms and 2000ms presets updates latency on MockBridgeHost', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
-      const preset500 = widget.shadowRoot?.querySelector('[data-latency="500"]') as HTMLButtonElement;
+      const preset500 = widget.shadowRoot?.querySelector(
+        '[data-latency="500"]',
+      ) as HTMLButtonElement;
       preset500.click();
 
       expect(host.getLatency()).toBe(500);
       expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('500ms');
 
-      const preset1000 = widget.shadowRoot?.querySelector('[data-latency="1000"]') as HTMLButtonElement;
+      const preset1000 = widget.shadowRoot?.querySelector(
+        '[data-latency="1000"]',
+      ) as HTMLButtonElement;
       preset1000.click();
 
       expect(host.getLatency()).toBe(1000);

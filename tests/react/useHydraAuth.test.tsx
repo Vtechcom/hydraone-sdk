@@ -141,7 +141,9 @@ describe('useHydraAuth hook', () => {
 
     expect(() => {
       renderHook(() => useHydraAuth());
-    }).toThrow('useHydraAuth must be used within a <HydraOneProvider> or passed an authManager/client option');
+    }).toThrow(
+      'useHydraAuth must be used within a <HydraOneProvider> or passed an authManager/client option',
+    );
 
     spy.mockRestore();
   });
@@ -159,7 +161,7 @@ describe('useHydraAuth hook', () => {
     expect(result.current.token).toBeTruthy();
     expect(result.current.jwtToken).toBe(result.current.token);
     expect(result.current.address).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
     );
     expect(result.current.claims?.role).toBe('player');
     expect(result.current.user?.role).toBe('player');

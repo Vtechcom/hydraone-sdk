@@ -131,7 +131,7 @@ describe('create-hydraone-game CLI', () => {
           projectName: 'invalid-template-app',
           targetDir: path.join(tempDir, 'invalid'),
           template: 'angular-17' as any,
-        })
+        }),
       ).rejects.toThrow('is not supported');
     });
 
@@ -227,9 +227,7 @@ describe('create-hydraone-game CLI', () => {
       });
 
       expect(result.template).toBe('nuxt-3');
-      const pkgJson = JSON.parse(
-        fs.readFileSync(path.join(targetDir, 'package.json'), 'utf-8')
-      );
+      const pkgJson = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf-8'));
       expect(pkgJson.name).toBe('@hydra/cardano-game');
     });
 
@@ -265,10 +263,9 @@ describe('create-hydraone-game CLI', () => {
 
     it('scaffolds non-interactively with --yes', () => {
       const targetDir = path.join(tempDir, 'cli-auto-app');
-      execSync(
-        `node "${binScript}" "${targetDir}" --template nuxt-3 --pm pnpm --yes`,
-        { encoding: 'utf-8' }
-      );
+      execSync(`node "${binScript}" "${targetDir}" --template nuxt-3 --pm pnpm --yes`, {
+        encoding: 'utf-8',
+      });
 
       expect(fs.existsSync(path.join(targetDir, 'package.json'))).toBe(true);
       expect(fs.existsSync(path.join(targetDir, 'app.vue'))).toBe(true);
@@ -278,7 +275,7 @@ describe('create-hydraone-game CLI', () => {
       expect(() => {
         execSync(
           `node "${binScript}" "${path.join(tempDir, 'invalid-tmpl')}" --template bogus-template --yes`,
-          { encoding: 'utf-8', stdio: 'pipe' }
+          { encoding: 'utf-8', stdio: 'pipe' },
         );
       }).toThrow();
     });

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { cardanoHexToBech32, cardanoBech32ToHex, encodeBech32, decodeBech32 } from '../../src/cardano/address';
+import {
+  cardanoHexToBech32,
+  cardanoBech32ToHex,
+  encodeBech32,
+  decodeBech32,
+} from '../../src/cardano/address';
 
 describe('Cardano Address & Bech32 Utility', () => {
   it('encodes and decodes a standard Bech32 string', () => {
@@ -33,7 +38,8 @@ describe('Cardano Address & Bech32 Utility', () => {
   });
 
   it('returns the input unchanged when it is already Bech32', () => {
-    const addr = 'addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp';
+    const addr =
+      'addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp';
     expect(cardanoHexToBech32(addr)).toBe(addr);
   });
 });

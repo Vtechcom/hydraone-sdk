@@ -193,7 +193,10 @@ export class DevShellBridgeController {
             throw new Error('Wallet not connected in App Center');
           }
           if (this.walletState.walletType === 'extension' && this.extensionApi) {
-            const signResult = await this.extensionApi.signData(request.address ?? '', request.hexPayload ?? '');
+            const signResult = await this.extensionApi.signData(
+              request.address ?? '',
+              request.hexPayload ?? '',
+            );
             this.sendResponse(source, origin, {
               type: 'WALLET_SIGN_DATA_RESULT',
               requestId,
@@ -226,7 +229,10 @@ export class DevShellBridgeController {
             throw new Error('Wallet not connected in App Center');
           }
           if (this.walletState.walletType === 'extension' && this.extensionApi) {
-            const signedTx = await this.extensionApi.signTx(request.txHex ?? '', request.partialSign ?? false);
+            const signedTx = await this.extensionApi.signTx(
+              request.txHex ?? '',
+              request.partialSign ?? false,
+            );
             this.sendResponse(source, origin, {
               type: 'WALLET_SIGN_TX_RESULT',
               requestId,
@@ -465,7 +471,12 @@ export class DevShellBridgeController {
     }
   }
 
-  public recordLog(direction: 'in' | 'out', type: string, requestId?: string, payload?: unknown): void {
+  public recordLog(
+    direction: 'in' | 'out',
+    type: string,
+    requestId?: string,
+    payload?: unknown,
+  ): void {
     const log: BridgeActivityLog = {
       timestamp: Date.now(),
       direction,
@@ -583,7 +594,8 @@ export class DevShellBridgeController {
       }
     }
 
-    const bech32Address = cardanoHexToBech32(rawAddress) || (networkId === 1 ? 'addr1...' : 'addr_test1...');
+    const bech32Address =
+      cardanoHexToBech32(rawAddress) || (networkId === 1 ? 'addr1...' : 'addr_test1...');
 
     // 5. Read the Lovelace balance (two-level fallback)
     let balanceLovelace = 0n;
@@ -647,7 +659,8 @@ export class DevShellBridgeController {
   public async autoReconnect(): Promise<boolean> {
     if (typeof window === 'undefined') return false;
     try {
-      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('lastConnectedWallet') : null;
+      const saved =
+        typeof localStorage !== 'undefined' ? localStorage.getItem('lastConnectedWallet') : null;
       if (!saved) return false;
 
       if (saved === 'mock') {
@@ -700,4 +713,3 @@ export class DevShellBridgeController {
     return Object.keys(cardano).filter((key) => getWalletExtension(cardano, key));
   }
 }
-

@@ -13,7 +13,7 @@ export class MockClientTransport implements ITransport {
 
   constructor(
     private readonly host: MockBridgeHost,
-    private readonly options?: MockClientTransportOptions
+    private readonly options?: MockClientTransportOptions,
   ) {}
 
   /**
@@ -28,8 +28,7 @@ export class MockClientTransport implements ITransport {
       console.log('[MockClientTransport -> Host]', message);
     }
 
-    const transportLatency =
-      this.host.getLatency() === 0 ? (this.options?.latencyMs ?? 0) : 0;
+    const transportLatency = this.host.getLatency() === 0 ? (this.options?.latencyMs ?? 0) : 0;
 
     if (transportLatency > 0) {
       await new Promise<void>((resolve) => setTimeout(resolve, transportLatency));

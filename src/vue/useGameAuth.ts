@@ -18,9 +18,7 @@ export function getSharedGameAuthManager(options?: UseGameAuthOptions): GameAuth
   if (!sharedAuthManagerInstance) {
     const client = options?.client ?? getSharedWalletBridgeClient();
     const storage =
-      typeof window !== 'undefined'
-        ? new SafeLocalStorageAdapter()
-        : new InMemoryStorageAdapter();
+      typeof window !== 'undefined' ? new SafeLocalStorageAdapter() : new InMemoryStorageAdapter();
 
     sharedAuthManagerInstance = new GameAuthManager({
       client,

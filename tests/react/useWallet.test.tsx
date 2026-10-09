@@ -69,7 +69,8 @@ class MockTransport implements ITransport {
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result: 'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
+          result:
+            'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -252,11 +253,12 @@ describe('useWallet hook', () => {
 
     expect(() => {
       renderHook(() => useWallet());
-    }).toThrow('useWallet must be used within a <HydraOneProvider> or passed a custom client option');
+    }).toThrow(
+      'useWallet must be used within a <HydraOneProvider> or passed a custom client option',
+    );
 
     spy.mockRestore();
   });
-
 
   it('connects via connect() and computes the BigInt balance', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
@@ -268,7 +270,7 @@ describe('useWallet hook', () => {
     expect(result.current.isConnected).toBe(true);
     expect(result.current.connectionState).toBe('connected');
     expect(result.current.address).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
     );
     expect(result.current.balanceLovelace).toBe(7500000n);
     expect(result.current.balanceADA).toBe('7.5');
@@ -285,7 +287,7 @@ describe('useWallet hook', () => {
 
     expect(result.current.isConnected).toBe(true);
     expect(result.current.address).toBe(
-      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999'
+      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
     );
     expect(result.current.usedAddresses).toEqual([
       'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
@@ -328,7 +330,7 @@ describe('useWallet hook', () => {
 
     expect(result.current.isConnected).toBe(true);
     expect(result.current.address).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
     );
     // The balance must not load automatically when autoRefreshBalance = false
     expect(result.current.balanceADA).toBeNull();
@@ -342,7 +344,8 @@ describe('useWallet hook', () => {
       await result.current.connect();
     });
 
-    const newAddr = 'addr1qnewaccount88888888888888888888888888888888888888888888888888888888888888';
+    const newAddr =
+      'addr1qnewaccount88888888888888888888888888888888888888888888888888888888888888';
     await act(async () => {
       transport.simulateMessage({
         id: 'evt_acc',

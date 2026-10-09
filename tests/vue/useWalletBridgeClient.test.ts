@@ -72,7 +72,8 @@ class MockTransport implements ITransport {
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result: 'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
+          result:
+            'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -171,7 +172,6 @@ class MockTransport implements ITransport {
   }
 }
 
-
 describe('useWalletBridgeClient', () => {
   let mockTransport: MockTransport;
   let client: WalletBridgeClient;
@@ -196,14 +196,8 @@ describe('useWalletBridgeClient', () => {
   });
 
   it('starts in a safe initial state (not connected)', () => {
-    const {
-      isConnected,
-      connectionState,
-      address,
-      balanceADA,
-      balanceLovelace,
-      hostInfo,
-    } = useWalletBridgeClient({ client });
+    const { isConnected, connectionState, address, balanceADA, balanceLovelace, hostInfo } =
+      useWalletBridgeClient({ client });
 
     expect(isConnected.value).toBe(false);
     expect(connectionState.value).toBe('disconnected');
@@ -222,14 +216,16 @@ describe('useWalletBridgeClient', () => {
     expect(isConnected.value).toBe(true);
     expect(connectionState.value).toBe('connected');
     expect(address.value).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
+      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
     );
     expect(balanceLovelace.value).toBe(45000000n);
     expect(balanceADA.value).toBe('45');
   });
 
   it('disconnect() resets all reactive state to defaults', async () => {
-    const { isConnected, address, balanceADA, init, disconnect } = useWalletBridgeClient({ client });
+    const { isConnected, address, balanceADA, init, disconnect } = useWalletBridgeClient({
+      client,
+    });
 
     await init();
     expect(isConnected.value).toBe(true);
@@ -290,7 +286,9 @@ describe('useWalletBridgeClient', () => {
   });
 
   it('forwards the signTx, submitTx and signData wallet actions through the composable', async () => {
-    const { init, signTx, submitTx, signData, getPlayerProfile } = useWalletBridgeClient({ client });
+    const { init, signTx, submitTx, signData, getPlayerProfile } = useWalletBridgeClient({
+      client,
+    });
 
     await init();
 
@@ -341,7 +339,7 @@ describe('useWalletBridgeClient', () => {
 
     await init();
     expect(address.value).toBe(
-      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999'
+      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
     );
   });
 
@@ -385,7 +383,7 @@ describe('useWalletBridgeClient', () => {
       expect.objectContaining({
         appCenterVersion: '2.0.0',
         walletSupported: true,
-      })
+      }),
     );
   });
 

@@ -15,7 +15,7 @@ import { ERROR_CODES, HydraAuthError, HydraBridgeError } from './errors';
 
 /**
  * Converts a UTF-8 string to a normalized hex string
- * 
+ *
  * @param str Text to convert
  * @returns Hex string of the UTF-8 bytes
  */
@@ -33,7 +33,7 @@ export function stringToHex(str: string): string {
 
 /**
  * Converts a hex string back to UTF-8 text
- * 
+ *
  * @param hex Hex string to decode
  * @returns UTF-8 text
  */
@@ -57,7 +57,7 @@ export function hexToString(hex: string): string {
 
 /**
  * Parses the payload of a JWT without any external library
- * 
+ *
  * @param token JWT in Header.Payload.Signature format
  * @returns The claims contained in the JWT payload
  */
@@ -68,7 +68,9 @@ export function parseJwt<T = Record<string, unknown>>(token: string): T {
 
   const parts = token.trim().split('.');
   if (parts.length < 2 || parts.length > 3) {
-    throw new Error('Invalid JWT format: token must contain header and payload parts separated by dot');
+    throw new Error(
+      'Invalid JWT format: token must contain header and payload parts separated by dot',
+    );
   }
 
   const base64UrlPayload = parts[1];
@@ -101,7 +103,7 @@ export function parseJwt<T = Record<string, unknown>>(token: string): T {
 
 /**
  * Checks whether a JWT has expired, based on its exp claim
- * 
+ *
  * @param token JWT to check
  * @param clockToleranceSeconds Clock skew tolerance in seconds, defaults to 0
  * @returns true if the token is expired or invalid; false if still valid or it has no exp claim
@@ -198,7 +200,7 @@ export class AuthManager {
    * 3. Ask the wallet to sign via CIP-8 signData
    * 4. Bundle the signature and optionally exchange it for a JWT
    * 5. Persist the JWT in IStorage and update the auth state
-   * 
+   *
    * @param params Login params { challenge, address?, token?, exchangeToken?, signOptions? }
    * @returns The resulting AuthSession
    */
@@ -207,7 +209,10 @@ export class AuthManager {
       throw new HydraBridgeError('Invalid sign-in parameters', 'ERR_INVALID_PARAMS');
     }
     if (!params.challenge || typeof params.challenge !== 'string') {
-      throw new HydraBridgeError('A non-empty challenge string is required for signIn', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError(
+        'A non-empty challenge string is required for signIn',
+        'ERR_INVALID_PARAMS',
+      );
     }
 
     // 1. Resolve the signing address
@@ -227,7 +232,7 @@ export class AuthManager {
     if (!address) {
       throw new HydraBridgeError(
         'No wallet address available for signing. Ensure wallet is connected.',
-        ERROR_CODES.ERR_NOT_CONNECTED
+        ERROR_CODES.ERR_NOT_CONNECTED,
       );
     }
 
@@ -297,7 +302,7 @@ export class AuthManager {
 
   /**
    * Returns the stored JWT. If it has expired, clears it and emits AUTH_STATE_CHANGED
-   * 
+   *
    * @returns The JWT, or null when not logged in or expired
    */
   public async getToken(): Promise<string | null> {
@@ -352,13 +357,16 @@ export class AuthManager {
 
   /**
    * Establishes a session directly from a JWT
-   * 
+   *
    * @param token Valid JWT
    * @param address Player wallet address (optional)
    */
   public async setSession(token: string, address?: string): Promise<AuthState> {
     if (!token || typeof token !== 'string') {
-      throw new HydraBridgeError('Invalid JWT token: must be a non-empty string', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError(
+        'Invalid JWT token: must be a non-empty string',
+        'ERR_INVALID_PARAMS',
+      );
     }
 
     if (isJwtExpired(token, this.clockToleranceSeconds)) {
@@ -454,7 +462,7 @@ export class AuthManager {
 
   /**
    * Subscribes to AUTH_STATE_CHANGED
-   * 
+   *
    * @param handler Callback receiving the AuthState
    * @returns Function that unsubscribes the handler
    */

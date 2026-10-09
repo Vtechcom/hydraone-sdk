@@ -29,21 +29,21 @@ export function useHostStorage(options?: UseHostStorageOptions): UseHostStorageR
     async (key: string): Promise<string | null> => {
       return storage.getItem(key);
     },
-    [storage]
+    [storage],
   );
 
   const setItem = useCallback(
     async (key: string, value: string): Promise<void> => {
       return storage.setItem(key, value);
     },
-    [storage]
+    [storage],
   );
 
   const removeItem = useCallback(
     async (key: string): Promise<void> => {
       return storage.removeItem(key);
     },
-    [storage]
+    [storage],
   );
 
   const clear = useCallback(async (): Promise<void> => {

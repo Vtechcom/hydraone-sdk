@@ -321,7 +321,9 @@ describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
         expect(report.status).toBe('WARN');
         expect(report.environment.origin).toBe('ssr');
         expect(report.checks.some((c) => c.id === 'iframe-sandbox')).toBe(true);
-        expect(report.checks.find((c) => c.id === 'iframe-sandbox')?.message).toContain('SSR/Node.js');
+        expect(report.checks.find((c) => c.id === 'iframe-sandbox')?.message).toContain(
+          'SSR/Node.js',
+        );
       } finally {
         globalThis.document = originalDoc;
       }
@@ -384,9 +386,7 @@ describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
         isIframeFn: () => false,
       });
 
-      await expect(standaloneClient.ping()).rejects.toThrowError(
-        /outside App Center iframe/
-      );
+      await expect(standaloneClient.ping()).rejects.toThrowError(/outside App Center iframe/);
 
       // On ERR_NOT_IN_IFRAME, checkPostMessageLatency returns a friendly WARN
       const latencyResult = await checkPostMessageLatency(standaloneClient);
@@ -438,7 +438,8 @@ describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
         });
         Object.defineProperty(window, 'frameElement', {
           value: {
-            getAttribute: (attr: string) => (attr === 'sandbox' ? 'ALLOW-SCRIPTS ALLOW-SAME-ORIGIN' : null),
+            getAttribute: (attr: string) =>
+              attr === 'sandbox' ? 'ALLOW-SCRIPTS ALLOW-SAME-ORIGIN' : null,
           },
           configurable: true,
           writable: true,
