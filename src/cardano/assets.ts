@@ -323,7 +323,7 @@ export function getAssetQuantity(
   }
 
   // Chuẩn hóa assetName: nếu là Uint8Array -> chuyển hex; nếu là string -> chuẩn bị cả dạng raw hex và utf8 hex
-  let assetNameHexCandidates: string[] = [];
+  const assetNameHexCandidates: string[] = [];
 
   if (assetName instanceof Uint8Array) {
     assetNameHexCandidates.push(bytesToHex(assetName).toLowerCase());

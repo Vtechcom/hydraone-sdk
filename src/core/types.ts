@@ -521,7 +521,7 @@ export interface DepositModalOptions {
 /**
  * Payload bản tin yêu cầu mở modal nạp tiền REQUEST_DEPOSIT_MODAL
  */
-export interface DepositModalPayload extends DepositModalOptions {}
+export type DepositModalPayload = DepositModalOptions;
 
 /**
  * Thông tin hồ sơ người chơi được trả về từ Host Shell

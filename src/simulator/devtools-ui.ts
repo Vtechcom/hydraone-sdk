@@ -776,7 +776,7 @@ export class DevToolsWidget {
   }
 
   private getStyles(): string {
-    let isDark = this.theme === 'dark';
+    let isDark: boolean;
     if (this.theme === 'auto') {
       if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
         isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -794,7 +794,7 @@ export class DevToolsWidget {
     const cardBg = isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.9)';
 
     // Positions
-    let posCss = '';
+    let posCss: string;
     switch (this.position) {
       case 'bottom-left':
         posCss = 'bottom: 20px; left: 20px;';

@@ -33,7 +33,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
   }
 
   // 2. Kiểm tra chế độ chạy độc lập (Standalone) ngoài iframe
-  let isInsideIframe = false;
+  let isInsideIframe: boolean;
   try {
     isInsideIframe = window.self !== window.top;
   } catch {
@@ -482,7 +482,7 @@ export function getDiagnosticEnvironmentInfo(): DiagnosticEnvironmentInfo {
     };
   }
 
-  let isIframe = false;
+  let isIframe: boolean;
   try {
     isIframe = window.self !== window.top;
   } catch {

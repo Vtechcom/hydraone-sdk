@@ -93,8 +93,9 @@ export function parseJwt<T = Record<string, any>>(token: string): T {
     }
 
     return JSON.parse(jsonStr) as T;
-  } catch (err: any) {
-    throw new Error(`Failed to parse JWT payload JSON: ${err?.message || 'SyntaxError'}`);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'SyntaxError';
+    throw new Error(`Failed to parse JWT payload JSON: ${reason}`, { cause: err });
   }
 }
 
@@ -484,8 +485,8 @@ export class AuthManager {
     for (const listener of listenersSnapshot) {
       try {
         listener({ ...this.currentState });
-      } catch (e) {
-        // Không để lỗi từ listener ngoài làm crash logic SDK
+      } catch {
+        // Do not let errors thrown by external listeners crash SDK logic
       }
     }
   }

@@ -1475,7 +1475,6 @@ describe('WalletBridgeClient', () => {
       });
 
       it('không gọi listener nếu bị unsubscribe hoặc destroy trong lúc listener trước đang chạy', () => {
-        let unsubB: UnsubscribeFn;
         const listenerA = vi.fn().mockImplementation(() => {
           // Listener A hủy đăng ký Listener B trong khi sự kiện đang được phân phối
           unsubB();
@@ -1483,7 +1482,7 @@ describe('WalletBridgeClient', () => {
         const listenerB = vi.fn();
 
         client.onAudioMutedChanged(listenerA);
-        unsubB = client.onAudioMutedChanged(listenerB);
+        const unsubB: UnsubscribeFn = client.onAudioMutedChanged(listenerB);
 
         messageCallback?.({
           id: 'evt-reentrant-audio',

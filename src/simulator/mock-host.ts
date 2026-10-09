@@ -607,14 +607,13 @@ export class MockBridgeHost {
       };
 
       if (this.latencyMs > 0) {
-        let timer: ReturnType<typeof setTimeout>;
         const timerResolver = () => {
           this.activeTimers.delete(timer);
           this.pendingResolvers.delete(timerResolver);
           resolve();
         };
 
-        timer = setTimeout(() => {
+        const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
           this.activeTimers.delete(timer);
           this.pendingResolvers.delete(timerResolver);
           execute();

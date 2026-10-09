@@ -548,7 +548,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       }).not.toThrow();
     });
 
-    it('rejectNext(\"\") với lý do rỗng tự động fallback về thông điệp mặc định', async () => {
+    it('rejectNext("") với lý do rỗng tự động fallback về thông điệp mặc định', async () => {
       host.rejectNext('');
       const transport = host.createClientTransport();
       let rpcResponse: any;

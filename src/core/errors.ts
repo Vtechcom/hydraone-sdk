@@ -32,7 +32,7 @@ export class HydraBridgeError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
 
     const errorConstructor = Error as unknown as {
-      captureStackTrace?: (target: object, constructorOpt?: Function) => void;
+      captureStackTrace?: (target: object, constructorOpt?: object) => void;
     };
     if (typeof errorConstructor.captureStackTrace === 'function') {
       errorConstructor.captureStackTrace(this, this.constructor);

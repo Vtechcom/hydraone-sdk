@@ -528,7 +528,7 @@ export class DevShellBridgeController {
     this.extensionApi = api;
 
     // 3. Lấy Network ID (0: Preprod/Testnet, 1: Mainnet)
-    let networkId = 0;
+    let networkId: number;
     try {
       networkId = await api.getNetworkId();
     } catch {
