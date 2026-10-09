@@ -155,7 +155,7 @@ describe('create-hydraone-game CLI', () => {
       const appVue = fs.readFileSync(path.join(targetDir, 'app.vue'), 'utf-8');
       expect(appVue).toContain('test-nuxt-game');
       expect(appVue).toContain('@hydraone/sdk/vue');
-      expect(appVue).toContain('mountDevTools');
+      expect(appVue).toContain('bootstrapDevShell');
 
       expect(fs.existsSync(path.join(targetDir, 'nuxt.config.ts'))).toBe(true);
       expect(fs.existsSync(path.join(targetDir, 'tsconfig.json'))).toBe(true);
@@ -189,7 +189,7 @@ describe('create-hydraone-game CLI', () => {
       const page = fs.readFileSync(path.join(targetDir, 'app/page.tsx'), 'utf-8');
       expect(page).toContain('useWallet');
       expect(page).toContain('useHydraAuth');
-      expect(page).toContain('mountDevTools');
+      expect(page).toContain('bootstrapDevShell');
     });
 
     it('scaffolds the Phaser 3 template and substitutes placeholders', async () => {
@@ -279,5 +279,44 @@ describe('create-hydraone-game CLI', () => {
         );
       }).toThrow();
     });
+  });
+});
+
+describe('scaffolder template hygiene', () => {
+  it('never copies dependency or build output directories', async () => {
+    const src = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-src-'));
+    const dest = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-dest-'));
+    try {
+      for (const dir of ['node_modules', '.next', '.nuxt', '.output', 'dist']) {
+        fs.mkdirSync(path.join(src, dir), { recursive: true });
+        fs.writeFileSync(path.join(src, dir, 'x.txt'), 'x');
+      }
+      fs.writeFileSync(path.join(src, 'next-env.d.ts'), '');
+      fs.writeFileSync(path.join(src, 'keep.txt'), 'keep');
+
+      await copyTemplateDir(src, dest, {});
+
+      expect(fs.readdirSync(dest)).toEqual(['keep.txt']);
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(dest, { recursive: true, force: true });
+    }
+  });
+
+  it('ships the host origin config and embed helpers in both templates', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-tpl-'));
+    try {
+      for (const [template, helper] of [
+        ['next-js', 'lib/hydra.ts'],
+        ['nuxt-3', 'utils/hydra.ts'],
+      ] as const) {
+        const dir = path.join(tmp, template);
+        await scaffoldProject({ projectName: `demo-${template}`, targetDir: dir, template });
+        expect(fs.existsSync(path.join(dir, '.env.example'))).toBe(true);
+        expect(fs.readFileSync(path.join(dir, helper), 'utf-8')).toContain('bootstrapDevShell');
+      }
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

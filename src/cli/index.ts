@@ -189,13 +189,13 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulat
     console.log(`  ${style(`${pm} run dev`, 'cyan')}\n`);
     console.log(
       style(
-        'Host shell: in dev mode the HydraOne host UI (header, CIP-30 wallet bridge and viewport frame) is embedded around your game via an iframe.',
+        'Develop: the dev server wraps your game in a copy of the HydraOne web client (header, wallet, viewport).',
         'green',
       ),
     );
     console.log(
       style(
-        'Production build: the host shell code is stripped out; only the game bundle is emitted, ready to plug into the real HydraOne host.\n',
+        'Publish: deploy anywhere, set the HYDRA_HOST_ORIGIN variable from .env.example, then submit the deployed URL to the HydraOne web client. See README.md.\n',
         'dim',
       ),
     );

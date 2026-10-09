@@ -80,6 +80,9 @@ export function resolveTemplatesDir(): string {
   return candidate;
 }
 
+/** Dependency and build output that must never be copied out of a template checkout. */
+const SKIPPED_TEMPLATE_ENTRIES = new Set(['node_modules', '.next', '.nuxt', '.output', 'dist']);
+
 export async function copyTemplateDir(
   sourceDir: string,
   targetDir: string,
@@ -92,6 +95,9 @@ export async function copyTemplateDir(
   const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
 
   for (const entry of entries) {
+    if (SKIPPED_TEMPLATE_ENTRIES.has(entry.name) || entry.name === 'next-env.d.ts') {
+      continue;
+    }
     const srcPath = path.join(sourceDir, entry.name);
     // File names may contain placeholders too
     let destFileName = entry.name;

@@ -6,12 +6,35 @@
 
 import { MockBridgeHost } from '../mock-host';
 import type { DevShellWalletState } from './types';
-import type { CIP30Api } from '../../core/types';
+import type { BridgeMessage, CIP30Api } from '../../core/types';
+import { DirectExtensionTransport } from '../../core/adapters/direct-extension-transport';
 import { ERROR_CODES, HydraBridgeError } from '../../core/errors';
-import { errorMessage } from '../../core/error-utils';
+import { errorCode, errorMessage } from '../../core/error-utils';
 import { getWalletExtension, getWindowCardano } from '../../core/cardano-provider';
 import { cardanoHexToBech32 } from '../../cardano/address';
 import { parseCborUtxoOrValue } from '../../cardano/cbor';
+
+/** SDK protocol requests that a connected CIP-30 extension answers instead of the mock host. */
+const SDK_EXTENSION_MESSAGE_TYPES: ReadonlySet<string> = new Set([
+  'GET_USED_ADDRESSES',
+  'GET_UTXOS',
+  'GET_BALANCE',
+  'GET_UNUSED_ADDRESSES',
+  'GET_CHANGE_ADDRESS',
+  'GET_REWARD_ADDRESSES',
+  'GET_NETWORK_ID',
+  'GET_COLLATERAL',
+  'SIGN_TX',
+  'SUBMIT_TX',
+  'SIGN_DATA',
+]);
+
+function generateMessageId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `hydra_shell_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
 
 export interface RegisteredGameIframe {
   window: Window;
@@ -47,6 +70,7 @@ export interface BridgeEnvelope {
 
 export class DevShellBridgeController {
   private registeredIframes = new Map<Window, RegisteredGameIframe>();
+  private messageListener?: (event: MessageEvent) => void;
   private mockHost: MockBridgeHost;
   private walletState: DevShellWalletState;
   private onStateChangeCb?: (state: DevShellWalletState) => void;
@@ -130,7 +154,7 @@ export class DevShellBridgeController {
   private initMessageListener(): void {
     if (typeof window === 'undefined') return;
 
-    window.addEventListener('message', async (event: MessageEvent) => {
+    this.messageListener = async (event: MessageEvent) => {
       const data = event.data;
       if (!data || typeof data !== 'object' || !('type' in data)) {
         return;
@@ -151,9 +175,105 @@ export class DevShellBridgeController {
       const info = this.registeredIframes.get(sourceWin)!;
       this.recordLog('in', data.type, data.requestId || data.id, data);
 
+      // Games built with @hydraone/sdk speak the CLIENT_READY / HOST_ACK protocol
+      if (data.source === 'hydra-client') {
+        await this.handleSdkRequest(data as BridgeMessage, sourceWin, info.origin);
+        return;
+      }
+
       // Handle the request
       await this.handleWalletRequest(data, sourceWin, info.origin);
-    });
+    };
+    window.addEventListener('message', this.messageListener);
+  }
+
+  /** Removes the window listener and forgets every registered game iframe. */
+  public destroy(): void {
+    if (this.messageListener && typeof window !== 'undefined') {
+      window.removeEventListener('message', this.messageListener);
+    }
+    this.messageListener = undefined;
+    this.registeredIframes.clear();
+    this.mockHost.destroy();
+  }
+
+  /**
+   * Answers a request sent by WalletBridgeClient (the @hydraone/sdk protocol).
+   * Wallet calls go to the connected CIP-30 extension when there is one; the handshake,
+   * host storage and everything else is answered by the mock host.
+   */
+  private async handleSdkRequest(
+    message: BridgeMessage,
+    source: Window,
+    origin: string,
+  ): Promise<void> {
+    const reply = (response: BridgeMessage): void => this.postSdkMessage(source, origin, response);
+
+    if (
+      this.walletState.isConnected &&
+      this.walletState.walletType === 'extension' &&
+      this.extensionApi &&
+      SDK_EXTENSION_MESSAGE_TYPES.has(message.type)
+    ) {
+      try {
+        const transport = new DirectExtensionTransport({
+          api: this.extensionApi,
+          walletName: this.walletState.extensionName,
+        });
+        reply(await transport.request(message));
+      } catch (err) {
+        reply({
+          id: generateMessageId(),
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: message.id,
+            error: {
+              code: errorCode(err) ?? 'ERR_RPC_FAILED',
+              message: errorMessage(err, 'Wallet request failed'),
+            },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+      }
+      return;
+    }
+
+    if (this.mockHost.isWalletConnected() !== this.walletState.isConnected) {
+      this.mockHost.setWalletConnected(this.walletState.isConnected);
+    }
+    await this.mockHost.handleClientMessage(message, reply);
+  }
+
+  private postSdkMessage(target: Window, origin: string, message: BridgeMessage): void {
+    this.recordLog('out', message.type, undefined, message);
+    try {
+      target.postMessage(message, origin);
+    } catch (err) {
+      console.error('[WalletBridgeHost] SDK response failed:', err);
+    }
+  }
+
+  /** Maps a wallet push event to the event WalletBridgeClient listens for. */
+  private toSdkEvent(event: BridgeEnvelope): BridgeMessage | null {
+    if (event.type === 'WALLET_CONNECTED' && typeof event.address === 'string') {
+      return {
+        id: generateMessageId(),
+        type: 'ACCOUNT_CHANGED',
+        payload: [event.address],
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      };
+    }
+    if (event.type === 'WALLET_DISCONNECTED') {
+      return {
+        id: generateMessageId(),
+        type: 'DISCONNECTED',
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      };
+    }
+    return null;
   }
 
   /**
@@ -466,8 +586,12 @@ export class DevShellBridgeController {
   }
 
   public notifyAllGames(event: BridgeEnvelope): void {
+    const sdkEvent = this.toSdkEvent(event);
     for (const [targetWin, info] of this.registeredIframes.entries()) {
       this.sendEventToIframe(targetWin, info.origin, event);
+      if (sdkEvent) {
+        this.postSdkMessage(targetWin, info.origin, sdkEvent);
+      }
     }
   }
 
@@ -496,6 +620,7 @@ export class DevShellBridgeController {
     this.walletState.walletType = 'mock';
     this.walletState.extensionName = undefined;
     this.extensionApi = null;
+    this.mockHost.walletName = 'HydraMock Wallet';
     this.walletState.isConnected = true;
 
     const snap = this.mockHost.getStateSnapshot();
@@ -629,6 +754,7 @@ export class DevShellBridgeController {
     // 6. Update the internal wallet state
     this.walletState.walletType = 'extension';
     this.walletState.extensionName = extName;
+    this.mockHost.walletName = extName;
     this.walletState.isConnected = true;
     this.walletState.address = bech32Address;
     this.walletState.networkId = networkId;

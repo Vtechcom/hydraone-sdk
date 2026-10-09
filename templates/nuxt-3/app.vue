@@ -10,9 +10,16 @@
     <main class="main">
       <section class="card">
         <h2>Web3 Cardano Gaming Starter</h2>
-        <p>A Nuxt 3 game starter with <strong>@hydraone/sdk</strong>.</p>
+        <p>
+          Deploy this app anywhere and register its URL in the HydraOne web client. It runs as an
+          embedded game with the wallet provided by the host.
+        </p>
 
         <div class="status-grid">
+          <div class="status-item">
+            <span class="label">Mode:</span>
+            <span class="val">{{ embedded ? 'Embedded in host' : 'Standalone tab' }}</span>
+          </div>
           <div class="status-item">
             <span class="label">Wallet status:</span>
             <span class="val">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
@@ -41,25 +48,48 @@
           <button v-if="isAuthenticated" class="btn outline" @click="handleSignOut">
             Sign out
           </button>
+          <button class="btn outline" @click="handleHealthCheck">Check host bridge</button>
         </div>
+
+        <p v-if="error" class="error" role="alert">{{ error.message }}</p>
+        <pre v-if="healthText" class="health">{{ healthText }}</pre>
       </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import type { BridgeHealthReport } from '@hydraone/sdk';
 import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
-import { mountDevTools } from '@hydraone/sdk/simulator';
 
 const projectName = '{{PROJECT_NAME}}';
-const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
+const config = useRuntimeConfig();
+
+// Embedded in the HydraOne web client: postMessage to the host. Standalone tab: wallet extension.
+if (import.meta.client) {
+  setupHydraClient(config.public.hydraHostOrigin);
+}
+
+const embedded = ref(false);
+const health = ref<BridgeHealthReport | null>(null);
+const { client, isConnected, address, balanceADA, error, connect, disconnect } =
+  useWalletBridgeClient({ autoConnect: import.meta.client && isEmbedded() });
 const { isAuthenticated, signIn, signOut } = useGameAuth();
 
 const isReadyToRender = ref(false);
 
+const healthText = computed(() =>
+  health.value
+    ? [
+        `${health.value.status}: ${health.value.summary}`,
+        ...health.value.checks.map((c) => `  [${c.status}] ${c.name}: ${c.message}`),
+      ].join('\n')
+    : '',
+);
+
 async function handleConnect() {
-  await connect();
+  await connect().catch(() => {});
 }
 
 async function handleDisconnect() {
@@ -67,29 +97,22 @@ async function handleDisconnect() {
 }
 
 async function handleSignIn() {
-  await signIn({ challenge: 'HydraOne Game Login Challenge' });
+  await signIn({ challenge: 'HydraOne Game Login Challenge' }).catch(() => {});
 }
 
 async function handleSignOut() {
   await signOut();
 }
 
-onMounted(async () => {
-  // In development, wrap the app in the dev host shell that mimics the HydraOne web client
-  if (import.meta.env.DEV) {
-    const { initHydraDevShell } = await import('@hydraone/sdk/simulator');
-    const isEmbed = initHydraDevShell({
-      projectName,
-      enableMockWallet: true,
-      enableRealWallet: true,
-    });
-    if (!isEmbed) {
-      // The host shell is mounted in the top-level window; the nested iframe renders the game
-      return;
-    }
-  }
+async function handleHealthCheck() {
+  health.value = await client.checkHealth().catch(() => null);
+}
 
-  isReadyToRender.value = true;
+onMounted(async () => {
+  embedded.value = isEmbedded();
+  // Development only: opened in a top-level tab, this wraps the game in the HydraOne host UI
+  // and renders the game inside its iframe. Production builds skip it entirely.
+  isReadyToRender.value = await bootstrapDevShell(projectName);
 });
 </script>
 
@@ -194,6 +217,18 @@ onMounted(async () => {
   background: transparent;
   border: 1px solid #64748b;
   color: #e2e8f0;
+}
+.error {
+  color: #f87171;
+  font-size: 0.875rem;
+}
+.health {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  overflow-x: auto;
 }
 .btn:hover {
   opacity: 0.9;
