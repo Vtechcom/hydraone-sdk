@@ -2115,6 +2115,46 @@ describe('WalletBridgeClient', () => {
         }
       });
 
+      it('routes debug output through a custom logger and stays silent when debug is off', async () => {
+        const failingVibrate = vi.fn().mockImplementation(() => {
+          throw new Error('Vibration permission denied');
+        });
+        const originalVibrate = (globalThis.navigator as any)?.vibrate;
+        Object.defineProperty(globalThis.navigator, 'vibrate', {
+          value: failingVibrate,
+          configurable: true,
+          writable: true,
+        });
+
+        const run = async (debug: boolean) => {
+          const logger = { warn: vi.fn(), error: vi.fn() };
+          const c = new WalletBridgeClient({ transport, isIframeFn: () => false, debug, logger });
+          await c.triggerHaptic('light');
+          c.destroy();
+          return logger;
+        };
+
+        const enabled = await run(true);
+        expect(enabled.warn).toHaveBeenCalledWith(
+          expect.stringContaining('navigator.vibrate failed'),
+          expect.any(Error),
+        );
+
+        const disabled = await run(false);
+        expect(disabled.warn).not.toHaveBeenCalled();
+        expect(disabled.error).not.toHaveBeenCalled();
+
+        if (originalVibrate !== undefined) {
+          Object.defineProperty(globalThis.navigator, 'vibrate', {
+            value: originalVibrate,
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (globalThis.navigator as any).vibrate;
+        }
+      });
+
       it('in standalone mode outside an iframe, triggerHaptic safely catches errors thrown by navigator.vibrate', async () => {
         const mockVibrate = vi.fn().mockImplementation(() => {
           throw new Error('Vibration permission denied');

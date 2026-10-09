@@ -24,6 +24,7 @@ import type {
   DepositModalOptions,
   DepositModalPayload,
   PlayerProfile,
+  Logger,
 } from './types';
 import { TIERED_TIMEOUTS, HAPTIC_PATTERNS } from './types';
 import {
@@ -83,6 +84,7 @@ export class WalletBridgeClient {
   public readonly cardanoProvider?: Record<string, any>;
   public readonly isIframeFn?: () => boolean;
   public readonly debug: boolean;
+  private readonly logger: Logger;
 
   private _connectionState: ConnectionState = 'disconnected';
   private _hostInfo?: HostInfo;
@@ -113,6 +115,7 @@ export class WalletBridgeClient {
     this.cardanoProvider = options.cardanoProvider;
     this.isIframeFn = options.isIframeFn;
     this.debug = options.debug ?? false;
+    this.logger = options.logger ?? console;
 
     // Listen for transport messages when a transport is already available.
     if (this.transport) {
@@ -123,7 +126,7 @@ export class WalletBridgeClient {
     if (options.autoConnect) {
       this.init().catch((err) => {
         if (this.debug) {
-          console.warn('[WalletBridgeClient] Auto-connect failed:', err);
+          this.logger.warn('[WalletBridgeClient] Auto-connect failed:', err);
         }
       });
     }
@@ -155,7 +158,7 @@ export class WalletBridgeClient {
           handler(payload);
         } catch (err) {
           if (this.debug) {
-            console.error(`[WalletBridgeClient] Error in event listener [${type}]:`, err);
+            this.logger.error(`[WalletBridgeClient] Error in event listener [${type}]:`, err);
           }
         }
       }
@@ -309,7 +312,7 @@ export class WalletBridgeClient {
     // Silently drop responses for requests that already timed out.
     if (this.expiredRequestIds.has(correlationId)) {
       if (this.debug) {
-        console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
+        this.logger.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
       }
       this.expiredRequestIds.delete(correlationId);
       return;
@@ -320,7 +323,7 @@ export class WalletBridgeClient {
 
       if (pending.isExpired) {
         if (this.debug) {
-          console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
+          this.logger.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
         }
         this.pendingRequests.delete(correlationId);
         return;
@@ -1154,7 +1157,7 @@ export class WalletBridgeClient {
         }
       } catch (err) {
         if (this.debug) {
-          console.warn('[WalletBridgeClient] ScreenOrientation lock/unlock failed in standalone mode:', err);
+          this.logger.warn('[WalletBridgeClient] ScreenOrientation lock/unlock failed in standalone mode:', err);
         }
       }
 
@@ -1210,7 +1213,7 @@ export class WalletBridgeClient {
         }
       } catch (err) {
         if (this.debug) {
-          console.warn('[WalletBridgeClient] navigator.vibrate failed in standalone mode:', err);
+          this.logger.warn('[WalletBridgeClient] navigator.vibrate failed in standalone mode:', err);
         }
       }
 

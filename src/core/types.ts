@@ -206,6 +206,16 @@ export interface WalletBridgeClientOptions {
   isIframeFn?: () => boolean;
   /** Enable warning/debug logging (default: false). */
   debug?: boolean;
+  /** Destination for debug output when `debug` is enabled (default: `console`). */
+  logger?: Logger;
+}
+
+/**
+ * Minimal logger contract. `console` satisfies it, so any logging library can be adapted with a thin wrapper.
+ */
+export interface Logger {
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
 }
 
 /**
