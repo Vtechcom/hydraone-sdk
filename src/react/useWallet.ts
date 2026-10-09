@@ -1,8 +1,7 @@
-import { useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { HydraOneContext } from './context';
-import type { UseWalletOptions, UseWalletReturn } from './types';
-import { formatShortAddress } from './utils';
-import { getTotalLovelace, getAdaBalance } from '../cardano';
+import { useContext, useState, useEffect, useCallback, useRef } from "react";
+import { HydraOneContext } from "./context";
+import type { UseWalletOptions, UseWalletReturn } from "./types";
+import { getTotalLovelace, getAdaBalance } from "../cardano";
 import type {
   ConnectionState,
   HostInfo,
@@ -14,8 +13,8 @@ import type {
   HapticFeedbackType,
   DepositModalOptions,
   PlayerProfile,
-} from '../core/types';
-import type { WalletBridgeClient } from '../core/client';
+} from "../core/types";
+import type { WalletBridgeClient } from "../core/client";
 
 /**
  * Custom React Hook quản lý trạng thái kết nối ví Cardano, số dư BigInt và các hành động RPC
@@ -25,27 +24,34 @@ import type { WalletBridgeClient } from '../core/client';
  */
 export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const context = useContext(HydraOneContext);
-  const client: WalletBridgeClient | undefined = options?.client ?? context?.client;
+  const client: WalletBridgeClient | undefined =
+    options?.client ?? context?.client;
 
   if (!client) {
     throw new Error(
-      'useWallet must be used within a <HydraOneProvider> or passed a custom client option'
+      "useWallet must be used within a <HydraOneProvider> or passed a custom client option",
     );
   }
 
   // 1. Khởi tạo states
-  const [connectionState, setConnectionState] = useState<ConnectionState>(() =>
-    client.connectionState
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    () => client.connectionState,
   );
-  const [isConnected, setIsConnected] = useState<boolean>(() => client.isConnected);
+  const [isConnected, setIsConnected] = useState<boolean>(
+    () => client.isConnected,
+  );
   const [address, setAddress] = useState<string | null>(null);
   const [usedAddresses, setUsedAddresses] = useState<string[]>([]);
   const [balanceADA, setBalanceADA] = useState<string | null>(null);
   const [balanceLovelace, setBalanceLovelace] = useState<bigint | null>(null);
   const [networkId, setNetworkId] = useState<number | null>(null);
-  const [hostInfo, setHostInfo] = useState<HostInfo | null>(() => client.hostInfo ?? null);
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(() => client.isAudioMuted ?? false);
-  const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? 'dark');
+  const [hostInfo, setHostInfo] = useState<HostInfo | null>(
+    () => client.hostInfo ?? null,
+  );
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(
+    () => client.isAudioMuted ?? false,
+  );
+  const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? "dark");
 
   // Ref theo dõi unmount để ngăn chặn state updates sau khi unmount
   const isMountedRef = useRef<boolean>(true);
@@ -58,9 +64,6 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   const autoRefreshBalance =
     options?.autoRefreshBalance ?? context?.autoRefreshBalance ?? true;
-
-  // 2. Computed shortAddress
-  const shortAddress = useMemo(() => formatShortAddress(address), [address]);
 
   // 3. Actions cập nhật mạng, số dư & địa chỉ ví
   const refreshNetwork = useCallback(async (): Promise<number | null> => {
@@ -123,7 +126,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
           setBalanceADA(null);
           setBalanceLovelace(null);
         }
-        return '0';
+        return "0";
       }
 
       // Ưu tiên getUtxos() để tính toán chính xác tổng Lovelace và ADA bằng BigInt
@@ -152,7 +155,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         setBalanceADA(null);
         setBalanceLovelace(null);
       }
-      return '0';
+      return "0";
     }
   }, [client]);
 
@@ -179,12 +182,18 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         // Bắt lỗi an toàn
       }
     }
-  }, [client, autoRefreshBalance, refreshNetwork, refreshAddress, refreshBalance]);
+  }, [
+    client,
+    autoRefreshBalance,
+    refreshNetwork,
+    refreshAddress,
+    refreshBalance,
+  ]);
 
   const disconnect = useCallback(async (): Promise<void> => {
     await client.disconnect();
     if (isMountedRef.current) {
-      setConnectionState('disconnected');
+      setConnectionState("disconnected");
       setIsConnected(false);
       setAddress(null);
       setUsedAddresses([]);
@@ -196,49 +205,53 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   // 5. Proxy methods bọc trong useCallback
   const signTx = useCallback(
-    async (txCbor: string, partialSign?: boolean, signOptions?: SignOptions): Promise<string> => {
+    async (
+      txCbor: string,
+      partialSign?: boolean,
+      signOptions?: SignOptions,
+    ): Promise<string> => {
       return client.signTx(txCbor, partialSign, signOptions);
     },
-    [client]
+    [client],
   );
 
   const submitTx = useCallback(
     async (txCbor: string, queryOptions?: QueryOptions): Promise<string> => {
       return client.submitTx(txCbor, queryOptions);
     },
-    [client]
+    [client],
   );
 
   const signData = useCallback(
     async (
       targetAddress: string,
       payloadHex: string,
-      signOptions?: SignOptions
+      signOptions?: SignOptions,
     ): Promise<DataSignature> => {
       return client.signData(targetAddress, payloadHex, signOptions);
     },
-    [client]
+    [client],
   );
 
   const setOrientation = useCallback(
     async (orientation: OrientationLockType): Promise<void> => {
       return client.setOrientation(orientation);
     },
-    [client]
+    [client],
   );
 
   const triggerHaptic = useCallback(
     async (type: HapticFeedbackType): Promise<void> => {
       return client.triggerHaptic(type);
     },
-    [client]
+    [client],
   );
 
   const requestDepositModal = useCallback(
     async (depositOptions?: DepositModalOptions): Promise<void> => {
       return client.requestDepositModal(depositOptions);
     },
-    [client]
+    [client],
   );
 
   const getPlayerProfile = useCallback(async (): Promise<PlayerProfile> => {
@@ -247,7 +260,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   // 6. Đăng ký sự kiện và Auto-cleanup trong useEffect (SSR Safe)
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
@@ -256,10 +269,10 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     const onConnStateChanged = (state: ConnectionState) => {
       if (!isMountedRef.current) return;
       setConnectionState(state);
-      setIsConnected(state === 'connected');
+      setIsConnected(state === "connected");
       setHostInfo(client.hostInfo ?? null);
 
-      if (state === 'connected') {
+      if (state === "connected") {
         if (client.theme !== undefined) {
           setTheme(client.theme);
         }
@@ -271,7 +284,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === 'disconnected' || state === 'error') {
+      } else if (state === "disconnected" || state === "error") {
         setAddress(null);
         setUsedAddresses([]);
         setBalanceADA(null);
@@ -298,7 +311,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
     const onDisconnected = () => {
       if (!isMountedRef.current) return;
-      setConnectionState('disconnected');
+      setConnectionState("disconnected");
       setIsConnected(false);
       setAddress(null);
       setUsedAddresses([]);
@@ -309,7 +322,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
     const onHostAck = (_payload: unknown) => {
       if (!isMountedRef.current) return;
-      setConnectionState('connected');
+      setConnectionState("connected");
       setIsConnected(true);
       setHostInfo(client.hostInfo ?? null);
       if (client.theme !== undefined) {
@@ -325,21 +338,21 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       }
     };
 
-    cleanups.push(client.on('HOST_ACK', onHostAck));
-    cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
-    cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
-    cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
+    cleanups.push(client.on("HOST_ACK", onHostAck));
+    cleanups.push(client.on("CONNECTION_STATE_CHANGED", onConnStateChanged));
+    cleanups.push(client.on("ACCOUNT_CHANGED", onAccountChanged));
+    cleanups.push(client.on("NETWORK_CHANGED", onNetworkChanged));
     cleanups.push(
       client.onAudioMutedChanged((muted) => {
         if (isMountedRef.current) setIsAudioMuted(muted);
-      })
+      }),
     );
     cleanups.push(
       client.onThemeChanged((newTheme) => {
         if (isMountedRef.current) setTheme(newTheme);
-      })
+      }),
     );
-    cleanups.push(client.on('DISCONNECTED', onDisconnected));
+    cleanups.push(client.on("DISCONNECTED", onDisconnected));
 
     // Đồng bộ trạng thái hiện tại nếu client đã kết nối trước đó
     if (client.isConnected) {
@@ -377,7 +390,6 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     connectionState,
     isConnected,
     address,
-    shortAddress,
     usedAddresses,
     balanceADA,
     balanceLovelace,

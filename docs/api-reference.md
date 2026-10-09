@@ -198,7 +198,6 @@ const {
 
 ### Các hàm quản lý Singleton Client:
 - `getSharedWalletBridgeClient()` / `setSharedWalletBridgeClient(client)`
-- `formatShortAddress(address: string, chars?: number): string` (Ví dụ: `addr1q...9xyz`)
 
 ---
 

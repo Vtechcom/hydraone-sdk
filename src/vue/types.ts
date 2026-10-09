@@ -65,10 +65,6 @@ export interface UseWalletBridgeClientReturn {
    */
   address: Ref<string | null>;
 
-  /**
-   * Chuỗi địa chỉ ví được rút gọn (e.g. "addr1q...4xyz"), trả về chuỗi rỗng khi chưa kết nối
-   */
-  shortAddress: ComputedRef<string>;
 
   /**
    * Danh sách toàn bộ các địa chỉ đã qua sử dụng của ví

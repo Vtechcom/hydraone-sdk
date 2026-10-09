@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { title: 'WalletBridgeClient (Core)', section: 'api-core', desc: 'init, connect, getBalance, signTx, signData, submitTx, triggerHaptic.' },
     { title: 'Cardano Domain Utilities (/cardano)', section: 'api-cardano', desc: 'lovelaceToAda, adaToLovelace, parseAssetValue, CBOR decoder, Hex utils.' },
     { title: 'React & Next.js Hooks (/react)', section: 'api-react', desc: 'HydraOneProvider, useWallet, useHydraAuth, useHostStorage.' },
-    { title: 'Vue 3 & Nuxt 3 Composables (/vue)', section: 'api-vue', desc: 'useWalletBridgeClient, useGameAuth, formatShortAddress.' },
+    { title: 'Vue 3 & Nuxt 3 Composables (/vue)', section: 'api-vue', desc: 'useWalletBridgeClient, useGameAuth.' },
     { title: 'Tích hợp Phaser 3 Game Engine', section: 'api-phaser', desc: 'Sử dụng SDK trong Phaser Scene canvas loop và event emitter.' },
     { title: 'Simulator DevTools (/simulator)', section: 'api-simulator', desc: 'MockBridgeHost sandbox, Floating DevTools UI widget.' },
     { title: 'Bridge Health Diagnostics (/diagnostics)', section: 'api-diagnostics', desc: 'checkBridgeHealth, tự kiểm tra iframe permissions và độ trễ.' },

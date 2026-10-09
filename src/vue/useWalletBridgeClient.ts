@@ -1,5 +1,4 @@
-import { ref, computed, onScopeDispose, getCurrentScope, getCurrentInstance, onMounted } from 'vue';
-import type { ComputedRef } from 'vue';
+import { ref, onScopeDispose, getCurrentScope, getCurrentInstance, onMounted } from 'vue';
 import type {
   ConnectionState,
   HostInfo,
@@ -47,35 +46,6 @@ export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): 
   sharedClientInstance = client;
 }
 
-/**
- * Rút gọn địa chỉ ví Cardano để hiển thị thân thiện trên UI dApp/Game
- *
- * @param address Chuỗi địa chỉ ví
- * @param startChars Số lượng ký tự tiền tố giữ lại (mặc định: 6, ví dụ "addr1q")
- * @param endChars Số lượng ký tự hậu tố giữ lại (mặc định: 4, ví dụ "4xyz")
- * @returns Chuỗi rút gọn (e.g. "addr1q...4xyz") hoặc chuỗi rỗng khi địa chỉ không hợp lệ
- */
-export function formatShortAddress(
-  address: string | null | undefined,
-  startChars = 6,
-  endChars = 4
-): string {
-  if (!address || typeof address !== 'string') {
-    return '';
-  }
-  const trimmed = address.trim();
-  if (trimmed === '') {
-    return '';
-  }
-  const validStart = Math.max(0, startChars);
-  const validEnd = Math.max(0, endChars);
-  if (trimmed.length <= validStart + validEnd + 3) {
-    return trimmed;
-  }
-  const prefix = validStart > 0 ? trimmed.slice(0, validStart) : '';
-  const suffix = validEnd > 0 ? trimmed.slice(-validEnd) : '';
-  return `${prefix}...${suffix}`;
-}
 
 /**
  * Headless Composable useWalletBridgeClient cho Vue 3.5+ và Nuxt 3 / Nuxt 4
@@ -107,10 +77,6 @@ export function useWalletBridgeClient(
   const theme = ref<ThemeMode | null>(client.theme ?? null);
   const error = ref<Error | null>(null);
 
-  // 3. Computed rút gọn địa chỉ ví
-  const shortAddress: ComputedRef<string> = computed(() => {
-    return formatShortAddress(address.value);
-  });
 
   // 4. Các hàm cập nhật dữ liệu nội bộ
   const refreshAddress = async (): Promise<string | null> => {
@@ -378,7 +344,6 @@ export function useWalletBridgeClient(
     connectionState,
     isConnected,
     address,
-    shortAddress,
     usedAddresses,
     balanceADA,
     balanceLovelace,

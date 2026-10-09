@@ -3,7 +3,7 @@
     <header class="header">
       <div class="logo">🎮 {{ projectName }}</div>
       <div class="wallet-badge" :class="{ connected: isConnected }">
-        {{ isConnected ? shortAddress : 'Chưa kết nối ví' }}
+        {{ isConnected ? address : 'Chưa kết nối ví' }}
       </div>
     </header>
 
@@ -53,7 +53,7 @@ import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
 import { mountDevTools } from '@hydraone/sdk/simulator';
 
 const projectName = '{{PROJECT_NAME}}';
-const { isConnected, shortAddress, balanceADA, connect, disconnect } = useWalletBridgeClient();
+const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
 const { isAuthenticated, signIn, signOut } = useGameAuth();
 
 const isReadyToRender = ref(false);

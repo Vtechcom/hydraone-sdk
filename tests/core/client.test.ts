@@ -2663,6 +2663,192 @@ describe('WalletBridgeClient', () => {
       });
     });
   });
+
+  describe('Code Review Patches & Invariant Hardening', () => {
+    it('khắc phục race condition: disconnect() trong khi init() đang chờ không để client chuyển thành connected', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+
+      const initPromise = client.init();
+      expect(client.connectionState).toBe('connecting');
+
+      // Người dùng gọi disconnect ngay trong khi đang chờ phản hồi handshake
+      client.disconnect();
+      expect(client.connectionState).toBe('disconnected');
+
+      // Host Shell gửi bản tin HOST_ACK muộn
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'host-ack-late',
+        type: 'HOST_ACK',
+        payload: {
+          requestId: readyMsg.id,
+          hostInfo: { hostVersion: '1.0.0', network: 'mainnet', walletName: 'Lace' },
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+
+      // Khi disconnect() được gọi, handshake request đang pending bị hủy với lỗi ERR_NOT_CONNECTED
+      await expect(initPromise).rejects.toThrow('Client has been disconnected');
+      // Trạng thái vẫn phải giữ nguyên là disconnected, không bị ghi đè thành connected
+      expect(client.connectionState).toBe('disconnected');
+      expect(client.isConnected).toBe(false);
+    });
+
+    it('activeWalletName fallback về hostInfo.walletName khi chạy trong iframe', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-1',
+        type: 'HOST_ACK',
+        payload: {
+          requestId: readyMsg.id,
+          hostInfo: { hostVersion: '1.0.0', network: 'mainnet', walletName: 'Eternl' },
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      expect(client.activeWalletName).toBe('Eternl');
+    });
+
+    it('phát sự kiện CONNECTION_STATE_CHANGED khi chuyển đổi trạng thái kết nối', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+      const states: string[] = [];
+
+      client.on('CONNECTION_STATE_CHANGED', (state) => {
+        states.push(state);
+      });
+
+      const initPromise = client.init();
+      expect(states).toContain('connecting');
+
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-2',
+        type: 'HOST_ACK',
+        payload: {
+          requestId: readyMsg.id,
+          hostInfo: { hostVersion: '1.0.0' },
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+      expect(states).toContain('connected');
+
+      client.disconnect();
+      expect(states).toContain('disconnected');
+    });
+
+    it('phát sự kiện HOST_ACK khi dùng generic ITransport có pendingRequests', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+      let hostAckFired = false;
+
+      client.on('HOST_ACK', (payload) => {
+        hostAckFired = true;
+        expect(payload).toBeDefined();
+      });
+
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-3',
+        type: 'HOST_ACK',
+        payload: {
+          requestId: readyMsg.id,
+          hostInfo: { hostVersion: '1.0.0' },
+        },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      expect(hostAckFired).toBe(true);
+    });
+
+    it('bảo vệ cờ isDestroyed và chặn gọi init/truy vấn sau khi destroy()', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+
+      expect(client.isDestroyed).toBe(false);
+      client.destroy();
+      expect(client.isDestroyed).toBe(true);
+
+      await expect(client.init()).rejects.toThrow('WalletBridgeClient has been destroyed');
+      await expect(client.getBalance()).rejects.toThrow('WalletBridgeClient has been destroyed');
+    });
+
+    it('extractAudioMuted hỗ trợ cả hai trường audioMuted và muted trong payload', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-4',
+        type: 'HOST_ACK',
+        payload: { requestId: readyMsg.id },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      let mutedVal: boolean | undefined;
+      client.onAudioMutedChanged((muted) => {
+        mutedVal = muted;
+      });
+
+      // Gửi dạng audioMuted
+      transport.simulateIncoming({
+        id: 'ev-audio-1',
+        type: 'AUDIO_MUTED_CHANGED',
+        payload: { audioMuted: true },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      expect(client.isAudioMuted).toBe(true);
+      expect(mutedVal).toBe(true);
+
+      // Gửi dạng muted
+      transport.simulateIncoming({
+        id: 'ev-audio-2',
+        type: 'AUDIO_MUTED_CHANGED',
+        payload: { muted: false },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      expect(client.isAudioMuted).toBe(false);
+      expect(mutedVal).toBe(false);
+    });
+
+    it('ném ERR_INVALID_PARAMS khi truyền chuỗi trắng cho signTx, submitTx và signData', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-5',
+        type: 'HOST_ACK',
+        payload: { requestId: readyMsg.id },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      await expect(client.signTx('   ')).rejects.toThrow('Invalid transaction CBOR');
+      await expect(client.submitTx('   ')).rejects.toThrow('Invalid transaction CBOR');
+      await expect(client.signData('   ', 'deadbeef')).rejects.toThrow('Invalid wallet address');
+    });
+  });
 });
 
 

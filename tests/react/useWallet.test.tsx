@@ -4,7 +4,6 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { HydraOneProvider } from '../../src/react/context';
 import { useWallet } from '../../src/react/useWallet';
-import { formatShortAddress } from '../../src/react/utils';
 import { WalletBridgeClient } from '../../src/core/client';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
@@ -236,7 +235,6 @@ describe('useWallet hook', () => {
     expect(result.current.isConnected).toBe(false);
     expect(result.current.connectionState).toBe('disconnected');
     expect(result.current.address).toBeNull();
-    expect(result.current.shortAddress).toBe('');
     expect(result.current.usedAddresses).toEqual([]);
     expect(result.current.balanceADA).toBeNull();
     expect(result.current.balanceLovelace).toBeNull();
@@ -259,23 +257,6 @@ describe('useWallet hook', () => {
     spy.mockRestore();
   });
 
-  it('định dạng formatShortAddress chính xác', () => {
-    expect(formatShortAddress(null)).toBe('');
-    expect(formatShortAddress('')).toBe('');
-    expect(formatShortAddress('addr1short')).toBe('addr1short');
-    expect(
-      formatShortAddress(
-        'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-        6,
-        4
-      )
-    ).toBe('addr1q...5a3x');
-    expect(formatShortAddress('addr1test', 0, 0)).toBe('addr1test');
-    expect(formatShortAddress('1234567890123', 6, 4)).toBe('1234567890123');
-    expect(formatShortAddress('12345678901234', 6, 4)).toBe('123456...1234');
-    expect(formatShortAddress('addr1testlong', 6, 0)).toBe('addr1t...');
-    expect(formatShortAddress('addr1testlong', 0, 4)).toBe('...long');
-  });
 
   it('kết nối thành công qua connect() và tính toán số dư BigInt', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
@@ -289,7 +270,6 @@ describe('useWallet hook', () => {
     expect(result.current.address).toBe(
       'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
     );
-    expect(result.current.shortAddress).toBe('addr1q...5a3x');
     expect(result.current.balanceLovelace).toBe(7500000n);
     expect(result.current.balanceADA).toBe('7.5');
     expect(result.current.networkId).toBe(1);

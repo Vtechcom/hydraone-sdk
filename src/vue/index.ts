@@ -8,7 +8,6 @@ export * from './types';
 // Composables & Utilities
 export {
   useWalletBridgeClient,
-  formatShortAddress,
   getSharedWalletBridgeClient,
   setSharedWalletBridgeClient,
 } from './useWalletBridgeClient';

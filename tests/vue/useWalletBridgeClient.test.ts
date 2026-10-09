@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { effectScope } from 'vue';
 import {
   useWalletBridgeClient,
-  formatShortAddress,
   setSharedWalletBridgeClient,
 } from '../../src/vue/useWalletBridgeClient';
 import { WalletBridgeClient } from '../../src/core/client';
@@ -172,33 +171,6 @@ class MockTransport implements ITransport {
   }
 }
 
-describe('formatShortAddress', () => {
-  it('trả về chuỗi rỗng khi địa chỉ là null, undefined hoặc rỗng', () => {
-    expect(formatShortAddress(null)).toBe('');
-    expect(formatShortAddress(undefined)).toBe('');
-    expect(formatShortAddress('')).toBe('');
-    expect(formatShortAddress('   ')).toBe('');
-  });
-
-  it('rút gọn địa chỉ ví Cardano chuẩn theo format addr1q...4xyz', () => {
-    const fullAddr =
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
-    const short = formatShortAddress(fullAddr, 6, 4);
-    expect(short).toBe('addr1q...5a3x');
-  });
-
-  it('giữ nguyên chuỗi nếu địa chỉ quá ngắn', () => {
-    expect(formatShortAddress('addr1short', 6, 4)).toBe('addr1short');
-  });
-
-  it('xử lý chính xác các trường hợp biên như endChars = 0 hoặc tham số âm', () => {
-    const fullAddr =
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
-    expect(formatShortAddress(fullAddr, 6, 0)).toBe('addr1q...');
-    expect(formatShortAddress(fullAddr, 0, 4)).toBe('...5a3x');
-    expect(formatShortAddress(fullAddr, -2, -3)).toBe('...');
-  });
-});
 
 describe('useWalletBridgeClient', () => {
   let mockTransport: MockTransport;
@@ -228,7 +200,6 @@ describe('useWalletBridgeClient', () => {
       isConnected,
       connectionState,
       address,
-      shortAddress,
       balanceADA,
       balanceLovelace,
       hostInfo,
@@ -237,14 +208,13 @@ describe('useWalletBridgeClient', () => {
     expect(isConnected.value).toBe(false);
     expect(connectionState.value).toBe('disconnected');
     expect(address.value).toBeNull();
-    expect(shortAddress.value).toBe('');
     expect(balanceADA.value).toBeNull();
     expect(balanceLovelace.value).toBeNull();
     expect(hostInfo.value).toBeNull();
   });
 
-  it('kết nối ví thành công qua init(), cập nhật reactive address, shortAddress và balanceADA', async () => {
-    const { isConnected, connectionState, address, shortAddress, balanceADA, balanceLovelace, init } =
+  it('kết nối ví thành công qua init(), cập nhật reactive address và balanceADA', async () => {
+    const { isConnected, connectionState, address, balanceADA, balanceLovelace, init } =
       useWalletBridgeClient({ client });
 
     await init();
@@ -254,7 +224,6 @@ describe('useWalletBridgeClient', () => {
     expect(address.value).toBe(
       'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x'
     );
-    expect(shortAddress.value).toBe('addr1q...5a3x');
     expect(balanceLovelace.value).toBe(45000000n);
     expect(balanceADA.value).toBe('45');
   });
@@ -437,7 +406,6 @@ describe('useWalletBridgeClient', () => {
 
       expect(composable.isConnected.value).toBe(false);
       expect(composable.address.value).toBeNull();
-      expect(composable.shortAddress.value).toBe('');
       expect(composable.balanceADA.value).toBeNull();
 
       // Kiểm tra không có listener nào bị rò rỉ vào client trong môi trường SSR

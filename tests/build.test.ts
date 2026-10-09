@@ -49,7 +49,6 @@ describe('Build Output Verification', () => {
     const vueEsmContent = fs.readFileSync(vueEsm, 'utf-8');
     expect(vueEsmContent).toContain('useWalletBridgeClient');
     expect(vueEsmContent).toContain('useGameAuth');
-    expect(vueEsmContent).toContain('formatShortAddress');
     // Đảm bảo vue là external peer dependency, không bị đóng gói trực tiếp vào dist/vue/index.js
     expect(vueEsmContent).toMatch(/from ["']vue["']/);
 
@@ -66,7 +65,6 @@ describe('Build Output Verification', () => {
     expect(reactEsmContent).toContain('useWallet');
     expect(reactEsmContent).toContain('useHydraAuth');
     expect(reactEsmContent).toContain('useHostStorage');
-    expect(reactEsmContent).toContain('formatShortAddress');
     // Đảm bảo react là external peer dependency, không bị đóng gói trực tiếp vào dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);
 

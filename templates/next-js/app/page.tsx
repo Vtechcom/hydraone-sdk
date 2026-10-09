@@ -6,7 +6,7 @@ import { mountDevTools } from '@hydraone/sdk/simulator';
 
 export default function Home() {
   const [isReadyToRender, setIsReadyToRender] = useState(false);
-  const { isConnected, shortAddress, balanceADA, connect, disconnect } = useWallet();
+  const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
   const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Home() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', background: '#090d16', borderBottom: '1px solid #1e293b' }}>
         <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#38bdf8' }}>🎮 {'{{PROJECT_NAME}}'}</div>
         <div style={{ padding: '0.4rem 0.8rem', borderRadius: 9999, background: isConnected ? '#065f46' : '#334155', color: isConnected ? '#34d399' : '#f8fafc', fontFamily: 'monospace' }}>
-          {isConnected ? shortAddress : 'Chưa kết nối ví'}
+          {isConnected ? address : 'Chưa kết nối ví'}
         </div>
       </header>
 

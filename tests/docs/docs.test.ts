@@ -112,7 +112,6 @@ describe('Story 6.2: Interactive Developer Documentation Portal & Guides', () =>
     it('tài liệu hóa subpath @hydraone/sdk/vue', () => {
       expect(content).toContain('useWalletBridgeClient');
       expect(content).toContain('useGameAuth');
-      expect(content).toContain('formatShortAddress');
     });
 
     it('tài liệu hóa subpath @hydraone/sdk/react', () => {

@@ -88,8 +88,10 @@ export class WalletBridgeClient {
   private _hostInfo?: HostInfo;
   private _isAudioMuted?: boolean;
   private _theme?: ThemeMode;
+  private _isDestroyed = false;
   private handshakePromise: Promise<void> | null = null;
   private readonly pendingRequests = new Map<string, PendingRequest<any>>();
+  private readonly expiredRequestIds = new Set<string>();
   private transportUnsubscribe?: UnsubscribeFn;
   private readonly eventListeners = new Map<string, Set<(payload: any) => void>>();
 
@@ -128,6 +130,39 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Cập nhật trạng thái kết nối và phát sự kiện CONNECTION_STATE_CHANGED
+   */
+  private setConnectionState(newState: ConnectionState): void {
+    if (this._connectionState === newState) {
+      return;
+    }
+    this._connectionState = newState;
+    this.emitHostEvent('CONNECTION_STATE_CHANGED', newState);
+  }
+
+  /**
+   * Phân phối sự kiện nội bộ tới các listeners đã đăng ký qua onHostEvent
+   */
+  private emitHostEvent<T = any>(type: string, payload: T): void {
+    const handlers = this.eventListeners.get(type);
+    if (handlers) {
+      const snapshot = Array.from(handlers);
+      for (const handler of snapshot) {
+        try {
+          if (!handlers.has(handler)) {
+            continue;
+          }
+          handler(payload);
+        } catch (err) {
+          if (this.debug) {
+            console.error(`[WalletBridgeClient] Error in event listener [${type}]:`, err);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Kiểm tra xem SDK có đang chạy ngoài iframe trong tab trình duyệt độc lập không
    */
   public isStandaloneBrowser(): boolean {
@@ -146,13 +181,20 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Tên ví Cardano đang được sử dụng nếu kết nối qua DirectExtensionTransport
+   * Kiểm tra xem client đã bị giải phóng hoàn toàn qua destroy() hay chưa
+   */
+  public get isDestroyed(): boolean {
+    return this._isDestroyed;
+  }
+
+  /**
+   * Tên ví Cardano đang được sử dụng nếu kết nối qua DirectExtensionTransport hoặc Host Shell
    */
   public get activeWalletName(): string | undefined {
     if (this.transport instanceof DirectExtensionTransport) {
       return this.transport.walletName;
     }
-    return undefined;
+    return this._hostInfo?.walletName;
   }
 
   /**
@@ -213,13 +255,14 @@ export class WalletBridgeClient {
     if (typeof payload === 'boolean') {
       return payload;
     }
-    if (
-      payload &&
-      typeof payload === 'object' &&
-      'muted' in payload &&
-      typeof (payload as any).muted === 'boolean'
-    ) {
-      return (payload as any).muted;
+    if (payload && typeof payload === 'object') {
+      const anyObj = payload as Record<string, unknown>;
+      if (typeof anyObj.muted === 'boolean') {
+        return anyObj.muted;
+      }
+      if (typeof anyObj.audioMuted === 'boolean') {
+        return anyObj.audioMuted;
+      }
     }
     return undefined;
   }
@@ -263,10 +306,18 @@ export class WalletBridgeClient {
       correlationId = rpcPayload.requestId;
     }
 
+    // Nếu yêu cầu đã bị timeout trước đó, bỏ qua trong im lặng (silent drop)
+    if (this.expiredRequestIds.has(correlationId)) {
+      if (this.debug) {
+        console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
+      }
+      this.expiredRequestIds.delete(correlationId);
+      return;
+    }
+
     if (this.pendingRequests.has(correlationId)) {
       const pending = this.pendingRequests.get(correlationId)!;
 
-      // Nếu yêu cầu đã bị timeout trước đó, bỏ qua trong im lặng (silent drop)
       if (pending.isExpired) {
         if (this.debug) {
           console.warn(`[WalletBridgeClient] Late response for request [${correlationId}] was ignored.`);
@@ -301,7 +352,21 @@ export class WalletBridgeClient {
 
       // Resolve kết quả thành công
       if (message.type === 'HOST_ACK') {
-        pending.resolve(rpcPayload?.hostInfo || rpcPayload || {});
+        const ackPayload = message.payload as HostAckPayload | undefined;
+        const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
+        this._hostInfo = info;
+        if (info && typeof info === 'object') {
+          const theme = this.extractTheme(info.theme);
+          if (theme) {
+            this._theme = theme;
+          }
+          if (typeof info.audioMuted === 'boolean') {
+            this._isAudioMuted = info.audioMuted;
+          }
+        }
+        this.setConnectionState('connected');
+        this.emitHostEvent('HOST_ACK', message.payload);
+        pending.resolve(info || {});
       } else if (rpcPayload && 'result' in rpcPayload) {
         pending.resolve(rpcPayload.result);
       } else {
@@ -324,7 +389,7 @@ export class WalletBridgeClient {
           this._isAudioMuted = info.audioMuted;
         }
       }
-      this._connectionState = 'connected';
+      this.setConnectionState('connected');
     }
 
     // 3. Xử lý sự kiện đồng bộ âm thanh AUDIO_MUTED_CHANGED
@@ -344,23 +409,7 @@ export class WalletBridgeClient {
     }
 
     // 5. Phân phối sự kiện đến các listeners đã đăng ký qua onHostEvent
-    const handlers = this.eventListeners.get(message.type);
-    if (handlers) {
-      const snapshot = Array.from(handlers);
-      for (const handler of snapshot) {
-        try {
-          // Bỏ qua nếu handler đã bị gỡ bỏ hoặc client đã bị hủy trong quá trình duyệt
-          if (!handlers.has(handler)) {
-            continue;
-          }
-          handler(message.payload);
-        } catch (err) {
-          if (this.debug) {
-            console.error(`[WalletBridgeClient] Error in event listener [${message.type}]:`, err);
-          }
-        }
-      }
-    }
+    this.emitHostEvent(message.type, message.payload);
   }
 
   /**
@@ -369,6 +418,12 @@ export class WalletBridgeClient {
    * Gửi bản tin CLIENT_READY và đợi HOST_ACK trong thời gian timeout quy định (mặc định 3,000ms).
    */
   public init(): Promise<void> {
+    if (this._isDestroyed) {
+      return Promise.reject(
+        new HydraBridgeError('WalletBridgeClient has been destroyed', ERROR_CODES.ERR_NOT_CONNECTED)
+      );
+    }
+
     if (this._connectionState === 'connected') {
       return Promise.resolve();
     }
@@ -377,7 +432,7 @@ export class WalletBridgeClient {
       return this.handshakePromise;
     }
 
-    this._connectionState = 'connecting';
+    this.setConnectionState('connecting');
 
     this.handshakePromise = (async () => {
       try {
@@ -446,6 +501,9 @@ export class WalletBridgeClient {
         };
 
         const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
+        if (this._connectionState !== 'connecting') {
+          return;
+        }
         this._hostInfo = result;
         if (result && typeof result === 'object') {
           const theme = this.extractTheme(result.theme);
@@ -456,9 +514,11 @@ export class WalletBridgeClient {
             this._isAudioMuted = result.audioMuted;
           }
         }
-        this._connectionState = 'connected';
+        this.setConnectionState('connected');
       } catch (err) {
-        this._connectionState = 'disconnected';
+        if (this._connectionState === 'connecting') {
+          this.setConnectionState('disconnected');
+        }
         if (err instanceof HydraTimeoutError) {
           throw new HydraTimeoutError(
             `Handshake with Host Shell (CLIENT_READY) timed out (${this.handshakeTimeoutMs}ms)`,
@@ -543,7 +603,11 @@ export class WalletBridgeClient {
       if (timeoutMs > 0 && timeoutMs !== Infinity) {
         timeoutTimer = setTimeout(() => {
           pending.isExpired = true;
+          this.expiredRequestIds.add(message.id);
           this.pendingRequests.delete(message.id);
+          setTimeout(() => {
+            this.expiredRequestIds.delete(message.id);
+          }, 60000);
           reject(
             new HydraTimeoutError(
               `Request [${message.type}] timed out (${timeoutMs}ms)`,
@@ -578,6 +642,12 @@ export class WalletBridgeClient {
    * Đảm bảo client đã kết nối trước khi thực hiện truy vấn trạng thái
    */
   private assertConnected(): void {
+    if (this._isDestroyed) {
+      throw new HydraBridgeError(
+        'WalletBridgeClient has been destroyed',
+        ERROR_CODES.ERR_NOT_CONNECTED
+      );
+    }
     if (!this.isConnected) {
       throw new HydraBridgeError(
         'Client is not connected to Host Shell. Please call await client.init() first.',
@@ -785,7 +855,7 @@ export class WalletBridgeClient {
     options?: SignOptions
   ): Promise<string> {
     this.assertConnected();
-    if (!cbor || typeof cbor !== 'string') {
+    if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
@@ -826,7 +896,7 @@ export class WalletBridgeClient {
     options?: SignOptions
   ): Promise<string> {
     this.assertConnected();
-    if (!cbor || typeof cbor !== 'string') {
+    if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
@@ -860,7 +930,7 @@ export class WalletBridgeClient {
     options?: SignOptions
   ): Promise<DataSignature> {
     this.assertConnected();
-    if (!address || typeof address !== 'string') {
+    if (!address || typeof address !== 'string' || address.trim().length === 0) {
       throw new HydraBridgeError('Invalid wallet address', 'ERR_INVALID_PARAMS');
     }
     if (payloadHex === undefined || payloadHex === null || typeof payloadHex !== 'string') {
@@ -1364,7 +1434,7 @@ export class WalletBridgeClient {
    * Ngắt kết nối client và dọn dẹp các yêu cầu đang chờ
    */
   public disconnect(): void {
-    this._connectionState = 'disconnected';
+    this.setConnectionState('disconnected');
     this._hostInfo = undefined;
     this._isAudioMuted = undefined;
     this._theme = undefined;
@@ -1376,6 +1446,10 @@ export class WalletBridgeClient {
         clearTimeout(pending.timeoutTimer);
       }
       pending.isExpired = true;
+      this.expiredRequestIds.add(pending.id);
+      setTimeout(() => {
+        this.expiredRequestIds.delete(pending.id);
+      }, 60000);
       pending.reject(
         new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED)
       );
@@ -1387,6 +1461,10 @@ export class WalletBridgeClient {
    * Hủy bỏ hoàn toàn client và giải phóng tài nguyên transport listener
    */
   public destroy(): void {
+    if (this._isDestroyed) {
+      return;
+    }
+    this._isDestroyed = true;
     this.disconnect();
     if (this.transportUnsubscribe) {
       this.transportUnsubscribe();
