@@ -4,8 +4,8 @@ import type { MockClientTransportOptions } from './types';
 import type { MockBridgeHost } from './mock-host';
 
 /**
- * MockClientTransport - Adapter in-memory hai chiều giữa WalletBridgeClient và MockBridgeHost
- * Triển khai chuẩn Port ITransport theo kiến trúc Hexagonal.
+ * MockClientTransport - in-memory, bidirectional adapter between WalletBridgeClient and MockBridgeHost.
+ * Implements the ITransport port.
  */
 export class MockClientTransport implements ITransport {
   private handlers = new Set<MessageHandler>();
@@ -17,7 +17,7 @@ export class MockClientTransport implements ITransport {
   ) {}
 
   /**
-   * Gửi một bản tin từ Client tới MockBridgeHost
+   * Sends a message from the client to MockBridgeHost
    */
   async send(message: BridgeMessage): Promise<void> {
     if (this.isDestroyed) {
@@ -39,14 +39,14 @@ export class MockClientTransport implements ITransport {
       return;
     }
 
-    // Chuyển bản tin sang MockBridgeHost xử lý
+    // Hand the message to MockBridgeHost for processing
     await this.host.handleClientMessage(message, (response) => {
       this.dispatchToClient(response);
     });
   }
 
   /**
-   * Đăng ký callback nhận bản tin từ Host gửi về Client
+   * Registers the callback that receives messages sent from the host to the client
    */
   onMessage(handler: MessageHandler): UnsubscribeFn {
     if (this.isDestroyed) {
@@ -60,7 +60,7 @@ export class MockClientTransport implements ITransport {
   }
 
   /**
-   * MockBridgeHost gọi hàm này để đẩy bản tin phản hồi hoặc broadcast về Client
+   * Called by MockBridgeHost to push a response or broadcast to the client
    */
   public dispatchToClient(message: BridgeMessage): void {
     if (this.isDestroyed) {
@@ -83,7 +83,7 @@ export class MockClientTransport implements ITransport {
   }
 
   /**
-   * Hủy kết nối transport và giải phóng tài nguyên
+   * Closes the transport and releases its resources
    */
   destroy(): void {
     this.isDestroyed = true;

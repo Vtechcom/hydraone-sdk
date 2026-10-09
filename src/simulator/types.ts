@@ -2,31 +2,31 @@ import type { MockBridgeHost } from './mock-host';
 import type { WalletBridgeClient } from '../core/client';
 
 /**
- * Trạng thái ví giả lập trong MockBridgeHost
+ * Simulated wallet state inside MockBridgeHost
  */
 export interface MockWalletState {
-  /** Địa chỉ ví Cardano testnet */
+  /** Cardano testnet wallet address */
   address: string;
-  /** Số dư Lovelace (mặc định 1,000 ADA = 1,000,000,000 Lovelace) */
+  /** Balance in Lovelace (default 1,000 ADA = 1,000,000,000 Lovelace) */
   balanceLovelace: bigint;
-  /** Danh sách native assets giả lập (unit -> quantity) */
+  /** Simulated native assets (unit -> quantity) */
   assets: Record<string, bigint>;
-  /** Network ID: 0 (Testnet) hoặc 1 (Mainnet) */
+  /** Network ID: 0 (Testnet) or 1 (Mainnet) */
   networkId: number;
-  /** Danh sách UTxOs giả lập (CBOR hex strings) */
+  /** Simulated UTxOs (CBOR hex strings) */
   utxos: string[];
-  /** Danh sách Collateral UTxOs giả lập */
+  /** Simulated collateral UTxOs */
   collateral: string[];
-  /** Danh sách địa chỉ chưa sử dụng */
+  /** Unused addresses */
   unusedAddresses: string[];
-  /** Địa chỉ thối lại (change address) */
+  /** Change address */
   changeAddress: string;
-  /** Danh sách địa chỉ phần thưởng stake (reward addresses) */
+  /** Stake reward addresses */
   rewardAddresses: string[];
 }
 
 /**
- * Thông tin người chơi giả lập
+ * Simulated player information
  */
 export interface MockPlayerProfile {
   nickname: string;
@@ -36,47 +36,47 @@ export interface MockPlayerProfile {
 }
 
 /**
- * Cấu hình tùy chọn khi khởi tạo MockBridgeHost
+ * Options for creating a MockBridgeHost
  */
 export interface MockBridgeHostOptions {
-  /** Tên ứng dụng Host Shell giả lập (mặc định 'HydraOne Mock Host') */
+  /** Simulated Host Shell app name (default 'HydraOne Mock Host') */
   appName?: string;
-  /** Phiên bản Host Shell giả lập (mặc định '1.0.0') */
+  /** Simulated Host Shell version (default '1.0.0') */
   appVersion?: string;
-  /** Tên ví giả lập hiển thị trong hostInfo (mặc định 'HydraMock Wallet') */
+  /** Simulated wallet name reported in hostInfo (default 'HydraMock Wallet') */
   walletName?: string;
-  /** Trạng thái ban đầu của ví giả lập */
+  /** Initial simulated wallet state */
   walletState?: Partial<MockWalletState>;
-  /** Độ trễ mạng giả lập tính bằng mili-giây (mặc định 0ms) */
+  /** Simulated network latency in milliseconds (default 0ms) */
   latencyMs?: number;
-  /** Bật/tắt chế độ từ chối ký ví (mặc định false) */
+  /** Enables the wallet signing rejection mode (default false) */
   rejectionMode?: boolean;
-  /** Giả lập lỗi Safari ITP chặn storage access (mặc định false) */
+  /** Simulates Safari ITP blocking storage access (default false) */
   storageBlock?: boolean;
-  /** Giao diện ban đầu ('dark' | 'light') */
+  /** Initial theme ('dark' | 'light') */
   theme?: 'dark' | 'light';
-  /** Trạng thái tắt tiếng ban đầu */
+  /** Initial muted state */
   audioMuted?: boolean;
-  /** Thông tin người chơi ban đầu */
+  /** Initial player information */
   playerProfile?: Partial<MockPlayerProfile>;
-  /** Trạng thái kết nối ban đầu của ví giả lập (mặc định true) */
+  /** Initial connection state of the simulated wallet (default true) */
   isWalletConnected?: boolean;
-  /** Bật log debug */
+  /** Enables debug logging */
   debug?: boolean;
 }
 
 /**
- * Cấu hình tùy chọn cho MockClientTransport
+ * Options for MockClientTransport
  */
 export interface MockClientTransportOptions {
-  /** Độ trễ nhân tạo bổ sung per-transport */
+  /** Extra artificial latency applied per transport */
   latencyMs?: number;
-  /** Bật log debug */
+  /** Enables debug logging */
   debug?: boolean;
 }
 
 /**
- * Trạng thái snapshot của MockBridgeHost dùng để đồng bộ dữ liệu giao diện
+ * Snapshot of MockBridgeHost state, used to keep the UI in sync
  */
 export interface MockBridgeHostState {
   appName: string;
@@ -94,40 +94,40 @@ export interface MockBridgeHostState {
 }
 
 /**
- * Hàm callback lắng nghe thay đổi trạng thái của MockBridgeHost
+ * Callback that listens for MockBridgeHost state changes
  */
 export type MockHostStateListener = (state: MockBridgeHostState) => void;
 
 /**
- * Các vị trí neo (anchor positions) cho DevTools Widget trên màn hình
+ * Anchor positions of the DevTools widget on screen
  */
 export type DevToolsPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 
 /**
- * Chủ đề giao diện cho DevTools Widget
+ * Theme of the DevTools widget
  */
 export type DevToolsTheme = 'dark' | 'light' | 'auto';
 
 /**
- * Cấu hình tùy chọn khi khởi tạo DevToolsWidget
+ * Options for creating a DevToolsWidget
  */
 export interface DevToolsWidgetOptions {
-  /** Tham chiếu MockBridgeHost cần điều khiển */
+  /** MockBridgeHost to control */
   host?: MockBridgeHost;
-  /** Tham chiếu WalletBridgeClient cần tương tác */
+  /** WalletBridgeClient to interact with */
   client?: WalletBridgeClient | any;
-  /** Phần tử HTML container để gắn widget (mặc định document.body) */
+  /** HTML container to mount the widget into (default document.body) */
   container?: HTMLElement;
-  /** Trạng thái ban đầu thu gọn hay mở rộng (mặc định false) */
+  /** Whether the widget starts collapsed (default false) */
   defaultCollapsed?: boolean;
-  /** Vị trí hiển thị trên màn hình (mặc định 'bottom-right') */
+  /** Position on screen (default 'bottom-right') */
   position?: DevToolsPosition;
-  /** Chủ đề giao diện (mặc định 'dark') */
+  /** Theme (default 'dark') */
   theme?: DevToolsTheme;
-  /** Tiêu đề hiển thị trên header của DevTools */
+  /** Title shown in the DevTools header */
   title?: string;
-  /** Có can thiệp globalThis.localStorage khi bật simulate Safari ITP hay không (mặc định true) */
+  /** Whether to patch globalThis.localStorage while Safari ITP simulation is on (default true) */
   interceptLocalStorage?: boolean;
-  /** Bật debug log */
+  /** Enables debug logging */
   debug?: boolean;
 }

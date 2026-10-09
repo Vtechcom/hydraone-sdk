@@ -1,6 +1,6 @@
 /**
  * @hydraone/sdk/simulator — HydraDevShell
- * Entry point cho Dev Host Shell mô phỏng 100% giao diện HydraOne Web Client.
+ * Entry point for the dev host shell that mimics the HydraOne Web Client UI.
  */
 
 export * from './types';
@@ -11,8 +11,8 @@ import type { HydraDevShellOptions } from './types';
 import { HydraDevShellUI } from './shell-ui';
 
 /**
- * Kiểm tra xem trang web hiện tại có đang chạy ở chế độ nhúng Iframe hay không
- * (Bao gồm: thực sự nằm trong <iframe>, hoặc có tham số ?hydra_standalone=true trên URL)
+ * Returns true when the page runs in embed mode: inside an <iframe>, or with
+ * a ?hydra_standalone=true (or ?standalone=true) URL parameter.
  */
 export function isHydraEmbedMode(): boolean {
   if (typeof window === 'undefined') return true;
@@ -29,24 +29,24 @@ export function isHydraEmbedMode(): boolean {
 }
 
 /**
- * Khởi tạo HydraDevShell trên môi trường Local Development:
- * - Nếu người dùng mở trực tiếp localhost trên trình duyệt (Top-level window):
- *   Tự động render giao diện 100% HydraOne Web Client, tạo <iframe> con nhúng chính game này,
- *   và trả về `false` (báo hiệu cho entry point DỪNG KHÔNG render canvas ở top window).
- * - Nếu đang chạy bên trong <iframe> (ở cả local lẫn production):
- *   Không làm gì cả và trả về `true` (báo hiệu cho game TIẾP TỤC render logic bình thường).
+ * Initializes HydraDevShell for local development:
+ * - Opened directly in the browser (top-level window): renders the HydraOne Web Client UI,
+ *   embeds this game in a child <iframe> and returns `false` so the entry point skips
+ *   rendering the game canvas in the top window.
+ * - Already inside an <iframe> (local or production): does nothing and returns `true`
+ *   so the game renders normally.
  *
- * @returns boolean `true` nếu là chế độ chạy Game (trong iframe), `false` nếu đã mount Host Shell ở Top Window.
+ * @returns `true` when the game should run (inside an iframe), `false` when the host shell was mounted in the top window.
  */
 export function initHydraDevShell(options: HydraDevShellOptions = {}): boolean {
   if (typeof window === 'undefined') return true;
 
-  // Nếu đã ở trong iframe -> Chạy game bình thường
+  // Already in an iframe: run the game normally
   if (isHydraEmbedMode()) {
     return true;
   }
 
-  // Nếu mở ở Top Window -> Mount Host Shell
+  // Top-level window: mount the host shell
   const shell = new HydraDevShellUI(options);
   shell.mount();
 

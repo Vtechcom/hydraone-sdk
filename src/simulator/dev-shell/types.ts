@@ -12,16 +12,16 @@ export interface DevShellWalletState {
 }
 
 export interface HydraDevShellOptions {
-  /** Tên dự án game hiển thị trên header */
+  /** Game project name shown in the header */
   projectName?: string;
-  /** URL của game cần nhúng vào iframe (mặc định lấy URL hiện tại với ?hydra_standalone=true) */
+  /** URL of the game to embed in the iframe (defaults to the current URL with ?hydra_standalone=true) */
   gameUrl?: string;
-  /** Cho phép sử dụng ví giả lập Mock Wallet (mặc định true) */
+  /** Enables the simulated Mock Wallet (default true) */
   enableMockWallet?: boolean;
-  /** Cho phép kết nối ví browser extension thật như Eternl, Lace qua CIP-30 (mặc định true) */
+  /** Enables connecting real browser-extension wallets such as Eternl and Lace via CIP-30 (default true) */
   enableRealWallet?: boolean;
-  /** Network ID mặc định (0 = Preprod/Testnet, 1 = Mainnet, mặc định 0) */
+  /** Default network ID (0 = Preprod/Testnet, 1 = Mainnet, default 0) */
   networkId?: number;
-  /** Callback khi trạng thái ví thay đổi */
+  /** Called when the wallet state changes */
   onWalletChange?: (state: DevShellWalletState) => void;
 }

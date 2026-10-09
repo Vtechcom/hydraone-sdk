@@ -8,7 +8,7 @@ import {
 } from '../../src/simulator';
 import { ERROR_CODES } from '../../src/core/errors';
 
-describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
+describe('Floating DevTools UI Widget (@hydraone/sdk/simulator)', () => {
   let host: MockBridgeHost;
   let widget: DevToolsWidget | undefined;
 
@@ -29,7 +29,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('1. Mounting, Shadow DOM & Lifecycle', () => {
-    it('khởi tạo và mount widget vào document.body với Shadow DOM', () => {
+    it('initializes and mounts the widget into document.body with a Shadow DOM', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       expect(widget.isMounted).toBe(true);
@@ -41,13 +41,13 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(hostEl?.getAttribute('data-position')).toBe('bottom-right');
       expect(hostEl?.getAttribute('data-theme')).toBe('dark');
 
-      // Shadow DOM phải chứa panel đầy đủ
+      // The Shadow DOM must contain the full panel
       const panel = widget.shadowRoot?.querySelector('.hydra-devtools-panel');
       expect(panel).not.toBeNull();
       expect(panel?.textContent).toContain('HydraOne DevTools');
     });
 
-    it('hỗ trợ mount vào custom container và vị trí tùy chỉnh', () => {
+    it('supports mounting into a custom container and a custom position', () => {
       const customContainer = document.createElement('div');
       customContainer.id = 'my-game-container';
       document.body.appendChild(customContainer);
@@ -67,7 +67,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.textContent).toContain('Custom Game DevTools');
     });
 
-    it('mount nhiều lần là thao tác an toàn (idempotent)', () => {
+    it('mounting repeatedly is safe (idempotent)', () => {
       widget = new DevToolsWidget({ host });
       widget.mount();
       widget.mount();
@@ -76,7 +76,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(hosts.length).toBe(1);
     });
 
-    it('unmount và destroy gỡ bỏ phần tử khỏi DOM và dọn dẹp listeners', () => {
+    it('unmount and destroy remove the element from the DOM and clean up listeners', () => {
       widget = mountDevTools({ host });
       expect(document.getElementById('hydra-devtools-host')).not.toBeNull();
 
@@ -87,8 +87,8 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
     });
   });
 
-  describe('2. Collapsible Floating Panel (Thu gọn / Mở rộng)', () => {
-    it('khởi tạo ở trạng thái thu gọn (collapsed) khi cấu hình defaultCollapsed: true', () => {
+  describe('2. Collapsible Floating Panel (Collapse / Expand)', () => {
+    it('starts collapsed when defaultCollapsed: true is configured', () => {
       widget = mountDevTools({ host, defaultCollapsed: true });
 
       expect(widget.isCollapsed).toBe(true);
@@ -98,7 +98,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.querySelector('.hydra-devtools-panel')).toBeNull();
     });
 
-    it('chuyển đổi mở rộng khi click nút expand và thu gọn khi click collapse', () => {
+    it('expands when the expand button is clicked and collapses when collapse is clicked', () => {
       widget = mountDevTools({ host, defaultCollapsed: true });
       expect(widget.isCollapsed).toBe(true);
 
@@ -117,7 +117,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.querySelector('.hydra-devtools-badge')).not.toBeNull();
     });
 
-    it('gọi phương thức expand(), collapse(), toggleCollapse() trực tiếp bằng code', () => {
+    it('calling expand(), collapse() and toggleCollapse() directly from code', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       expect(widget.isCollapsed).toBe(false);
 
@@ -133,7 +133,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('3. Wallet Connection & Disconnection ("Connect Mock Wallet", "Disconnect")', () => {
-    it('hiển thị trạng thái Connected và thông tin ví mặc định', () => {
+    it('shows the Connected state and the default wallet info', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       expect(host.isWalletConnected()).toBe(true);
@@ -147,7 +147,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(btnDisconnect.disabled).toBe(false);
     });
 
-    it('click "Disconnect" ngắt kết nối ví và khiến các RPC CIP-30 tiếp theo trả về ERR_NOT_CONNECTED', async () => {
+    it('click "Disconnect" disconnects the wallet so later CIP-30 RPCs return ERR_NOT_CONNECTED', async () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       const transport = host.createClientTransport();
 
@@ -157,7 +157,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(host.isWalletConnected()).toBe(false);
       expect(widget.shadowRoot?.textContent).toContain('Disconnected');
 
-      // Gửi RPC GET_BALANCE từ transport
+      // Send a GET_BALANCE RPC from the transport
       let rpcResponse: any;
       transport.onMessage((msg) => {
         if (msg.type === 'RPC_ERROR' || msg.type === 'RPC_RESPONSE') {
@@ -178,7 +178,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(rpcResponse.payload?.error?.code).toBe(ERROR_CODES.ERR_NOT_CONNECTED);
     });
 
-    it('click "Connect Mock Wallet" kết nối lại ví thành công', async () => {
+    it('click "Connect Mock Wallet" reconnects the wallet successfully', async () => {
       host.disconnectWallet();
       widget = mountDevTools({ host, defaultCollapsed: false });
 
@@ -191,7 +191,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(host.isWalletConnected()).toBe(true);
       expect(widget.shadowRoot?.textContent).toContain('Connected');
 
-      // Test RPC GET_BALANCE thành công sau khi kết nối lại
+      // GET_BALANCE succeeds after reconnecting
       const transport = host.createClientTransport();
       let rpcResponse: any;
       transport.onMessage((msg) => {
@@ -212,7 +212,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(rpcResponse.type).toBe('RPC_RESPONSE');
     });
 
-    it('tích hợp với client mock: gọi client.init() và client.disconnect() khi click nút', async () => {
+    it('integrates with a mock client: calls client.init() and client.disconnect() on button click', async () => {
       const mockClient = {
         init: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn(),
@@ -231,7 +231,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('4. "Trigger Reject Next Signing" (User Rejection Simulation)', () => {
-    it('kích hoạt rejectNext() khi click nút "Trigger Reject Next Signing"', async () => {
+    it('triggers rejectNext() when the button is clicked: "Trigger Reject Next Signing"', async () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       const transport = host.createClientTransport();
 
@@ -243,7 +243,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(host.isRejectNextActive()).toBe(true);
       expect(widget.shadowRoot?.textContent).toContain('ACTIVE');
 
-      // Gửi SIGN_TX
+      // Send SIGN_TX
       let rpcResponse: any;
       transport.onMessage((msg) => {
         rpcResponse = msg;
@@ -262,11 +262,11 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(rpcResponse.type).toBe('RPC_ERROR');
       expect(rpcResponse.payload?.error?.code).toBe(ERROR_CODES.ERR_USER_REJECTED);
 
-      // Cờ reject next phải tự động reset sau khi đã bị từ chối
+      // The reject-next flag must reset automatically after a rejection
       expect(host.isRejectNextActive()).toBe(false);
     });
 
-    it('phương thức triggerRejectNext() có thể nhận lý do tùy chỉnh', async () => {
+    it('triggerRejectNext() accepts a custom reason', async () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       const transport = host.createClientTransport();
 
@@ -291,12 +291,12 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('5. "Simulate Safari ITP Storage Block"', () => {
-    it('khi bật Safari ITP, các thao tác localStorage phát sinh SecurityError', () => {
+    it('with Safari ITP on, localStorage operations raise SecurityError', () => {
       widget = mountDevTools({ host, defaultCollapsed: false, interceptLocalStorage: true });
 
       expect(widget.isSafariItpActive).toBe(false);
 
-      // Lưu trữ bình thường trước khi bật ITP
+      // Storage works normally before ITP is enabled
       localStorage.setItem('test_key', 'initial_value');
       expect(localStorage.getItem('test_key')).toBe('initial_value');
 
@@ -307,7 +307,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.isSafariItpActive).toBe(true);
       expect(host.isStorageBlock()).toBe(true);
 
-      // Kiểm tra thao tác localStorage ném SecurityError
+      // localStorage operations must throw SecurityError
       expect(() => {
         localStorage.setItem('another_key', 'value');
       }).toThrowError();
@@ -318,19 +318,19 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
         expect(err.name).toBe('SecurityError');
       }
 
-      // Tắt Safari ITP
+      // Turn Safari ITP off
       btnItp.click();
       expect(widget.isSafariItpActive).toBe(false);
       expect(host.isStorageBlock()).toBe(false);
 
-      // Kiểm tra localStorage khôi phục hoạt động bình thường
+      // localStorage works normally again
       expect(() => {
         localStorage.setItem('after_restore', 'works');
       }).not.toThrow();
       expect(localStorage.getItem('after_restore')).toBe('works');
     });
 
-    it('khi bật Safari ITP, Host Storage Relay ném lỗi ERR_STORAGE_UNAVAILABLE', async () => {
+    it('with Safari ITP on, Host Storage Relay throws ERR_STORAGE_UNAVAILABLE', async () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
       const transport = host.createClientTransport();
 
@@ -357,7 +357,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('6. Simulated Network Latency Controls', () => {
-    it('click các preset buttons 0ms, 500ms, 1000ms, 2000ms cập nhật latency trên MockBridgeHost', () => {
+    it('clicking the 0ms, 500ms, 1000ms and 2000ms presets updates latency on MockBridgeHost', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       const preset500 = widget.shadowRoot?.querySelector('[data-latency="500"]') as HTMLButtonElement;
@@ -373,7 +373,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('1000ms');
     });
 
-    it('gọi widget.setLatency(ms) đồng bộ dữ liệu chuẩn xác', () => {
+    it('widget.setLatency(ms) keeps the data in sync', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       widget.setLatency(2000);
@@ -383,23 +383,23 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('7. Reactive Two-Way State Sync & Host Controls', () => {
-    it('widget tự động cập nhật UI khi MockBridgeHost thay đổi từ code bên ngoài', () => {
+    it('the widget refreshes its UI when MockBridgeHost is changed from outside', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
-      // Host thay đổi độ trễ từ ngoài
+      // The host latency changes externally
       host.setLatency(1500);
       expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('1500ms');
 
-      // Host thay đổi số dư từ ngoài
+      // The host balance changes externally
       host.setWalletBalance(2_500_000_000n); // 2,500 ADA
       expect(widget.shadowRoot?.textContent).toContain('2,500 ADA');
 
-      // Host ngắt kết nối ví từ ngoài
+      // The host disconnects the wallet externally
       host.disconnectWallet();
       expect(widget.shadowRoot?.textContent).toContain('Disconnected');
     });
 
-    it('điều khiển Theme và Audio từ DevTools phát broadcast sự kiện', () => {
+    it('controlling Theme and Audio from DevTools broadcasts events', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       const broadcastSpy = vi.spyOn(host, 'broadcastTheme');
@@ -414,7 +414,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(audioSpy).toHaveBeenCalledWith(true);
     });
 
-    it('cho phép cập nhật số dư qua setBalance()', () => {
+    it('allows updating the balance through setBalance()', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       widget.setBalance(500);
@@ -424,7 +424,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('8. SafariItpStorageSimulator standalone helper', () => {
-    it('hoạt động độc lập và khôi phục khi disable()', () => {
+    it('works standalone and restores state on disable()', () => {
       const sim = new SafariItpStorageSimulator();
       expect(sim.isActive).toBe(false);
 
@@ -443,7 +443,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       }).not.toThrow();
     });
 
-    it('toggle() chuyển đổi trạng thái', () => {
+    it('toggle() flips the state', () => {
       const sim = new SafariItpStorageSimulator();
       expect(sim.toggle()).toBe(true);
       expect(sim.isActive).toBe(true);
@@ -451,7 +451,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(sim.isActive).toBe(false);
     });
 
-    it('chặn cả sessionStorage khi kích hoạt enable()', () => {
+    it('also blocks sessionStorage when enable() is called', () => {
       const sim = new SafariItpStorageSimulator();
       sim.enable();
 
@@ -468,7 +468,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('9. Input Boundaries & Internal Host Cleanup', () => {
-    it('setBalance xử lý an toàn khi truyền NaN hoặc số âm', () => {
+    it('setBalance handles NaN or negative numbers safely', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       widget.setBalance(-50);
@@ -478,14 +478,14 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(host.getWalletState().balanceLovelace).toBe(0n);
     });
 
-    it('setLatency xử lý an toàn khi truyền số âm hoặc không hợp lệ', () => {
+    it('setLatency handles negative or invalid numbers safely', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       widget.setLatency(-200);
       expect(host.getLatency()).toBe(0);
     });
 
-    it('destroy() tự động dọn dẹp internal host nếu widget tự khởi tạo host', () => {
+    it('destroy() cleans up the internal host when the widget created it', () => {
       const internalWidget = new DevToolsWidget();
       const internalHost = internalWidget.host;
       const destroySpy = vi.spyOn(internalHost, 'destroy');
@@ -498,7 +498,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('10. Node.js / SSR Safety', () => {
-    it('mountDevTools không crash khi document là undefined', () => {
+    it('mountDevTools does not crash when document is undefined', () => {
       const originalDoc = globalThis.document;
       try {
         (globalThis as any).document = undefined;
@@ -511,14 +511,14 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
   });
 
   describe('11. Code Review Patches Verification', () => {
-    it('MockBridgeHost khởi tạo với isWalletConnected: false', () => {
+    it('MockBridgeHost starts with isWalletConnected: false', () => {
       const disconnectedHost = new MockBridgeHost({ isWalletConnected: false });
       expect(disconnectedHost.isWalletConnected()).toBe(false);
       expect(disconnectedHost.isConnected()).toBe(false);
       disconnectedHost.destroy();
     });
 
-    it('gọi mountDevTools() nhiều lần tự động gỡ bỏ container cũ, chỉ giữ duy nhất 1 #hydra-devtools-host', () => {
+    it('calling mountDevTools() repeatedly removes the old container and keeps exactly one #hydra-devtools-host', () => {
       const w1 = mountDevTools({ host });
       expect(document.querySelectorAll('#hydra-devtools-host').length).toBe(1);
 
@@ -529,18 +529,18 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       w2.destroy();
     });
 
-    it('đồng bộ SafariItpStorageSimulator khi host.setStorageBlock() được kích hoạt từ bên ngoài', () => {
+    it('syncs SafariItpStorageSimulator when host.setStorageBlock() is triggered externally', () => {
       widget = mountDevTools({ host, defaultCollapsed: false, interceptLocalStorage: true });
       expect(widget.isSafariItpActive).toBe(false);
 
-      // Kích hoạt từ ngoài
+      // Enabled externally
       host.setStorageBlock(true);
       expect(widget.isSafariItpActive).toBe(true);
       expect(() => {
         localStorage.setItem('k_ext', 'v');
       }).toThrowError(/Safari ITP/);
 
-      // Tắt từ ngoài
+      // Disabled externally
       host.setStorageBlock(false);
       expect(widget.isSafariItpActive).toBe(false);
       expect(() => {
@@ -548,7 +548,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       }).not.toThrow();
     });
 
-    it('rejectNext("") với lý do rỗng tự động fallback về thông điệp mặc định', async () => {
+    it('rejectNext("") with an empty reason falls back to the default message', async () => {
       host.rejectNext('');
       const transport = host.createClientTransport();
       let rpcResponse: any;
@@ -567,7 +567,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(rpcResponse?.payload?.error?.message).toBe('User rejected the wallet operation');
     });
 
-    it('SafariItpStorageSimulator.disable() khôi phục hoạt động lưu trữ và thuộc tính length của localStorage', () => {
+    it('SafariItpStorageSimulator.disable() restores storage behavior and the length property of localStorage', () => {
       const sim = new SafariItpStorageSimulator();
       sim.enable();
       expect(sim.isActive).toBe(true);
@@ -581,19 +581,19 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(typeof localStorage.length).toBe('number');
     });
 
-    it('new DevToolsWidget({ container: customContainer }).mount() gắn vào đúng container khi không truyền tham số', () => {
+    it('new DevToolsWidget({ container: customContainer }).mount() attaches to the right container when no argument is passed', () => {
       const customDiv = document.createElement('div');
       customDiv.id = 'target-game-div';
       document.body.appendChild(customDiv);
 
       widget = new DevToolsWidget({ host, container: customDiv });
-      widget.mount(); // Không truyền tham số
+      widget.mount(); // No argument passed
 
       expect(customDiv.querySelector('#hydra-devtools-host')).not.toBeNull();
       expect(widget.element?.parentElement).toBe(customDiv);
     });
 
-    it('nhập độ trễ tùy chỉnh qua input và click Set cập nhật latency trên MockBridgeHost', () => {
+    it('entering a custom latency in the input and clicking Set updates latency on MockBridgeHost', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       const input = widget.shadowRoot?.querySelector('#input-custom-latency') as HTMLInputElement;
@@ -609,7 +609,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('1750ms');
     });
 
-    it('nhập độ trễ tùy chỉnh và nhấn Enter cập nhật latency', () => {
+    it('entering a custom latency and pressing Enter updates latency', () => {
       widget = mountDevTools({ host, defaultCollapsed: false });
 
       const input = widget.shadowRoot?.querySelector('#input-custom-latency') as HTMLInputElement;
@@ -620,7 +620,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       expect(widget.shadowRoot?.querySelector('.latency-label')?.textContent).toBe('350ms');
     });
 
-    it('hỗ trợ theme: "auto" với prefers-color-scheme media query', () => {
+    it('supports theme: "auto" with the prefers-color-scheme media query', () => {
       const originalMatchMedia = window.matchMedia;
       try {
         window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -641,7 +641,7 @@ describe('Story 5.2: Floating DevTools UI Widget (@hydraone/sdk/simulator)', () 
       }
     });
 
-    it('disconnectMockWallet() xử lý an toàn khi client.disconnect() trả về Promise', async () => {
+    it('disconnectMockWallet() is safe when client.disconnect() returns a Promise', async () => {
       let resolved = false;
       const asyncClient = {
         disconnect: vi.fn().mockImplementation(async () => {

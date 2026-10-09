@@ -1,10 +1,7 @@
 /**
  * @hydraone/sdk/simulator — HydraDevShell UI Renderer
- * Sao chép 100% giao diện và styling từ hydraone-web-client:
- * - layouts/hydra-game.vue (.game-layout, bg #0a0a1a)
- * - components/layout/Header.vue (Logo quay anim-hyperspace-flux, menu ShinyText, StripeButton ví, Popover)
- * - components/apps/_shared/ModalConnectWallet.vue (Modal backdrop blur, danh sách ví Eternl/Lace/Mock)
- * - components/game/GameIframeContainer.vue (Loader xoay flux continuous, iframe sandbox, error overlay)
+ * Renders a replica of the HydraOne web client shell: game layout, header with
+ * animated logo and wallet button, wallet connection modal and the game iframe container.
  */
 
 import type {
@@ -14,14 +11,14 @@ import type {
 import { DevShellBridgeController } from "./shell-bridge";
 import { HYDRA_LOGO_SRC } from "./assets";
 
-/** Helper rút gọn chuỗi address y hệt formatId() trong composables/useFormat.ts của hydraone-web-client */
+/** Shortens an address for display */
 function formatId(id: string | null | undefined, begin = 6, last = 4): string {
   if (!id) return "";
   if (id.length <= begin + last) return id;
   return id.substring(0, begin) + "..." + id.substring(id.length - last);
 }
 
-// Icon Cardano SVG chuẩn
+// Standard Cardano icon (SVG)
 const CARDANO_ICON_SVG = `
 <svg class="cardano-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="12" cy="12" r="3" fill="#38b8fc"/>
@@ -38,7 +35,7 @@ const CARDANO_ICON_SVG = `
 
 const EXACT_WEB_CLIENT_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
-   100% EXACT CSS FROM hydraone-web-client (tailwind.css & components)
+   Shell styles
    ═════════════════════════════════════════════════════════════════════════ */
 :root {
   --background: #000000;
@@ -65,7 +62,7 @@ html, body {
   overflow: hidden !important;
 }
 
-/* Layout chuẩn hydra-game.vue */
+/* Game layout */
 .game-layout {
   --header-height: 64px;
   display: flex;
@@ -78,7 +75,7 @@ html, body {
   box-sizing: border-box;
 }
 
-/* ─── Header.vue ─────────────────────────────────────────────────────────── */
+/* ─── Header ─────────────────────────────────────────────────────────── */
 .game-header {
   height: var(--header-height);
   background-color: rgba(10, 10, 26, 0.95);
@@ -127,7 +124,7 @@ html, body {
   color: #ffffff;
 }
 
-/* Keyframe anim-hyperspace-flux (từ Header.vue) */
+/* Keyframe: hyperspace flux (header logo) */
 @keyframes anim-hyperspace-flux {
   0%, 85%, 100% {
     transform: rotate(0deg) scale(1);
@@ -149,7 +146,7 @@ html, body {
   animation: anim-hyperspace-flux 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Keyframe continuous (từ GameIframeContainer.vue) */
+/* Keyframe: continuous flux (game loading overlay) */
 @keyframes anim-hyperspace-flux-continuous {
   0% { transform: rotate(0deg) scale(1); }
   50% { transform: rotate(180deg) scale(1.12); }
@@ -190,7 +187,7 @@ html, body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* ShinyText effect (từ ShinyText.vue) */
+/* Shiny text effect */
 .shiny-text {
   position: relative;
   display: inline-block;
@@ -216,7 +213,7 @@ html, body {
   gap: 12px;
 }
 
-/* Connect Button (Khi chưa kết nối - chuẩn Header.vue) */
+/* Connect button (wallet not connected) */
 .btn-connect-wallet {
   font-size: 13px;
   font-weight: 600;
@@ -235,7 +232,7 @@ html, body {
   transform: translateY(-1px);
 }
 
-/* StripeButton Pill (Khi đã kết nối - chuẩn Header.vue) */
+/* Stripe button pill (wallet connected) */
 .wallet-connected-pill {
   height: 36px;
   display: flex;
@@ -278,7 +275,7 @@ html, body {
   -webkit-text-fill-color: transparent;
 }
 
-/* Popover Dropdown (Chuẩn Header.vue lines 175-239) */
+/* Popover dropdown */
 .wallet-popover {
   position: absolute;
   top: 56px;
@@ -367,7 +364,7 @@ html, body {
   background: rgba(246, 70, 93, 0.2);
 }
 
-/* ─── ModalConnectWallet.vue ─────────────────────────────────────────────── */
+/* ─── Wallet connection modal ─────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -482,7 +479,7 @@ html, body {
   color: #64748b;
 }
 
-/* ─── GameIframeContainer.vue ────────────────────────────────────────────── */
+/* ─── Game iframe container ────────────────────────────────────────────── */
 .game-iframe-wrapper {
   position: relative;
   flex: 1;
@@ -598,10 +595,10 @@ export class HydraDevShellUI {
 
     const targetUrl = this.options.gameUrl || this.buildStandaloneGameUrl();
 
-    // 2. Render Root DOM (Sao chép 100% cấu trúc HTML của hydraone-web-client)
+    // 2. Render the root DOM
     document.body.innerHTML = `
       <div class="game-layout">
-        <!-- 1. HEADER CHUẨN Header.vue -->
+        <!-- 1. HEADER -->
         <nav class="game-header">
           <!-- Left: Logo + Desktop nav -->
           <div class="header-left">
@@ -624,10 +621,10 @@ export class HydraDevShellUI {
 
           <!-- Right: actions & Wallet -->
           <div class="header-right">
-            <!-- Nút Connect khi chưa kết nối -->
+            <!-- Connect button when disconnected -->
             <button id="btn-top-connect" class="btn-connect-wallet" style="display: none;">Connect</button>
 
-            <!-- StripeButton Pill khi đã kết nối -->
+            <!-- Stripe button pill when connected -->
             <div id="btn-wallet-pill" class="wallet-connected-pill">
               ${CARDANO_ICON_SVG}
               <span class="pill-balance" id="header-balance-text">1,000.00 ADA</span>
@@ -654,16 +651,16 @@ export class HydraDevShellUI {
           </div>
         </nav>
 
-        <!-- 2. GAME CONTAINER CHUẨN GameIframeContainer.vue -->
+        <!-- 2. GAME CONTAINER -->
         <main class="game-iframe-wrapper" id="game-main-wrapper">
           <div class="iframe-viewport-box" id="iframe-viewport-box">
-            <!-- Loading Overlay với animation continuous -->
+            <!-- Loading overlay with continuous animation -->
             <div id="game-loader-overlay" class="loader-overlay">
               <img src="${HYDRA_LOGO_SRC}" alt="HydraOne" class="logo-hyperspace-flux-continuous" style="width: 44px; height: 44px; margin-bottom: 16px; object-fit: contain;" />
               <span class="loader-text">Initializing Game...</span>
             </div>
 
-            <!-- Thẻ Iframe chuẩn 100% production của HydraOne -->
+            <!-- Production-like HydraOne game iframe -->
             <iframe
               id="hydra-game-iframe"
               class="the-game-iframe"
@@ -676,7 +673,7 @@ export class HydraDevShellUI {
           </div>
         </main>
 
-        <!-- 4. MODAL KẾT NỐI VÍ CHUẨN ModalConnectWallet.vue -->
+        <!-- 4. WALLET CONNECTION MODAL -->
         <div class="modal-overlay" id="wallet-connect-modal">
           <div class="modal-panel">
             <div class="modal-header">
@@ -687,7 +684,7 @@ export class HydraDevShellUI {
               <button class="modal-close-btn" id="btn-close-wallet-modal">&times;</button>
             </div>
 
-            <!-- Danh sách các ví -->
+            <!-- Wallet list -->
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <!-- ⚡ Mock Wallet -->
               <div class="wallet-item active" id="modal-opt-mock">
@@ -738,7 +735,7 @@ export class HydraDevShellUI {
     this.bindEvents();
     this.updateWalletUI(this.bridge.state);
 
-    // Tự động kết nối lại ví nếu đã lưu trong localStorage (Eternl, Lace hoặc Mock)
+    // Reconnect automatically if a wallet was stored in localStorage (Eternl, Lace or Mock)
     this.bridge.autoReconnect().catch((err) => {
       console.warn("[HydraDevShell] autoReconnect error:", err);
     });
@@ -833,9 +830,9 @@ export class HydraDevShellUI {
         } catch (err: any) {
           if (statusSpan) statusSpan.textContent = prevText;
           const msg = err?.message || String(err);
-          if (msg.includes("Không tìm thấy ví") || msg.includes("not found")) {
+          if (msg.includes("not found")) {
             const openStore = confirm(
-              msg + "\n\nBạn có muốn mở Chrome Web Store để cài đặt tiện ích Eternl không?"
+              msg + "\n\nDo you want to open the Chrome Web Store to install the Eternl extension?"
             );
             if (openStore && typeof window !== "undefined") {
               window.open(
@@ -844,7 +841,7 @@ export class HydraDevShellUI {
               );
             }
           } else {
-            alert("Lỗi kết nối Eternl: " + msg);
+            alert("Eternl connection error: " + msg);
           }
         }
       });
@@ -863,9 +860,9 @@ export class HydraDevShellUI {
         } catch (err: any) {
           if (statusSpan) statusSpan.textContent = prevText;
           const msg = err?.message || String(err);
-          if (msg.includes("Không tìm thấy ví") || msg.includes("not found")) {
+          if (msg.includes("not found")) {
             const openStore = confirm(
-              msg + "\n\nBạn có muốn mở Chrome Web Store để cài đặt tiện ích Lace không?"
+              msg + "\n\nDo you want to open the Chrome Web Store to install the Lace extension?"
             );
             if (openStore && typeof window !== "undefined") {
               window.open(
@@ -874,7 +871,7 @@ export class HydraDevShellUI {
               );
             }
           } else {
-            alert("Lỗi kết nối Lace: " + msg);
+            alert("Lace connection error: " + msg);
           }
         }
       });
@@ -885,7 +882,7 @@ export class HydraDevShellUI {
       ?.addEventListener("click", () => {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(this.bridge.state.address);
-          alert("Đã sao chép địa chỉ: " + this.bridge.state.address);
+          alert("Address copied: " + this.bridge.state.address);
         }
       });
 
@@ -928,7 +925,7 @@ export class HydraDevShellUI {
       }
     }
 
-    // Cập nhật trạng thái hiển thị trong Modal Connect Wallet
+    // Update the display state inside the wallet connection modal
     const mockBadge = document.querySelector("#modal-opt-mock span:last-child");
     const eternlBadge = document.querySelector("#modal-opt-eternl span:last-child");
     const laceBadge = document.querySelector("#modal-opt-lace span:last-child");

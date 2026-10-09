@@ -11,7 +11,7 @@ import type {
 import { MockClientTransport } from './mock-transport';
 
 /**
- * Hàm sinh ID ngẫu nhiên cho bản tin
+ * Generates a random ID for a message
  */
 function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -21,7 +21,7 @@ function generateId(): string {
 }
 
 /**
- * Mã hóa Lovelace thành chuỗi hex CBOR hợp lệ theo chuẩn CIP-30
+ * Encodes Lovelace as a CIP-30 compliant CBOR hex string
  */
 export function encodeLovelaceToCbor(lovelace: bigint): string {
   if (lovelace < 0n) {
@@ -45,7 +45,7 @@ export function encodeLovelaceToCbor(lovelace: bigint): string {
 }
 
 /**
- * Mã hóa chuỗi byte CBOR (Major type 2)
+ * Encodes a CBOR byte string (major type 2)
  */
 function encodeCborBytes(hex: string): string {
   let cleanHex = hex.replace(/^0x/i, '');
@@ -63,7 +63,7 @@ function encodeCborBytes(hex: string): string {
 }
 
 /**
- * Mã hóa Map header CBOR (Major type 5)
+ * Encodes a CBOR map header (major type 5)
  */
 function encodeCborMapHeader(length: number): string {
   if (length <= 23) {
@@ -76,7 +76,7 @@ function encodeCborMapHeader(length: number): string {
 }
 
 /**
- * Mã hóa Cardano Value (Lovelace + Multi-assets) thành chuỗi CBOR hex chuẩn CIP-30
+ * Encodes a Cardano Value (Lovelace + multi-assets) as a CIP-30 CBOR hex string
  */
 export function encodeCardanoValueToCbor(
   lovelace: bigint,
@@ -87,7 +87,7 @@ export function encodeCardanoValueToCbor(
     return coinCbor;
   }
 
-  // Nhóm các tài sản theo Policy ID (56 ký tự hex đầu tiên)
+  // Group assets by policy ID (first 56 hex characters)
   const policyMap = new Map<string, Map<string, bigint>>();
   for (const [fullUnit, qty] of Object.entries(assets)) {
     const cleanUnit = fullUnit.replace(/^0x/i, '').toLowerCase();
@@ -120,8 +120,8 @@ export function encodeCardanoValueToCbor(
 }
 
 /**
- * Lớp MockBridgeHost - Giả lập App Center Host Shell và ví Web3 Cardano
- * Phản hồi các truy vấn CIP-30, CIP-8, Host Storage Relay và Lifecycle Events.
+ * MockBridgeHost - simulates the App Center host shell and a Cardano Web3 wallet.
+ * Answers CIP-30, CIP-8, Host Storage Relay and lifecycle event requests.
  */
 export class MockBridgeHost {
   public appName: string;
@@ -196,7 +196,7 @@ export class MockBridgeHost {
   // ==========================================
 
   /**
-   * Thiết lập độ trễ mạng giả lập (ms)
+   * Sets the simulated network latency (ms)
    */
   public setLatency(ms: number): void {
     this.latencyMs = Math.max(0, ms);
@@ -204,14 +204,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Lấy độ trễ mạng hiện tại
+   * Returns the current network latency
    */
   public getLatency(): number {
     return this.latencyMs;
   }
 
   /**
-   * Bật hoặc tắt chế độ từ chối ký ví
+   * Enables or disables wallet signing rejection mode
    */
   public setRejectionMode(enabled: boolean): void {
     this.rejectionMode = enabled;
@@ -219,14 +219,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Kiểm tra chế độ từ chối ký ví
+   * Returns whether wallet signing rejection mode is on
    */
   public isRejectionMode(): boolean {
     return this.rejectionMode;
   }
 
   /**
-   * Cố tình từ chối một yêu cầu ký tiếp theo duy nhất
+   * Rejects only the next signing request
    */
   public rejectNext(reason?: string): void {
     this.rejectNextFlag = true;
@@ -235,14 +235,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Kiểm tra cờ reject next có đang được kích hoạt hay không
+   * Returns whether the reject-next flag is set
    */
   public isRejectNextActive(): boolean {
     return this.rejectNextFlag;
   }
 
   /**
-   * Bật hoặc tắt lỗi Safari ITP chặn storage
+   * Enables or disables Safari ITP storage blocking
    */
   public setStorageBlock(enabled: boolean): void {
     this.storageBlock = enabled;
@@ -250,28 +250,28 @@ export class MockBridgeHost {
   }
 
   /**
-   * Kiểm tra trạng thái chặn storage
+   * Returns whether storage is currently blocked
    */
   public isStorageBlock(): boolean {
     return this.storageBlock;
   }
 
   /**
-   * Kiểm tra xem ví giả lập có đang được kết nối không
+   * Returns whether the simulated wallet is connected
    */
   public isConnected(): boolean {
     return this._isWalletConnected;
   }
 
   /**
-   * Kiểm tra xem ví giả lập có đang được kết nối không
+   * Returns whether the simulated wallet is connected
    */
   public isWalletConnected(): boolean {
     return this._isWalletConnected;
   }
 
   /**
-   * Kết nối ví giả lập
+   * Connects the simulated wallet
    */
   public connectWallet(): void {
     this._isWalletConnected = true;
@@ -279,7 +279,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Ngắt kết nối ví giả lập
+   * Disconnects the simulated wallet
    */
   public disconnectWallet(): void {
     this._isWalletConnected = false;
@@ -287,7 +287,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Đặt trạng thái kết nối của ví giả lập
+   * Sets the connection state of the simulated wallet
    */
   public setWalletConnected(connected: boolean): void {
     this._isWalletConnected = connected;
@@ -295,7 +295,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Cập nhật số dư ví giả lập
+   * Updates the simulated wallet balance
    */
   public setWalletBalance(
     lovelace: bigint | string | number,
@@ -313,14 +313,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Lấy toàn bộ trạng thái ví giả lập
+   * Returns the full simulated wallet state
    */
   public getWalletState(): MockWalletState {
     return { ...this.walletState };
   }
 
   /**
-   * Cập nhật từng phần trạng thái ví giả lập
+   * Partially updates the simulated wallet state
    */
   public updateWalletState(updates: Partial<MockWalletState>): void {
     this.walletState = {
@@ -331,7 +331,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Lấy snapshot trạng thái hiện tại của MockBridgeHost
+   * Returns a snapshot of the current MockBridgeHost state
    */
   public getStateSnapshot(): MockBridgeHostState {
     return {
@@ -351,7 +351,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Đăng ký lắng nghe thay đổi trạng thái của MockBridgeHost
+   * Subscribes to MockBridgeHost state changes
    */
   public onStateChange(listener: MockHostStateListener): () => void {
     this.stateListeners.add(listener);
@@ -361,7 +361,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Phát thông báo cập nhật trạng thái tới toàn bộ listeners
+   * Notifies all listeners of a state change
    */
   public notifyStateChange(): void {
     const snapshot = this.getStateSnapshot();
@@ -377,14 +377,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Lấy thông tin player profile
+   * Returns the player profile
    */
   public getPlayerProfile(): MockPlayerProfile {
     return { ...this.playerProfile };
   }
 
   /**
-   * Cập nhật player profile
+   * Updates the player profile
    */
   public setPlayerProfile(updates: Partial<MockPlayerProfile>): void {
     this.playerProfile = {
@@ -394,21 +394,21 @@ export class MockBridgeHost {
   }
 
   /**
-   * Lấy giá trị trong in-memory storage của Host
+   * Reads a value from the host in-memory storage
    */
   public getStorage(key: string): string | undefined {
     return this.storage.get(key);
   }
 
   /**
-   * Đặt giá trị vào in-memory storage của Host
+   * Writes a value to the host in-memory storage
    */
   public setStorage(key: string, value: string): void {
     this.storage.set(key, value);
   }
 
   /**
-   * Xóa storage theo prefix
+   * Clears storage entries by prefix
    */
   public clearStorage(prefix = 'hydra:sdk:'): void {
     for (const key of Array.from(this.storage.keys())) {
@@ -423,7 +423,7 @@ export class MockBridgeHost {
   // ==========================================
 
   /**
-   * Khởi tạo một MockClientTransport in-memory kết nối trực tiếp với host này
+   * Creates an in-memory MockClientTransport wired directly to this host
    */
   public createClientTransport(options?: MockClientTransportOptions): MockClientTransport {
     const transport = new MockClientTransport(this, options);
@@ -432,14 +432,14 @@ export class MockBridgeHost {
   }
 
   /**
-   * Xóa transport khi bị destroy
+   * Removes a transport when it is destroyed
    */
   public removeClientTransport(transport: MockClientTransport): void {
     this.clients.delete(transport);
   }
 
   /**
-   * Gắn listener vào window message để nhận postMessage từ browser/iframe
+   * Attaches a window message listener to receive postMessage calls from the browser/iframe
    */
   public listenWindow(targetWindow?: Window): () => void {
     const win = targetWindow ?? (typeof window !== 'undefined' ? window : undefined);
@@ -499,7 +499,7 @@ export class MockBridgeHost {
   // ==========================================
 
   /**
-   * Phát sự kiện thay đổi trạng thái âm thanh tới toàn bộ client đã kết nối
+   * Broadcasts an audio mute change to all connected clients
    */
   public broadcastAudioMuted(muted: boolean): void {
     this.audioMuted = muted;
@@ -514,7 +514,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Phát sự kiện thay đổi chủ đề giao diện ('dark' | 'light') tới toàn bộ client
+   * Broadcasts a theme change ('dark' | 'light') to all connected clients
    */
   public broadcastTheme(theme: 'dark' | 'light'): void {
     this.theme = theme;
@@ -529,7 +529,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Gửi một bản tin broadcast tới tất cả connected client transports và attached windows
+   * Broadcasts a message to all connected client transports and attached windows
    */
   public broadcast(message: BridgeMessage): void {
     for (const client of Array.from(this.clients)) {
@@ -551,7 +551,7 @@ export class MockBridgeHost {
   // ==========================================
 
   /**
-   * Kiểm tra điều kiện có từ chối thao tác người dùng hay không
+   * Decides whether a user action should be rejected
    */
   private checkRejection(): { shouldReject: boolean; reason?: string } {
     if (this.rejectNextFlag) {
@@ -569,7 +569,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Xử lý bản tin nhận được từ Client
+   * Handles a message received from a client
    */
   public handleClientMessage(
     message: BridgeMessage,
@@ -628,7 +628,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Điều phối router xử lý từng loại bản tin BridgeMessageType
+   * Routes each BridgeMessageType to its handler
    */
   private processMessage(message: BridgeMessage): BridgeMessage | null {
     const { id, type, payload } = message;
@@ -725,7 +725,7 @@ export class MockBridgeHost {
       if (rejection.shouldReject) {
         return this.createRpcError(id, ERROR_CODES.ERR_USER_REJECTED, rejection.reason!);
       }
-      // Trả về witness set CBOR hex giả lập
+      // Return a simulated witness set (CBOR hex)
       const mockWitness =
         'a1008182582001020304050607080910111213141516171819202122232425262728293031325840112233445566778899001122334455667788990011223344556677889900112233445566778899001122334455667788990011223344';
       return this.createRpcResponse(id, mockWitness);
@@ -736,7 +736,7 @@ export class MockBridgeHost {
       if (rejection.shouldReject) {
         return this.createRpcError(id, ERROR_CODES.ERR_USER_REJECTED, rejection.reason!);
       }
-      // Trả về 64-char transaction hash
+      // Return a 64-char transaction hash
       const mockTxHash = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       return this.createRpcResponse(id, mockTxHash);
     }
@@ -746,14 +746,14 @@ export class MockBridgeHost {
       if (rejection.shouldReject) {
         return this.createRpcError(id, ERROR_CODES.ERR_USER_REJECTED, rejection.reason!);
       }
-      // Trả về CIP-8 signature payload
+      // Return a CIP-8 signature payload
       return this.createRpcResponse(id, {
         signature: '8458200102030405060708091011121314151617181920212223242526272829303132a05820',
         key: 'a40101032720062158200102030405060708091011121314151617181920212223242526272829303132',
       });
     }
 
-    // 4. Host Storage Relay (có hỗ trợ Safari ITP simulation)
+    // 4. Host Storage Relay (with Safari ITP simulation)
     if (type === 'HOST_STORAGE_GET') {
       if (this.storageBlock) {
         return this.createRpcError(
@@ -827,12 +827,12 @@ export class MockBridgeHost {
       return this.createRpcResponse(id, { acknowledged: true });
     }
 
-    // Fallback cho các bản tin không nhận dạng được
+    // Fallback for unrecognized messages
     return this.createRpcResponse(id, { acknowledged: true });
   }
 
   /**
-   * Tạo bản tin RPC_RESPONSE chuẩn
+   * Builds a standard RPC_RESPONSE message
    */
   private createRpcResponse(requestId: string, result: unknown): BridgeMessage {
     return {
@@ -848,7 +848,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Tạo bản tin RPC_ERROR chuẩn
+   * Builds a standard RPC_ERROR message
    */
   private createRpcError(requestId: string, code: string, message: string): BridgeMessage {
     return {
@@ -867,7 +867,7 @@ export class MockBridgeHost {
   }
 
   /**
-   * Dọn dẹp toàn bộ tài nguyên khi hủy host
+   * Releases all host resources
    */
   public destroy(): void {
     this.isDestroyed = true;

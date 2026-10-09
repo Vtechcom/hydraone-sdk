@@ -1,7 +1,7 @@
 /**
  * @hydraone/sdk/simulator — Floating DevTools UI Widget
- * Cung cấp widget giao diện nổi có thể thu gọn/mở rộng, đóng gói trong Shadow DOM,
- * điều khiển MockBridgeHost, mô phỏng lỗi ví Web3 và Safari ITP Storage Block.
+ * Floating, collapsible widget isolated in a Shadow DOM that
+ * controls MockBridgeHost and simulates Web3 wallet failures and Safari ITP storage blocking.
  */
 
 import { MockBridgeHost } from './mock-host';
@@ -13,8 +13,8 @@ import type {
 } from './types';
 
 /**
- * Lớp hỗ trợ mô phỏng Safari ITP trên globalThis.localStorage
- * Bằng cách can thiệp tạm thời vào các phương thức storage để ném SecurityError
+ * Simulates Safari ITP on globalThis.localStorage
+ * by temporarily patching the storage methods to throw SecurityError
  */
 export class SafariItpStorageSimulator {
   private originalMethods = new Map<Storage, {
@@ -35,7 +35,7 @@ export class SafariItpStorageSimulator {
   }
 
   /**
-   * Kích hoạt mô phỏng Safari ITP: Các thao tác localStorage & sessionStorage sẽ ném SecurityError
+   * Enables Safari ITP simulation: localStorage and sessionStorage operations throw SecurityError
    */
   public enable(): void {
     if (this._isActive) return;
@@ -46,12 +46,12 @@ export class SafariItpStorageSimulator {
         try {
           if (window.localStorage) storages.push(window.localStorage);
         } catch {
-          // Bỏ qua lỗi truy cập ban đầu
+          // Ignore the initial access error
         }
         try {
           if (window.sessionStorage) storages.push(window.sessionStorage);
         } catch {
-          // Bỏ qua lỗi truy cập ban đầu
+          // Ignore the initial access error
         }
       } else if (typeof globalThis !== 'undefined') {
         try {
@@ -127,12 +127,12 @@ export class SafariItpStorageSimulator {
 
       this._isActive = true;
     } catch {
-      // Bỏ qua lỗi nếu môi trường không cho phép can thiệp storage
+      // Ignore errors when the environment does not allow patching storage
     }
   }
 
   /**
-   * Vô hiệu hóa mô phỏng Safari ITP, khôi phục các phương thức storage nguyên bản
+   * Disables Safari ITP simulation and restores the original storage methods
    */
   public disable(): void {
     if (!this._isActive) return;
@@ -172,7 +172,7 @@ export class SafariItpStorageSimulator {
   }
 
   /**
-   * Đảo ngược trạng thái bật/tắt
+   * Toggles the on/off state
    */
   public toggle(): boolean {
     if (this._isActive) {
@@ -185,7 +185,7 @@ export class SafariItpStorageSimulator {
 }
 
 /**
- * Lớp điều khiển Floating DevTools UI Widget
+ * Controller for the floating DevTools UI widget
  */
 export class DevToolsWidget {
   public readonly host: MockBridgeHost;
@@ -221,35 +221,35 @@ export class DevToolsWidget {
   }
 
   /**
-   * Widget đã được mount vào DOM hay chưa
+   * Whether the widget is mounted in the DOM
    */
   public get isMounted(): boolean {
     return this._isMounted;
   }
 
   /**
-   * Widget đang ở trạng thái thu gọn hay không
+   * Whether the widget is collapsed
    */
   public get isCollapsed(): boolean {
     return this._isCollapsed;
   }
 
   /**
-   * Phần tử container ngoài cùng của widget
+   * Outermost container element of the widget
    */
   public get element(): HTMLElement | undefined {
     return this.containerEl;
   }
 
   /**
-   * ShadowRoot của widget
+   * ShadowRoot of the widget
    */
   public get shadowRoot(): ShadowRoot | undefined {
     return this.shadow;
   }
 
   /**
-   * Trạng thái mô phỏng Safari ITP của Storage
+   * Safari ITP storage simulation state
    */
   public get isSafariItpActive(): boolean {
     return this.host.isStorageBlock() || this.storageSimulator.isActive;
@@ -260,7 +260,7 @@ export class DevToolsWidget {
   // ==========================================
 
   /**
-   * Gắn widget vào DOM
+   * Mounts the widget into the DOM
    */
   public mount(targetContainer?: HTMLElement): this {
     if (this._isMounted) {
@@ -282,34 +282,34 @@ export class DevToolsWidget {
       return this;
     }
 
-    // Gỡ bỏ container cũ nếu đã tồn tại trên toàn document để tránh nhân bản #hydra-devtools-host khi re-mount
+    // Remove any stale container from the whole document so re-mounting does not duplicate #hydra-devtools-host
     const existing = document.querySelector('#hydra-devtools-host');
     if (existing && existing.parentNode) {
       existing.parentNode.removeChild(existing);
     }
 
-    // Tạo host container element
+    // Create the host container element
     this.containerEl = document.createElement('div');
     this.containerEl.id = 'hydra-devtools-host';
     this.containerEl.setAttribute('data-position', this.position);
     this.containerEl.setAttribute('data-theme', this.theme);
 
-    // Đính kèm Shadow DOM để cách ly 100% CSS
+    // Attach a Shadow DOM to fully isolate CSS
     this.shadow = this.containerEl.attachShadow({ mode: 'open' });
 
-    // Đồng bộ ban đầu với storageBlock nếu host đã bật từ trước
+    // Sync with storageBlock if the host already enabled it
     if (this.interceptLocalStorage && this.host.isStorageBlock()) {
       this.storageSimulator.enable();
     }
 
-    // Render nội dung ban đầu
+    // Render the initial content
     this.render();
 
-    // Gắn vào DOM cha
+    // Attach to the parent element
     parent.appendChild(this.containerEl);
     this._isMounted = true;
 
-    // Lắng nghe thay đổi trạng thái từ MockBridgeHost để tự động cập nhật UI và đồng bộ storage simulation
+    // Listen to MockBridgeHost state changes to refresh the UI and keep the storage simulation in sync
     this.unsubscribeHostState = this.host.onStateChange((state) => {
       if (this._isMounted) {
         if (this.interceptLocalStorage) {
@@ -327,7 +327,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Gỡ widget khỏi DOM
+   * Removes the widget from the DOM
    */
   public unmount(): void {
     if (!this._isMounted) return;
@@ -356,7 +356,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Hủy triệt để widget và dọn dẹp mọi tài nguyên
+   * Fully destroys the widget and releases all resources
    */
   public destroy(): void {
     this.unmount();
@@ -370,7 +370,7 @@ export class DevToolsWidget {
   // ==========================================
 
   /**
-   * Thu gọn panel thành floating badge
+   * Collapses the panel into a floating badge
    */
   public collapse(): void {
     this._isCollapsed = true;
@@ -378,7 +378,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Mở rộng floating badge thành full panel
+   * Expands the floating badge into the full panel
    */
   public expand(): void {
     this._isCollapsed = false;
@@ -386,7 +386,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Chuyển đổi qua lại giữa thu gọn và mở rộng
+   * Toggles between collapsed and expanded
    */
   public toggleCollapse(): void {
     this._isCollapsed = !this._isCollapsed;
@@ -394,7 +394,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Bật/tắt chế độ mô phỏng Safari ITP Storage Block
+   * Turns the Safari ITP storage block simulation on or off
    */
   public setSafariItp(enabled: boolean): void {
     this.host.setStorageBlock(enabled);
@@ -409,7 +409,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Đảo trạng thái Safari ITP
+   * Toggles Safari ITP simulation
    */
   public toggleSafariItp(): void {
     const nextState = !this.host.isStorageBlock();
@@ -417,7 +417,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Kích hoạt từ chối thao tác ký tiếp theo
+   * Rejects the next signing request
    */
   public triggerRejectNext(reason?: string): void {
     this.host.rejectNext(reason);
@@ -425,7 +425,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Đảo chế độ từ chối ký vĩnh viễn (Rejection Mode)
+   * Toggles permanent signing rejection (rejection mode)
    */
   public toggleRejectionMode(): void {
     const nextMode = !this.host.isRejectionMode();
@@ -434,7 +434,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Thiết lập độ trễ mạng giả lập (ms)
+   * Sets the simulated network latency (ms)
    */
   public setLatency(ms: number): void {
     const clampedMs = typeof ms === 'number' && Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
@@ -443,7 +443,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Kết nối ví giả lập
+   * Connects the simulated wallet
    */
   public async connectMockWallet(): Promise<void> {
     this.host.connectWallet();
@@ -460,7 +460,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Ngắt kết nối ví giả lập
+   * Disconnects the simulated wallet
    */
   public async disconnectMockWallet(): Promise<void> {
     this.host.disconnectWallet();
@@ -477,7 +477,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Cập nhật số dư ADA của ví
+   * Updates the wallet ADA balance
    */
   public setBalance(ada: number): void {
     const validAda = typeof ada === 'number' && Number.isFinite(ada) ? Math.max(0, ada) : 0;
@@ -487,7 +487,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Đổi chủ đề giao diện Host
+   * Changes the host theme
    */
   public toggleHostTheme(): void {
     const nextTheme = this.host.theme === 'dark' ? 'light' : 'dark';
@@ -496,7 +496,7 @@ export class DevToolsWidget {
   }
 
   /**
-   * Đổi trạng thái âm thanh Host
+   * Changes the host audio state
    */
   public toggleHostAudio(): void {
     const nextMuted = !this.host.audioMuted;
@@ -1218,7 +1218,7 @@ export class DevToolsWidget {
 }
 
 /**
- * Hàm khởi tạo và mount DevToolsWidget nhanh
+ * Creates and mounts a DevToolsWidget in one call
  */
 export function mountDevTools(options?: DevToolsWidgetOptions): DevToolsWidget {
   const widget = new DevToolsWidget(options);
