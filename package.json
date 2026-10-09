@@ -96,6 +96,7 @@
   "files": [
     "dist",
     "bin",
+    "CHANGELOG.md",
     "templates",
     "!templates/**/node_modules",
     "!templates/**/.next",
