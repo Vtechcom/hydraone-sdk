@@ -1,7 +1,12 @@
 packages:
-  - '.'
-  - 'templates/*'
+  - 'packages/*'
+  - 'packages/sdk/templates/*'
+  - 'apps/*'
 
 allowBuilds:
   esbuild: true
+  unrs-resolver: true
+  vue-demi: true
 
+overrides:
+  mdast-util-to-markdown: 2.1.2

@@ -71,26 +71,26 @@ try {
 
 Inside the App Center iframe the client talks to the host shell. Outside an iframe, `fallbackToExtension: true` makes it connect to an installed Cardano wallet extension instead.
 
-`getBalance()` returns the wallet balance exactly as CIP-30 defines it: a CBOR-encoded hex string. `useWallet().balanceADA` and `useWalletBridgeClient().balanceADA` read its lovelace for you (see [Reading balances](./docs/getting-started.md#reading-balances)).
+`getBalance()` returns the wallet balance exactly as CIP-30 defines it: a CBOR-encoded hex string. `useWallet().balanceADA` and `useWalletBridgeClient().balanceADA` read its lovelace for you (see [Reading balances](./apps/docs/content/en/getting-started.md#reading-balances)).
 
 ## Configuration
 
 `new WalletBridgeClient(options)` accepts:
 
-| Option                | Type                  | Default            | Description                                                                    |
-| --------------------- | --------------------- | ------------------ | ------------------------------------------------------------------------------ |
-| `transport`           | `ITransport`          | none               | Transport adapter. Optional only when `fallbackToExtension` is enabled.        |
-| `handshakeTimeoutMs`  | `number`              | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                 |
-| `pingTimeoutMs`       | `number`              | `3000`             | Maximum wait for a `ping()` latency probe.                                     |
-| `queryTimeoutMs`      | `number`              | `15000`            | Default timeout for wallet state queries.                                      |
-| `signingTimeoutMs`    | `number`              | `120000`           | Default timeout for signing and submitting, which wait for the user.           |
-| `autoConnect`         | `boolean`             | `false`            | Run the handshake as soon as the client is constructed.                        |
-| `fallbackToExtension` | `boolean`             | `false`            | Use `window.cardano` when running outside an iframe.                           |
-| `preferredWallet`     | `string`              | first detected     | Wallet to prefer in fallback mode, for example `'eternl'`, `'lace'`, `'nami'`. |
-| `cardanoProvider`     | `Record<string, any>` | `window.cardano`   | Custom `window.cardano` object, mainly for tests.                              |
-| `isIframeFn`          | `() => boolean`       | built-in detection | Custom iframe detection, mainly for tests.                                     |
-| `debug`               | `boolean`             | `false`            | Emit warnings through the logger.                                              |
-| `logger`              | `Logger`              | `console`          | Destination for debug output. See [Logging](./docs/logging.md).                |
+| Option                | Type                  | Default            | Description                                                                     |
+| --------------------- | --------------------- | ------------------ | ------------------------------------------------------------------------------- |
+| `transport`           | `ITransport`          | none               | Transport adapter. Optional only when `fallbackToExtension` is enabled.         |
+| `handshakeTimeoutMs`  | `number`              | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                  |
+| `pingTimeoutMs`       | `number`              | `3000`             | Maximum wait for a `ping()` latency probe.                                      |
+| `queryTimeoutMs`      | `number`              | `15000`            | Default timeout for wallet state queries.                                       |
+| `signingTimeoutMs`    | `number`              | `120000`           | Default timeout for signing and submitting, which wait for the user.            |
+| `autoConnect`         | `boolean`             | `false`            | Run the handshake as soon as the client is constructed.                         |
+| `fallbackToExtension` | `boolean`             | `false`            | Use `window.cardano` when running outside an iframe.                            |
+| `preferredWallet`     | `string`              | first detected     | Wallet to prefer in fallback mode, for example `'eternl'`, `'lace'`, `'nami'`.  |
+| `cardanoProvider`     | `Record<string, any>` | `window.cardano`   | Custom `window.cardano` object, mainly for tests.                               |
+| `isIframeFn`          | `() => boolean`       | built-in detection | Custom iframe detection, mainly for tests.                                      |
+| `debug`               | `boolean`             | `false`            | Emit warnings through the logger.                                               |
+| `logger`              | `Logger`              | `console`          | Destination for debug output. See [Logging](./apps/docs/content/en/logging.md). |
 
 `new PostMessageTransport(options)` accepts:
 
@@ -103,7 +103,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 | `checkIframeSource` | `boolean`            | `true`                                  | Verify `event.source === window.parent` when inside an iframe.                           |
 | `defaultTimeoutMs`  | `number`             | `15000`                                 | Default response timeout for requests.                                                   |
 
-See [Configuration](./docs/configuration.md) for details.
+See [Configuration](./apps/docs/content/en/configuration.md) for details.
 
 ## Usage
 
@@ -163,7 +163,7 @@ export async function login(nonce: string) {
 }
 ```
 
-`https://api.example.com` stands for your own backend: it issues the challenge and verifies the CIP-8 signature. See [Authentication](./docs/authentication.md).
+`https://api.example.com` stands for your own backend: it issues the challenge and verifies the CIP-8 signature. See [Authentication](./apps/docs/content/en/authentication.md).
 
 ### Storage and Safari ITP
 
@@ -188,7 +188,7 @@ export function pickStorage(insideAppCenter: boolean): IStorage {
 }
 ```
 
-Safari partitions or wipes storage for cross-origin iframes. `HostStorageRelayAdapter` keeps data on the host shell instead. See the [Safari ITP guide](./docs/guides/safari-itp.md).
+Safari partitions or wipes storage for cross-origin iframes. `HostStorageRelayAdapter` keeps data on the host shell instead. See the [Safari ITP guide](./apps/docs/content/en/guides/safari-itp.md).
 
 ### React
 
@@ -224,7 +224,7 @@ export function App() {
 }
 ```
 
-Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](./docs/guides/react.md).
+Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](./apps/docs/content/en/guides/react.md).
 
 ### Vue and Nuxt
 
@@ -247,7 +247,7 @@ export function setup() {
 }
 ```
 
-See the [Vue guide](./docs/guides/vue.md).
+See the [Vue guide](./apps/docs/content/en/guides/vue.md).
 
 ### Diagnostics
 
@@ -295,7 +295,7 @@ Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Details are in [Error handling](./docs/error-handling.md).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Details are in [Error handling](./apps/docs/content/en/error-handling.md).
 
 ## Logging and debugging
 
@@ -329,18 +329,18 @@ Entry points: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. The r
 The API reference is generated from the TSDoc comments with TypeDoc. Build it locally:
 
 ```bash
-pnpm run docs
+pnpm run docs:api
 ```
 
-The output is written to `docs/api/`. Guides live in [docs/](./docs/README.md).
+The output is written to `packages/sdk/docs/api/`. Guides live in [docs/](./apps/docs/content/en/overview.md).
 
 ## FAQ and troubleshooting
 
 - **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab. Set `fallbackToExtension: true` and install a CIP-30 wallet.
 - **`ERR_UNTRUSTED_ORIGIN` in the console**: `appCenterOrigin` must match the host shell origin exactly (scheme, host and port, no path). A wildcard is only accepted outside production.
-- **Session lost after reload on iOS Safari**: store the session with `HostStorageRelayAdapter`. See the [Safari ITP guide](./docs/guides/safari-itp.md).
+- **Session lost after reload on iOS Safari**: store the session with `HostStorageRelayAdapter`. See the [Safari ITP guide](./apps/docs/content/en/guides/safari-itp.md).
 
-More answers are in the [FAQ](./docs/faq.md) and [Troubleshooting](./docs/troubleshooting.md).
+More answers are in the [FAQ](./apps/docs/content/en/faq.md) and [Troubleshooting](./apps/docs/content/en/troubleshooting.md).
 
 ## Versioning and support
 

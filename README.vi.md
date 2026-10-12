@@ -73,7 +73,7 @@ try {
 
 Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài iframe, `fallbackToExtension: true` làm client kết nối tới tiện ích ví Cardano đã cài.
 
-`getBalance()` trả về số dư ví đúng như CIP-30 định nghĩa: một chuỗi hex mã hóa CBOR. `useWallet().balanceADA` và `useWalletBridgeClient().balanceADA` đọc phần lovelace của chuỗi này giúp bạn (xem [Đọc số dư](./docs/vi/getting-started.md#đọc-số-dư)).
+`getBalance()` trả về số dư ví đúng như CIP-30 định nghĩa: một chuỗi hex mã hóa CBOR. `useWallet().balanceADA` và `useWalletBridgeClient().balanceADA` đọc phần lovelace của chuỗi này giúp bạn (xem [Đọc số dư](./apps/docs/content/vi/getting-started.md#đọc-số-dư)).
 
 ## Cấu hình
 
@@ -92,7 +92,7 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 | `cardanoProvider`     | `Record<string, any>` | `window.cardano` | Đối tượng `window.cardano` tùy chỉnh, chủ yếu dùng cho test.              |
 | `isIframeFn`          | `() => boolean`       | tự phát hiện     | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                    |
 | `debug`               | `boolean`             | `false`          | Ghi cảnh báo qua logger.                                                  |
-| `logger`              | `Logger`              | `console`        | Nơi nhận đầu ra debug. Xem [Logging](./docs/vi/logging.md).               |
+| `logger`              | `Logger`              | `console`        | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/logging.md).  |
 
 `new PostMessageTransport(options)` nhận:
 
@@ -105,7 +105,7 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 | `checkIframeSource` | `boolean`            | `true`                                    | Xác minh `event.source === window.parent` khi ở trong iframe.                               |
 | `defaultTimeoutMs`  | `number`             | `15000`                                   | Timeout phản hồi mặc định cho các request.                                                  |
 
-Xem [Configuration](./docs/vi/configuration.md) để biết chi tiết.
+Xem [Configuration](./apps/docs/content/vi/configuration.md) để biết chi tiết.
 
 ## Cách dùng
 
@@ -165,7 +165,7 @@ export async function login(nonce: string) {
 }
 ```
 
-`https://api.example.com` đại diện cho backend của riêng bạn: nó phát hành challenge và xác minh chữ ký CIP-8. Xem [Authentication](./docs/vi/authentication.md).
+`https://api.example.com` đại diện cho backend của riêng bạn: nó phát hành challenge và xác minh chữ ký CIP-8. Xem [Authentication](./apps/docs/content/vi/authentication.md).
 
 ### Lưu trữ và Safari ITP
 
@@ -190,7 +190,7 @@ export function pickStorage(insideAppCenter: boolean): IStorage {
 }
 ```
 
-Safari phân vùng hoặc xóa storage của các iframe cross-origin. `HostStorageRelayAdapter` giữ dữ liệu trên host shell thay vì trong iframe. Xem [hướng dẫn Safari ITP](./docs/vi/guides/safari-itp.md).
+Safari phân vùng hoặc xóa storage của các iframe cross-origin. `HostStorageRelayAdapter` giữ dữ liệu trên host shell thay vì trong iframe. Xem [hướng dẫn Safari ITP](./apps/docs/content/vi/guides/safari-itp.md).
 
 ### React
 
@@ -226,7 +226,7 @@ export function App() {
 }
 ```
 
-Cũng được export: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. Xem [hướng dẫn React](./docs/vi/guides/react.md).
+Cũng được export: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. Xem [hướng dẫn React](./apps/docs/content/vi/guides/react.md).
 
 ### Vue và Nuxt
 
@@ -249,7 +249,7 @@ export function setup() {
 }
 ```
 
-Xem [hướng dẫn Vue](./docs/vi/guides/vue.md).
+Xem [hướng dẫn Vue](./apps/docs/content/vi/guides/vue.md).
 
 ### Chẩn đoán
 
@@ -297,7 +297,7 @@ Mọi lỗi do SDK ném ra đều là `HydraBridgeError` với `code` ổn đị
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | Client chưa kết nối, đã bị hủy, hoặc không có địa chỉ ví.                                  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |
 
-Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Chi tiết nằm trong [Error handling](./docs/vi/error-handling.md).
+Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/error-handling.md).
 
 ## Logging và debug
 
@@ -331,18 +331,18 @@ Các entry point: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. E
 Tài liệu API được sinh từ các comment TSDoc bằng TypeDoc. Build cục bộ:
 
 ```bash
-pnpm run docs
+pnpm run docs:api
 ```
 
-Kết quả được ghi vào `docs/api/`. Các hướng dẫn nằm trong [docs/](./docs/vi/README.md).
+Kết quả được ghi vào `packages/sdk/docs/api/`. Các hướng dẫn nằm trong [docs/](./apps/docs/content/vi/README.md).
 
 ## FAQ và xử lý sự cố
 
-- **`ERR_NOT_IN_IFRAME` khi gọi `init()`**: game đang chạy trong một tab thường. Đặt `fallbackToExtension: true` và cài một ví CIP-30, hoặc dùng [trình giả lập](./docs/vi/testing-your-integration.md).
+- **`ERR_NOT_IN_IFRAME` khi gọi `init()`**: game đang chạy trong một tab thường. Đặt `fallbackToExtension: true` và cài một ví CIP-30, hoặc dùng [trình giả lập](./apps/docs/content/vi/testing-your-integration.md).
 - **`ERR_UNTRUSTED_ORIGIN` trong console**: `appCenterOrigin` phải khớp chính xác origin của host shell (scheme, host và port, không có path). Ký tự đại diện chỉ được chấp nhận ngoài production.
-- **Mất phiên sau khi reload trên iOS Safari**: lưu phiên bằng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](./docs/vi/guides/safari-itp.md).
+- **Mất phiên sau khi reload trên iOS Safari**: lưu phiên bằng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](./apps/docs/content/vi/guides/safari-itp.md).
 
-Có thêm câu trả lời trong [FAQ](./docs/vi/faq.md) và [Troubleshooting](./docs/vi/troubleshooting.md).
+Có thêm câu trả lời trong [FAQ](./apps/docs/content/vi/faq.md) và [Troubleshooting](./apps/docs/content/vi/troubleshooting.md).
 
 ## Phiên bản và hỗ trợ
 

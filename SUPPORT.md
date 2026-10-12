@@ -2,7 +2,7 @@
 
 ## Where to get help
 
-- **Documentation:** start with the [docs index](./docs/README.md), then [Troubleshooting](./docs/troubleshooting.md) and the [FAQ](./docs/faq.md).
+- **Documentation:** start with the [docs index](./apps/docs/content/en/overview.md), then [Troubleshooting](./apps/docs/content/en/troubleshooting.md) and the [FAQ](./apps/docs/content/en/faq.md).
 - **Questions and ideas:** use GitHub Discussions on the repository if it is enabled, otherwise open an issue with the `question` label.
 - **Bugs:** open an issue with the bug report template. Include the SDK version, your framework and browser, and a minimal reproduction. Run `checkBridgeHealth` and attach the report after removing addresses and tokens.
 - **Feature requests:** open an issue with the feature request template and describe the use case first.

@@ -22,4 +22,8 @@ _bmad/
 _bmad-output/
 
 # Generated API reference (pnpm run docs)
-docs/api/
+packages/sdk/docs/api/
+
+# Copied from the repo root by `prepack`
+packages/sdk/README.md
+packages/sdk/LICENSE

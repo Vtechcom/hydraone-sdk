@@ -48,8 +48,8 @@ jobs:
 
       - name: Check package exports and types
         run: |
-          pnpm exec publint
-          pnpm exec attw --pack . --profile node16
+          pnpm --filter @hydraone/sdk exec publint
+          pnpm --filter @hydraone/sdk exec attw --pack . --profile node16
 
       - name: Check bundle size
         run: pnpm run size
@@ -74,6 +74,7 @@ jobs:
 
       - name: Verify no build artifacts or internal files are packed
         run: |
+          cd packages/sdk
           npm pack --dry-run --json > pack.json
           node -e "
             const files = JSON.parse(require('fs').readFileSync('pack.json', 'utf8'))[0].files.map((f) => f.path);
@@ -81,3 +82,21 @@ jobs:
             if (bad.length) { console.error('Unexpected files in tarball:', bad); process.exit(1); }
             console.log('Tarball OK:', files.length, 'files');
           "
+
+  docs:
+    name: Docs site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:docs

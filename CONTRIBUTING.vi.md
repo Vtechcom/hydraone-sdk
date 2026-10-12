@@ -16,7 +16,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-Repository là một pnpm workspace: package gốc là SDK, còn `templates/*` là các template dự án mà CLI sử dụng.
+Repository là một pnpm monorepo: `packages/sdk` là SDK, `packages/sdk/templates/*` là các template dự án mà CLI sử dụng, và `apps/docs` là trang tài liệu (Nuxt). Chạy các script bên dưới từ thư mục gốc của repository.
 
 ## Scripts
 
@@ -29,15 +29,14 @@ Repository là một pnpm workspace: package gốc là SDK, còn `templates/*` l
 | `pnpm run typecheck`     | Chạy `tsc --noEmit` (mã nguồn và test).                   |
 | `pnpm test`              | Chạy bộ test Vitest. `test:watch` cho chế độ watch.       |
 | `pnpm run test:coverage` | Chạy bộ test kèm coverage V8.                             |
-| `pnpm run docs`          | Sinh tài liệu API TypeDoc vào `docs/api/`.                |
+| `pnpm run docs:api`      | Sinh tài liệu API TypeDoc vào `packages/sdk/docs/api/`.   |
 | `pnpm run size`          | Kiểm tra giới hạn kích thước bundle (chạy sau `build`).   |
 | `pnpm run changeset`     | Thêm một changeset mô tả thay đổi của bạn.                |
 
 Các bước kiểm tra package, giống như CI chạy (sau `build`):
 
 ```bash
-pnpm exec publint
-pnpm exec attw --pack . --profile node16
+pnpm run check:package
 ```
 
 Trước khi mở pull request, hãy chạy tối thiểu: `pnpm run lint`, `pnpm run typecheck`, `pnpm run build` và `pnpm test`.
@@ -71,7 +70,7 @@ Chọn package, loại tăng phiên bản (khi còn dưới 1.0.0, breaking chan
 
 ## Tài liệu
 
-Các file tiếng Anh là nguồn chính. Các bản dịch tiếng Việt (`*.vi.md`, `docs/vi/`) phải phản ánh đúng cấu trúc tiếng Anh theo tỷ lệ một-một. Khi bạn đổi một trang tiếng Anh, hãy cập nhật bản tiếng Việt tương ứng trong cùng pull request, hoặc nêu trong pull request rằng bản dịch đang chờ. Giữ code, lệnh, tên API và error code bằng tiếng Anh ở cả hai bản. Các ví dụ code phải biên dịch được với API thật.
+Các file tiếng Anh là nguồn chính. Các bản dịch tiếng Việt (`*.vi.md`, `apps/docs/content/vi/`) phải phản ánh đúng cấu trúc tiếng Anh theo tỷ lệ một-một. Khi bạn đổi một trang tiếng Anh, hãy cập nhật bản tiếng Việt tương ứng trong cùng pull request, hoặc nêu trong pull request rằng bản dịch đang chờ. Giữ code, lệnh, tên API và error code bằng tiếng Anh ở cả hai bản. Các ví dụ code phải biên dịch được với API thật.
 
 ## Pull request
 

@@ -70,7 +70,7 @@ const client = new WalletBridgeClient({
 
 ### Script tài liệu
 
-`pnpm run docs` trước đây phục vụ một portal tĩnh. Nay nó sinh tài liệu API TypeDoc vào `docs/api/`.
+`pnpm run docs` trước đây phục vụ một portal tĩnh. Nay nó sinh tài liệu API TypeDoc vào `packages/sdk/docs/api/`.
 
 ### Đầu ra của CLI
 

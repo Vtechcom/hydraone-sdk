@@ -68,7 +68,7 @@ const client = new WalletBridgeClient({
 
 ### Documentation script
 
-`pnpm run docs` used to serve a static portal. It now generates the TypeDoc API reference into `docs/api/`.
+`pnpm run docs` used to serve a static portal. It now generates the TypeDoc API reference into `packages/sdk/docs/api/`.
 
 ### CLI output
 

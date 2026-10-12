@@ -14,28 +14,27 @@ cd hydraone-sdk
 pnpm install
 ```
 
-The repository is a pnpm workspace: the root package is the SDK and `templates/*` are the project templates used by the CLI.
+The repository is a pnpm monorepo: `packages/sdk` is the SDK, `packages/sdk/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
 
 ## Scripts
 
-| Script                   | What it does                                                 |
-| ------------------------ | ------------------------------------------------------------ |
-| `pnpm run build`         | Build ESM, CJS and type declarations into `dist/` with tsup. |
-| `pnpm run clean`         | Remove `dist/`.                                              |
-| `pnpm run lint`          | Run ESLint.                                                  |
-| `pnpm run format`        | Format with Prettier. `format:check` only verifies.          |
-| `pnpm run typecheck`     | Run `tsc --noEmit` (sources and tests).                      |
-| `pnpm test`              | Run the Vitest suite. `test:watch` for watch mode.           |
-| `pnpm run test:coverage` | Run the suite with V8 coverage.                              |
-| `pnpm run docs`          | Generate the TypeDoc API reference into `docs/api/`.         |
-| `pnpm run size`          | Check bundle size limits (run after `build`).                |
-| `pnpm run changeset`     | Add a changeset describing your change.                      |
+| Script                   | What it does                                                      |
+| ------------------------ | ----------------------------------------------------------------- |
+| `pnpm run build`         | Build ESM, CJS and type declarations into `dist/` with tsup.      |
+| `pnpm run clean`         | Remove `dist/`.                                                   |
+| `pnpm run lint`          | Run ESLint.                                                       |
+| `pnpm run format`        | Format with Prettier. `format:check` only verifies.               |
+| `pnpm run typecheck`     | Run `tsc --noEmit` (sources and tests).                           |
+| `pnpm test`              | Run the Vitest suite. `test:watch` for watch mode.                |
+| `pnpm run test:coverage` | Run the suite with V8 coverage.                                   |
+| `pnpm run docs:api`      | Generate the TypeDoc API reference into `packages/sdk/docs/api/`. |
+| `pnpm run size`          | Check bundle size limits (run after `build`).                     |
+| `pnpm run changeset`     | Add a changeset describing your change.                           |
 
 Package checks, as CI runs them (after `build`):
 
 ```bash
-pnpm exec publint
-pnpm exec attw --pack . --profile node16
+pnpm run check:package
 ```
 
 Before opening a pull request, run at least: `pnpm run lint`, `pnpm run typecheck`, `pnpm run build` and `pnpm test`.
@@ -69,7 +68,7 @@ Pick the package, the bump type (while below 1.0.0, breaking changes are a minor
 
 ## Documentation
 
-The English files are the source of truth. The Vietnamese translations (`*.vi.md`, `docs/vi/`) must mirror the English structure one to one. When you change an English page, update its Vietnamese counterpart in the same pull request, or say in the pull request that the translation is pending. Keep code, commands, API names and error codes in English in both. Code examples must compile against the real API.
+The English files are the source of truth. The Vietnamese translations (`*.vi.md`, `apps/docs/content/vi/`) must mirror the English structure one to one. When you change an English page, update its Vietnamese counterpart in the same pull request, or say in the pull request that the translation is pending. Keep code, commands, API names and error codes in English in both. Code examples must compile against the real API.
 
 ## Pull requests
 

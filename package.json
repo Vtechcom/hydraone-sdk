@@ -1,146 +1,32 @@
 {
-  "name": "@hydraone/sdk",
-  "version": "0.1.0",
-  "description": "Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth and React/Vue adapters",
-  "keywords": [
-    "cardano",
-    "hydra",
-    "hydraone",
-    "web3",
-    "sdk",
-    "game-sdk",
-    "cip-30",
-    "cip-8",
-    "wallet-bridge"
-  ],
-  "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
-  "bugs": {
-    "url": "https://github.com/Vtechcom/hydraone-sdk/issues"
-  },
+  "name": "hydraone-sdk-monorepo",
+  "private": true,
+  "description": "Monorepo for the HydraOne SDK (@hydraone/sdk) and its documentation site",
   "license": "Apache-2.0",
-  "author": "HydraOne Team",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Vtechcom/hydraone-sdk.git"
   },
-  "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./vue": {
-      "import": {
-        "types": "./dist/vue/index.d.ts",
-        "default": "./dist/vue/index.js"
-      },
-      "require": {
-        "types": "./dist/vue/index.d.cts",
-        "default": "./dist/vue/index.cjs"
-      }
-    },
-    "./react": {
-      "import": {
-        "types": "./dist/react/index.d.ts",
-        "default": "./dist/react/index.js"
-      },
-      "require": {
-        "types": "./dist/react/index.d.cts",
-        "default": "./dist/react/index.cjs"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "bin": {
-    "create-hydraone-game": "./bin/create-hydraone-game.js"
-  },
-  "files": [
-    "dist",
-    "bin",
-    "CHANGELOG.md",
-    "templates",
-    "!templates/**/node_modules",
-    "!templates/**/.next",
-    "!templates/**/.nuxt",
-    "!templates/**/.output",
-    "!templates/**/dist",
-    "!templates/**/next-env.d.ts"
-  ],
-  "sideEffects": false,
-  "engines": {
-    "node": ">=20"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
+  "packageManager": "pnpm@11.0.0",
   "scripts": {
-    "build": "tsup",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "lint": "eslint .",
+    "build": "pnpm --filter @hydraone/sdk build",
+    "lint": "pnpm --filter @hydraone/sdk lint",
+    "typecheck": "pnpm --filter @hydraone/sdk typecheck",
+    "test": "pnpm --filter @hydraone/sdk test",
+    "test:coverage": "pnpm --filter @hydraone/sdk test:coverage",
+    "size": "pnpm --filter @hydraone/sdk size",
+    "check:package": "pnpm --filter @hydraone/sdk check:package",
+    "docs:api": "pnpm --filter @hydraone/sdk docs",
+    "dev:docs": "pnpm --filter @hydraone/docs dev",
+    "build:docs": "pnpm --filter @hydraone/docs generate",
+    "dev:next": "pnpm --filter @hydraone/template-next-js dev",
+    "dev:nuxt": "pnpm --filter @hydraone/template-nuxt-3 dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "docs": "typedoc",
-    "size": "size-limit",
-    "check:package": "publint && attw --pack .",
-    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
-    "changeset": "changeset",
-    "dev:next": "pnpm --filter @hydraone/template-next-js dev",
-    "dev:nuxt": "pnpm --filter @hydraone/template-nuxt-3 dev"
-  },
-  "peerDependencies": {
-    "phaser": ">=3.60.0",
-    "react": ">=18.0.0",
-    "vue": ">=3.3.0"
-  },
-  "peerDependenciesMeta": {
-    "phaser": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "vue": {
-      "optional": true
-    }
+    "changeset": "changeset"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^3.0.3",
-    "@eslint/js": "^10.0.1",
-    "@size-limit/file": "^14.2.0",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.3.3",
-    "@types/node": "^26.6.4",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitest/coverage-v8": "^3.2.7",
-    "eslint": "^10.12.0",
-    "eslint-config-prettier": "^10.1.8",
-    "happy-dom": "^20.14.5",
-    "prettier": "^3.9.9",
-    "publint": "^0.3.25",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "size-limit": "^14.2.0",
-    "tsup": "^8.3.6",
-    "typedoc": "^0.28.20",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.71.1",
-    "vitest": "^3.0.7",
-    "vue": "^3.5.43"
+    "prettier": "^3.9.9"
   }
 }
