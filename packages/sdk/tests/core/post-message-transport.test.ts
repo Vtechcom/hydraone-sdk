@@ -120,13 +120,15 @@ describe('PostMessageTransport', () => {
   });
 
   describe('Origin & source window checks on incoming messages', () => {
-    it('rejects messages from an untrusted origin with HydraSecurityError', () => {
+    it('silently drops messages from an untrusted origin without notifying handlers', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
         checkIframeSource: false,
       });
+      const handler = vi.fn();
+      transport.onMessage(handler);
 
       const untrustedEvent = {
         origin: 'https://attacker.site',
@@ -139,21 +141,19 @@ describe('PostMessageTransport', () => {
         },
       };
 
-      expect(() => transport.handleMessageEvent(untrustedEvent)).toThrow(HydraSecurityError);
-      try {
-        transport.handleMessageEvent(untrustedEvent);
-      } catch (err: any) {
-        expect(err.code).toBe(ERROR_CODES.ERR_UNTRUSTED_ORIGIN);
-      }
+      expect(() => transport.handleMessageEvent(untrustedEvent)).not.toThrow();
+      expect(handler).not.toHaveBeenCalled();
     });
 
-    it('rejects messages whose source window is not window.parent in an iframe context', () => {
+    it('silently drops messages whose source window is not window.parent in an iframe context', () => {
       const transport = new PostMessageTransport({
         appCenterOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
         checkIframeSource: true,
       });
+      const handler = vi.fn();
+      transport.onMessage(handler);
 
       const invalidSourceEvent = {
         origin: TRUSTED_ORIGIN,
@@ -166,7 +166,8 @@ describe('PostMessageTransport', () => {
         },
       };
 
-      expect(() => transport.handleMessageEvent(invalidSourceEvent)).toThrow(HydraSecurityError);
+      expect(() => transport.handleMessageEvent(invalidSourceEvent)).not.toThrow();
+      expect(handler).not.toHaveBeenCalled();
     });
 
     it('accepts valid messages from a trusted origin and the correct parent source', () => {

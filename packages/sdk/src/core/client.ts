@@ -97,6 +97,7 @@ export class WalletBridgeClient {
   private handshakePromise: Promise<void> | null = null;
   private readonly pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly expiredRequestIds = new Set<string>();
+  private readonly expiryTimers = new Set<ReturnType<typeof setTimeout>>();
   private transportUnsubscribe?: UnsubscribeFn;
   private readonly eventListeners = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -603,11 +604,8 @@ export class WalletBridgeClient {
       if (timeoutMs > 0 && timeoutMs !== Infinity) {
         timeoutTimer = setTimeout(() => {
           pending.isExpired = true;
-          this.expiredRequestIds.add(message.id);
+          this.markRequestExpired(message.id);
           this.pendingRequests.delete(message.id);
-          setTimeout(() => {
-            this.expiredRequestIds.delete(message.id);
-          }, 60000);
           reject(
             new HydraTimeoutError(`Request [${message.type}] timed out (${timeoutMs}ms)`, {
               messageType: message.type,
@@ -636,6 +634,19 @@ export class WalletBridgeClient {
         reject(syncErr);
       }
     });
+  }
+
+  /**
+   * Remembers a timed-out request ID for 60 s so its late response is dropped.
+   * The timer is tracked so destroy() can cancel it.
+   */
+  private markRequestExpired(id: string): void {
+    this.expiredRequestIds.add(id);
+    const timer = setTimeout(() => {
+      this.expiredRequestIds.delete(id);
+      this.expiryTimers.delete(timer);
+    }, 60000);
+    this.expiryTimers.add(timer);
   }
 
   /**
@@ -1188,7 +1199,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.transport.send(message);
+        await this.executeRpc(message, this.queryTimeoutMs);
       }
       return;
     }
@@ -1203,7 +1214,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.transport!.send(message);
+    await this.executeRpc(message, this.queryTimeoutMs);
   }
 
   /**
@@ -1251,7 +1262,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.transport.send(message);
+        await this.executeRpc(message, this.queryTimeoutMs);
       }
       return;
     }
@@ -1270,7 +1281,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.transport!.send(message);
+    await this.executeRpc(message, this.queryTimeoutMs);
   }
 
   // ==========================================
@@ -1367,7 +1378,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.transport!.send(message);
+    await this.executeRpc(message, this.queryTimeoutMs);
   }
 
   /**
@@ -1471,10 +1482,7 @@ export class WalletBridgeClient {
         clearTimeout(pending.timeoutTimer);
       }
       pending.isExpired = true;
-      this.expiredRequestIds.add(pending.id);
-      setTimeout(() => {
-        this.expiredRequestIds.delete(pending.id);
-      }, 60000);
+      this.markRequestExpired(pending.id);
       pending.reject(
         new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED),
       );
@@ -1491,6 +1499,11 @@ export class WalletBridgeClient {
     }
     this._isDestroyed = true;
     this.disconnect();
+    for (const timer of this.expiryTimers) {
+      clearTimeout(timer);
+    }
+    this.expiryTimers.clear();
+    this.expiredRequestIds.clear();
     if (this.transportUnsubscribe) {
       this.transportUnsubscribe();
       this.transportUnsubscribe = undefined;

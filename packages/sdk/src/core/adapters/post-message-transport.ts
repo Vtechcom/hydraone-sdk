@@ -84,15 +84,10 @@ export class PostMessageTransport implements ITransport {
       return;
     }
 
-    // 1. Zero-trust origin check
+    // 1. Zero-trust origin check. Foreign messages (extensions, devtools, other frames) are
+    // dropped: throwing here would surface as an uncaught error in the window listener.
     if (this.appCenterOrigin !== '*' && event.origin !== this.appCenterOrigin) {
-      throw new HydraSecurityError(
-        `Untrusted origin: "${event.origin}". Expected: "${this.appCenterOrigin}"`,
-        {
-          origin: event.origin,
-          expectedOrigin: this.appCenterOrigin,
-        },
-      );
+      return;
     }
 
     // 2. Check the source window when running inside an iframe
@@ -105,12 +100,7 @@ export class PostMessageTransport implements ITransport {
             : undefined;
 
       if (expectedParent && event.source !== expectedParent) {
-        throw new HydraSecurityError(
-          'Invalid source window (message did not originate from window.parent)',
-          {
-            source: event.source,
-          },
-        );
+        return;
       }
     }
 

@@ -20,8 +20,20 @@ class SimpleMockTransport implements ITransport {
   private handlers = new Set<MessageHandler>();
   public destroyed = false;
 
+  /** Host commands that the real App Center always acknowledges with an RPC_RESPONSE. */
+  public autoAckTypes = new Set(['SET_ORIENTATION', 'TRIGGER_HAPTIC', 'REQUEST_DEPOSIT_MODAL']);
+
   async send(message: BridgeMessage): Promise<void> {
     this.sentMessages.push(message);
+    if (this.autoAckTypes.has(message.type)) {
+      this.simulateIncoming({
+        id: `ack-${message.id}`,
+        type: 'RPC_RESPONSE',
+        payload: { requestId: message.id, result: { acknowledged: true } },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+    }
   }
 
   onMessage(handler: MessageHandler): UnsubscribeFn {
@@ -1913,6 +1925,43 @@ describe('WalletBridgeClient', () => {
         });
 
         disconnectedClient.destroy();
+      });
+
+      it('rejects with the host error code when the host answers SET_ORIENTATION with RPC_ERROR', async () => {
+        transport.autoAckTypes.clear();
+        const pending = client.setOrientation('landscape');
+        const sent = transport.sentMessages[transport.sentMessages.length - 1];
+        transport.simulateIncoming({
+          id: 'err-orientation',
+          type: 'RPC_ERROR',
+          payload: {
+            requestId: sent.id,
+            error: { code: 'ERR_RPC_FAILED', message: 'Orientation lock not supported' },
+          },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(pending).rejects.toMatchObject({ code: 'ERR_RPC_FAILED' });
+      });
+
+      it('times out when the host never acknowledges TRIGGER_HAPTIC', async () => {
+        transport.autoAckTypes.clear();
+        const pending = client.triggerHaptic('light');
+        const assertion = expect(pending).rejects.toBeInstanceOf(HydraTimeoutError);
+        await vi.advanceTimersByTimeAsync(15000);
+        await assertion;
+      });
+
+      it('destroy() leaves no expiry timers behind after a request timed out', async () => {
+        transport.autoAckTypes.clear();
+        const pending = client.triggerHaptic('light').catch(() => undefined);
+        await vi.advanceTimersByTimeAsync(15000);
+        await pending;
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+        client.destroy();
+        expect(vi.getTimerCount()).toBe(0);
       });
 
       it('throws ERR_NOT_CONNECTED when unlockOrientation is called before the client is connected', async () => {

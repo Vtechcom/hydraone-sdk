@@ -219,15 +219,49 @@ export class AuthManager {
 
     // Listen to host events when the client supports onHostEvent
     if (typeof this.client.onHostEvent === 'function') {
-      this.hostUnsubscribe = this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: unknown) => {
-        if (
-          payload &&
-          typeof payload === 'object' &&
-          (payload as { isAuthenticated?: unknown }).isAuthenticated === false
-        ) {
+      const unsubscribers: UnsubscribeFn[] = [
+        this.client.onHostEvent('AUTH_STATE_CHANGED', (payload: unknown) => {
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            (payload as { isAuthenticated?: unknown }).isAuthenticated === false
+          ) {
+            this.signOut().catch(() => {});
+          }
+        }),
+        // The wallet going away invalidates the session the JWT was issued for.
+        this.client.onHostEvent('DISCONNECTED', () => {
           this.signOut().catch(() => {});
+        }),
+        this.client.onHostEvent('ACCOUNT_CHANGED', (payload: unknown) => {
+          this.handleAccountChanged(payload).catch(() => {});
+        }),
+      ];
+      this.hostUnsubscribe = () => {
+        for (const unsubscribe of unsubscribers) {
+          unsubscribe();
         }
-      });
+      };
+    }
+  }
+
+  /**
+   * Ends the session unless the stored address is still one of the wallet's addresses.
+   * ACCOUNT_CHANGED carries CIP-30 hex addresses, so an address stored in another format
+   * (for example a bech32 one passed to signIn) cannot be matched and is treated as changed.
+   */
+  private async handleAccountChanged(payload: unknown): Promise<void> {
+    const storedAddress = (await this.storage.getItem(this.addressStorageKey)) ?? this.currentState.address;
+    if (!storedAddress) {
+      return;
+    }
+
+    const addresses = Array.isArray(payload)
+      ? payload.filter((a): a is string => typeof a === 'string')
+      : [];
+    const stillOwned = addresses.some((a) => a.toLowerCase() === storedAddress.toLowerCase());
+    if (!stillOwned) {
+      await this.signOut();
     }
   }
 

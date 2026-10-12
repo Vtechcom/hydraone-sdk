@@ -474,10 +474,58 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
 
     authManager.destroy();
 
-    expect(unsubscribeHostMock).toHaveBeenCalledTimes(1);
+    // AUTH_STATE_CHANGED, DISCONNECTED and ACCOUNT_CHANGED subscriptions
+    expect(unsubscribeHostMock).toHaveBeenCalledTimes(3);
 
     // After destroy, the internal listener no longer receives events
     authManager.signOut();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('signs out when the wallet is disconnected on the host', async () => {
+    const testJwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+
+    await authManager.setSession(testJwt, 'addr_test1qrz937q4s8l26rsv0f00j2a6x3v73c3x2');
+    expect(await authManager.isAuthenticated()).toBe(true);
+
+    hostEventListeners.get('DISCONNECTED')!(undefined);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await authManager.isAuthenticated()).toBe(false);
+    expect(await storage.getItem('hydra:sdk:auth:address')).toBeNull();
+  });
+
+  it('signs out when ACCOUNT_CHANGED no longer includes the session address', async () => {
+    const testJwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+
+    await authManager.setSession(testJwt, 'addr_test1old');
+    hostEventListeners.get('ACCOUNT_CHANGED')!(['addr_test1new']);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await authManager.isAuthenticated()).toBe(false);
+  });
+
+  it('keeps the session when ACCOUNT_CHANGED still contains the session address', async () => {
+    const testJwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+
+    await authManager.setSession(testJwt, 'ADDR_test1same');
+    hostEventListeners.get('ACCOUNT_CHANGED')!(['addr_test1other', 'addr_test1same']);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(await authManager.isAuthenticated()).toBe(true);
+  });
+
+  it('ignores ACCOUNT_CHANGED when there is no session', async () => {
+    const authManager = new GameAuthManager({ client: mockClient, storage });
+    const listener = vi.fn();
+    authManager.onAuthStateChanged(listener);
+
+    hostEventListeners.get('ACCOUNT_CHANGED')!(['addr_test1new']);
+
+    await new Promise((r) => setTimeout(r, 50));
     expect(listener).not.toHaveBeenCalled();
   });
 
