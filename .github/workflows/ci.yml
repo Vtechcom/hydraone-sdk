@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +48,7 @@ jobs:
 
       - name: Check package exports and types
         run: |
-          pnpm --filter @hydraone/sdk exec publint
-          pnpm --filter @hydraone/sdk exec attw --pack . --profile node16
+          pnpm run check:package
 
       - name: Check bundle size
         run: pnpm run size

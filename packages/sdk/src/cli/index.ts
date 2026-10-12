@@ -64,7 +64,7 @@ ${style('OPTIONS:', 'yellow')}
 ${style('EXAMPLES:', 'yellow')}
   $ npx create-hydraone-game my-hydra-game
   $ npx create-hydraone-game my-phaser-game --template phaser-3
-  $ npx create-hydraone-game my-nuxt-app --template nuxt-3 --pm pnpm
+  $ npx create-hydraone-game my-nuxt-app --template nuxt --pm pnpm
 `);
 }
 
@@ -124,8 +124,8 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
           'Select a framework / game engine template:',
           [
             {
-              label: 'Nuxt 3 (Vue 3.5+ Headless Composables)',
-              value: 'nuxt-3',
+              label: 'Nuxt (Vue 3.5+ Headless Composables)',
+              value: 'nuxt',
               description: 'Includes @hydraone/sdk/vue and an SSR-safe setup',
             },
             {
@@ -158,7 +158,7 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
       projectName = 'hydraone-game-starter';
     }
     if (!template) {
-      template = 'nuxt-3';
+      template = 'nuxt';
     }
   }
 

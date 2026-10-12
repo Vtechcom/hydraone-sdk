@@ -24,7 +24,7 @@ To start from a template instead:
 npx create-hydraone-game my-game --template phaser-3
 ```
 
-Templates: `next-js`, `nuxt-3`, `phaser-3`.
+Templates: `next-js`, `nuxt`, `phaser-3`.
 
 ## Connect
 

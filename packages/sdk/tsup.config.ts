@@ -11,7 +11,8 @@ export default defineConfig({
     'cli/index': 'src/cli/index.ts',
   },
   format: ['esm', 'cjs'],
-  dts: true,
+  // tsup injects the deprecated `baseUrl` into its dts build, an error under TS 6.
+  dts: { compilerOptions: { ignoreDeprecations: '6.0' } },
   clean: true,
   sourcemap: true,
   splitting: false,

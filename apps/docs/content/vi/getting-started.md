@@ -26,7 +26,7 @@ npm install @hydraone/sdk
 npx create-hydraone-game my-game --template phaser-3
 ```
 
-Các template: `next-js`, `nuxt-3`, `phaser-3`.
+Các template: `next-js`, `nuxt`, `phaser-3`.
 
 ## Kết nối
 

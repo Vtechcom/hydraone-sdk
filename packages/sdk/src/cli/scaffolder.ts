@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { ScaffoldOptions, TemplateType } from './types';
 import { CLI_VERSION } from './types';
 
-export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt-3', 'next-js', 'phaser-3'];
+export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt', 'next-js', 'phaser-3'];
 
 export function validateProjectName(name: string): { valid: boolean; reason?: string } {
   if (!name || name.trim() === '') {
@@ -176,7 +176,7 @@ export async function scaffoldProject(
   const replacements: Record<string, string> = {
     '{{PROJECT_NAME}}': actualProjectName,
     '{{SDK_VERSION}}': `^${CLI_VERSION}`,
-    '@hydraone/template-nuxt-3': actualProjectName,
+    '@hydraone/template-nuxt': actualProjectName,
     '@hydraone/template-next-js': actualProjectName,
     '@hydraone/template-phaser-3': actualProjectName,
     'workspace:*': `^${CLI_VERSION}`,

@@ -20,7 +20,7 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
 - **Framework adapters**: React hooks (`@hydraone/sdk/react`) and Vue/Nuxt composables (`@hydraone/sdk/vue`).
 - **Health diagnostics** for the bridge.
-- **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt 3, Phaser 3).
+- **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt, Phaser 3).
 - Zero runtime dependencies. ESM and CommonJS builds with bundled type declarations.
 
 ## Requirements
@@ -45,7 +45,7 @@ Start a new project from a template:
 npx create-hydraone-game my-game --template phaser-3
 ```
 
-Templates: `next-js`, `nuxt-3`, `phaser-3`. Run `npx create-hydraone-game --help` for all options.
+Templates: `next-js`, `nuxt`, `phaser-3`. Run `npx create-hydraone-game --help` for all options.
 
 ## Quick start
 
@@ -272,7 +272,7 @@ for (const check of report.checks) {
 ```text
 npx create-hydraone-game [project-name] [options]
 
-  -t, --template <name>   next-js, nuxt-3 or phaser-3
+  -t, --template <name>   next-js, nuxt or phaser-3
   --pm <package-manager>  pnpm, npm, yarn or bun
   --force                 Use the target directory even if it is not empty
   -y, --yes               Skip prompts and use defaults

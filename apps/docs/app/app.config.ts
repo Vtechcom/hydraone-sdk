@@ -31,7 +31,7 @@ export default defineAppConfig({
       'aria-label': 'HydraOne SDK on GitHub'
     }, {
       'icon': 'i-simple-icons-discord',
-      'to': 'https://discord.com/invite/eZKRyQnbea',
+      'to': 'https://discord.com/invite/4eXjD9uESE',
       'target': '_blank',
       'aria-label': 'HydraOne SDK on Discord'
     }, {
@@ -56,14 +56,9 @@ export default defineAppConfig({
       'aria-label': '@hydraone/sdk on npm'
     }, {
       'icon': 'i-simple-icons-discord',
-      'to': 'https://discord.com/invite/eZKRyQnbea',
+      'to': 'https://discord.com/invite/4eXjD9uESE',
       'target': '_blank',
       'aria-label': 'HydraOne SDK on Discord'
-    }, {
-      'icon': 'i-simple-icons-telegram',
-      'to': 'https://telegram.me/+LeuWUO7YjGYyZmJl',
-      'target': '_blank',
-      'aria-label': 'HydraOne SDK on Telegram'
     }, {
       'icon': 'i-simple-icons-x',
       'to': 'https://x.com/VtechcomLabs',
@@ -84,7 +79,7 @@ export default defineAppConfig({
       }, {
         icon: 'i-simple-icons-discord',
         label: 'Join our Discord',
-        to: 'https://discord.com/invite/eZKRyQnbea',
+        to: 'https://discord.com/invite/4eXjD9uESE',
         target: '_blank'
       }]
     }

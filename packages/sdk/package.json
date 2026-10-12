@@ -78,7 +78,7 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public",
@@ -94,7 +94,7 @@
     "test:coverage": "vitest run --coverage",
     "docs": "typedoc",
     "size": "size-limit",
-    "check:package": "publint && attw --pack .",
+    "check:package": "publint && attw --pack . --profile node16",
     "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
     "prepack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.copyFileSync('../../'+n,n)\"",
     "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
@@ -134,7 +134,7 @@
     "size-limit": "^14.2.0",
     "tsup": "^8.3.6",
     "typedoc": "^0.28.20",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1",
     "vitest": "^3.0.7",
     "vue": "^3.5.43"

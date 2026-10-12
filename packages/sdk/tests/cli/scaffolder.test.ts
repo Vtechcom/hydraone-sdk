@@ -89,9 +89,9 @@ describe('create-hydraone-game CLI', () => {
 
   describe('3. CLI Argument Parser (parseCliArgs)', () => {
     it('parses positional arguments and options', () => {
-      const args = parseCliArgs(['my-game', '--template', 'nuxt-3', '--pm', 'pnpm']);
+      const args = parseCliArgs(['my-game', '--template', 'nuxt', '--pm', 'pnpm']);
       expect(args.projectName).toBe('my-game');
-      expect(args.template).toBe('nuxt-3');
+      expect(args.template).toBe('nuxt');
       expect(args.packageManager).toBe('pnpm');
     });
 
@@ -122,7 +122,7 @@ describe('create-hydraone-game CLI', () => {
 
   describe('4. Project Scaffolding Engine (scaffoldProject)', () => {
     it('lists every shipped template as supported', () => {
-      expect(SUPPORTED_TEMPLATES).toEqual(['nuxt-3', 'next-js', 'phaser-3']);
+      expect(SUPPORTED_TEMPLATES).toEqual(['nuxt', 'next-js', 'phaser-3']);
     });
 
     it('throws when the template is not supported', async () => {
@@ -135,15 +135,15 @@ describe('create-hydraone-game CLI', () => {
       ).rejects.toThrow('is not supported');
     });
 
-    it('scaffolds the Nuxt 3 template and substitutes placeholders', async () => {
+    it('scaffolds the Nuxt template and substitutes placeholders', async () => {
       const targetDir = path.join(tempDir, 'test-nuxt');
       const result = await scaffoldProject({
         projectName: 'test-nuxt-game',
         targetDir,
-        template: 'nuxt-3',
+        template: 'nuxt',
       });
 
-      expect(result.template).toBe('nuxt-3');
+      expect(result.template).toBe('nuxt');
       expect(fs.existsSync(targetDir)).toBe(true);
 
       const pkgJsonPath = path.join(targetDir, 'package.json');
@@ -223,10 +223,10 @@ describe('create-hydraone-game CLI', () => {
       const result = await scaffoldProject({
         projectName: '@hydra/cardano-game',
         targetDir,
-        template: 'nuxt-3',
+        template: 'nuxt',
       });
 
-      expect(result.template).toBe('nuxt-3');
+      expect(result.template).toBe('nuxt');
       const pkgJson = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf-8'));
       expect(pkgJson.name).toBe('@hydra/cardano-game');
     });
@@ -263,7 +263,7 @@ describe('create-hydraone-game CLI', () => {
 
     it('scaffolds non-interactively with --yes', () => {
       const targetDir = path.join(tempDir, 'cli-auto-app');
-      execSync(`node "${binScript}" "${targetDir}" --template nuxt-3 --pm pnpm --yes`, {
+      execSync(`node "${binScript}" "${targetDir}" --template nuxt --pm pnpm --yes`, {
         encoding: 'utf-8',
       });
 
@@ -308,7 +308,7 @@ describe('scaffolder template hygiene', () => {
     try {
       for (const [template, helper] of [
         ['next-js', 'lib/hydra.ts'],
-        ['nuxt-3', 'utils/hydra.ts'],
+        ['nuxt', 'utils/hydra.ts'],
       ] as const) {
         const dir = path.join(tmp, template);
         await scaffoldProject({ projectName: `demo-${template}`, targetDir: dir, template });

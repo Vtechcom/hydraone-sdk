@@ -9,7 +9,7 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "@hydraone/template-next-js",
-    "@hydraone/template-nuxt-3",
+    "@hydraone/template-nuxt",
     "@hydraone/template-phaser-3",
     "@hydraone/docs"
   ]

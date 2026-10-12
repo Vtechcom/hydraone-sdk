@@ -22,7 +22,7 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
 - **Adapter cho framework**: React hooks (`@hydraone/sdk/react`) và Vue/Nuxt composables (`@hydraone/sdk/vue`).
 - **Chẩn đoán sức khỏe** cho cầu nối.
-- **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt 3, Phaser 3).
+- **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt, Phaser 3).
 - Không có runtime dependency. Có bản build ESM và CommonJS kèm type declaration đóng gói sẵn.
 
 ## Yêu cầu
@@ -47,7 +47,7 @@ Khởi tạo dự án mới từ template:
 npx create-hydraone-game my-game --template phaser-3
 ```
 
-Các template: `next-js`, `nuxt-3`, `phaser-3`. Chạy `npx create-hydraone-game --help` để xem mọi tùy chọn.
+Các template: `next-js`, `nuxt`, `phaser-3`. Chạy `npx create-hydraone-game --help` để xem mọi tùy chọn.
 
 ## Bắt đầu nhanh
 
@@ -274,7 +274,7 @@ for (const check of report.checks) {
 ```text
 npx create-hydraone-game [project-name] [options]
 
-  -t, --template <name>   next-js, nuxt-3 or phaser-3
+  -t, --template <name>   next-js, nuxt or phaser-3
   --pm <package-manager>  pnpm, npm, yarn or bun
   --force                 Use the target directory even if it is not empty
   -y, --yes               Skip prompts and use defaults

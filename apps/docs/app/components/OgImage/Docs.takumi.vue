@@ -51,7 +51,7 @@ defineProps<{
         >
         <span class="text-2xl font-bold text-highlighted">HydraOne SDK</span>
         <div class="h-px flex-1 bg-border" />
-        <span class="text-xl text-dimmed">hydraone.io</span>
+        <span class="text-xl text-dimmed">alpha.hydraone.app</span>
       </div>
     </div>
   </div>

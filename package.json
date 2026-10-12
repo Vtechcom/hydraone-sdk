@@ -16,11 +16,11 @@
     "test:coverage": "pnpm --filter @hydraone/sdk test:coverage",
     "size": "pnpm --filter @hydraone/sdk size",
     "check:package": "pnpm --filter @hydraone/sdk check:package",
-    "docs:api": "pnpm --filter @hydraone/sdk docs",
+    "docs:api": "pnpm --filter @hydraone/sdk run docs",
     "dev:docs": "pnpm --filter @hydraone/docs dev",
     "build:docs": "pnpm --filter @hydraone/docs generate",
     "dev:next": "pnpm --filter @hydraone/template-next-js dev",
-    "dev:nuxt": "pnpm --filter @hydraone/template-nuxt-3 dev",
+    "dev:nuxt": "pnpm --filter @hydraone/template-nuxt dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "changeset": "changeset"
@@ -28,5 +28,8 @@
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
     "prettier": "^3.9.9"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

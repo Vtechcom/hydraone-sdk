@@ -80,7 +80,7 @@ Call `installHydra()` before any component uses the composables, for example in 
 - The composables are SSR-safe: they check for `window`, register listeners only after mount, and remove them with `onScopeDispose`.
 - Wrap wallet-dependent markup in `<ClientOnly>` or a `v-if` on `isConnected` so server and client markup match.
 
-`npx create-hydraone-game my-game --template nuxt-3` generates a starter that uses the shared defaults (wallet-extension fallback only). Add the `installHydra()` setup above before embedding the game in the App Center.
+`npx create-hydraone-game my-game --template nuxt` generates a starter that uses the shared defaults (wallet-extension fallback only). Add the `installHydra()` setup above before embedding the game in the App Center.
 
 ## Testing
 

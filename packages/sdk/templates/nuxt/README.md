@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-A Web3 game scaffolded with `create-hydraone-game`, built with **Nuxt 3** and **@hydraone/sdk**.
+A Web3 game scaffolded with `create-hydraone-game`, built with **Nuxt 4** and **@hydraone/sdk**.
 
 ## Develop
 

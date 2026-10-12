@@ -82,7 +82,7 @@ Gọi `installHydra()` trước khi bất kỳ component nào dùng các composa
 - Các composable an toàn với SSR: chúng kiểm tra `window`, chỉ đăng ký listener sau khi mount, và gỡ listener bằng `onScopeDispose`.
 - Bọc phần markup phụ thuộc vào ví trong `<ClientOnly>` hoặc dùng `v-if` trên `isConnected`, để markup của server và client khớp nhau.
 
-`npx create-hydraone-game my-game --template nuxt-3` sinh ra một dự án khởi đầu dùng các giá trị chung mặc định (chỉ có fallback sang wallet extension). Hãy thêm phần thiết lập `installHydra()` ở trên trước khi nhúng game vào App Center.
+`npx create-hydraone-game my-game --template nuxt` sinh ra một dự án khởi đầu dùng các giá trị chung mặc định (chỉ có fallback sang wallet extension). Hãy thêm phần thiết lập `installHydra()` ở trên trước khi nhúng game vào App Center.
 
 ## Kiểm thử
 

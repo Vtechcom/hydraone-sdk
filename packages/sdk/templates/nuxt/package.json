@@ -1,5 +1,5 @@
 {
-  "name": "@hydraone/template-nuxt-3",
+  "name": "@hydraone/template-nuxt",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,10 @@
     "vue": "^3.5.0"
   },
   "devDependencies": {
-    "nuxt": "^3.15.0",
-    "typescript": "^5.7.0"
+    "nuxt": "^4.6.1",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
   }
 }
