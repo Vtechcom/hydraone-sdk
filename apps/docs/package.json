@@ -38,7 +38,7 @@
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/schema": "^4.4.8",
     "eslint": "^10.6.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vue-tsc": "^3.3.5"
   }
 }
