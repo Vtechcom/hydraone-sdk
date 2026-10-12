@@ -21,9 +21,7 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 - **Đăng nhập CIP-8 một chạm** kèm quản lý vòng đời JWT (`GameAuthManager`).
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
 - **Adapter cho framework**: React hooks (`@hydraone/sdk/react`) và Vue/Nuxt composables (`@hydraone/sdk/vue`).
-- **Tiện ích Cardano** với phép toán `bigint` chính xác, bộ giải mã CBOR nhỏ gọn và chuyển đổi bech32 (`@hydraone/sdk/cardano`).
-- **Trình giả lập cục bộ**: mock host, widget DevTools nổi và dev shell (`@hydraone/sdk/simulator`).
-- **Chẩn đoán sức khỏe** cho cầu nối (`@hydraone/sdk/diagnostics`).
+- **Chẩn đoán sức khỏe** cho cầu nối.
 - **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt 3, Phaser 3).
 - Không có runtime dependency. Có bản build ESM và CommonJS kèm type declaration đóng gói sẵn.
 
@@ -75,7 +73,7 @@ try {
 
 Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài iframe, `fallbackToExtension: true` làm client kết nối tới tiện ích ví Cardano đã cài.
 
-`getBalance()` trả về số dư ví đúng như CIP-30 định nghĩa: một chuỗi hex mã hóa CBOR. Truyền nó vào `getAdaBalance([balanceCbor])` từ `@hydraone/sdk/cardano` để nhận chuỗi ADA (xem [Reading balances](./docs/vi/getting-started.md#đọc-số-dư)).
+`getBalance()` trả về số dư ví đúng như CIP-30 định nghĩa: một chuỗi hex mã hóa CBOR. `useWallet().balanceADA` và `useWalletBridgeClient().balanceADA` đọc phần lovelace của chuỗi này giúp bạn (xem [Đọc số dư](./docs/vi/getting-started.md#đọc-số-dư)).
 
 ## Cấu hình
 
@@ -253,58 +251,11 @@ export function setup() {
 
 Xem [hướng dẫn Vue](./docs/vi/guides/vue.md).
 
-### Tiện ích Cardano
-
-```ts
-import {
-  adaToLovelace,
-  lovelaceToAda,
-  getTotalLovelace,
-  getAdaBalance,
-  getAssetQuantity,
-  cardanoHexToBech32,
-  stringToHex,
-  hexToString,
-} from '@hydraone/sdk/cardano';
-
-export function demo(utxos: string[], addressHex: string) {
-  const lovelace: bigint = adaToLovelace('12.5');
-  const ada: string = lovelaceToAda(lovelace);
-  const total: bigint = getTotalLovelace(utxos);
-  const balance: string = getAdaBalance(utxos);
-  const qty: bigint = getAssetQuantity(utxos, 'a'.repeat(56), stringToHex('GOLD'));
-  const bech32: string = cardanoHexToBech32(addressHex);
-  return { ada, total, balance, qty, bech32, name: hexToString('476f6c64') };
-}
-```
-
-### Trình giả lập
-
-```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
-import { MockBridgeHost, mountDevTools, initHydraDevShell } from '@hydraone/sdk/simulator';
-
-if (initHydraDevShell({ projectName: 'My Game' })) {
-  const host = new MockBridgeHost({
-    latencyMs: 200,
-    walletState: { balanceLovelace: 5_000_000_000n },
-  });
-  const client = new WalletBridgeClient({ transport: host.createClientTransport() });
-  mountDevTools({ host, client });
-
-  host.rejectNext('Rejected by the test');
-  host.setStorageBlock(true);
-  await client.init();
-}
-```
-
-Chỉ import trình giả lập khi phát triển. Nó không dành cho bundle production. Xem [Testing your integration](./docs/vi/testing-your-integration.md).
-
 ### Chẩn đoán
 
 ```ts
 import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),
@@ -363,7 +314,7 @@ const logger: Logger = {
 export const client = new WalletBridgeClient({ fallbackToExtension: true, debug: true, logger });
 ```
 
-Client chỉ ghi các thông điệp ngắn và đối tượng lỗi, không bao giờ ghi payload của request. Ngoại lệ là trình giả lập: `MockClientTransport` với `debug: true` in mọi tin nhắn, vì vậy hãy tắt cờ này khi có token hoặc chữ ký thật.
+Client chỉ ghi các thông điệp ngắn và đối tượng lỗi, không bao giờ ghi payload của request.
 
 ## ESM, CommonJS và TypeScript
 
@@ -373,7 +324,7 @@ Package phát hành bản build ESM (`.js`) và CommonJS (`.cjs`) kèm declarati
 const { WalletBridgeClient } = require('@hydraone/sdk');
 ```
 
-Các entry point: `@hydraone/sdk`, `@hydraone/sdk/cardano`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`, `@hydraone/sdk/simulator`, `@hydraone/sdk/diagnostics`. Entry gốc nặng khoảng 23 KB sau khi gzip. Chỉ import những subpath bạn cần.
+Các entry point: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. Entry gốc nặng khoảng 23 KB sau khi gzip. Chỉ import những subpath bạn cần.
 
 ## Tài liệu API
 

@@ -84,4 +84,4 @@ Gọi `installHydra()` trước khi bất kỳ component nào dùng các composa
 
 ## Kiểm thử
 
-Tạo một `MockBridgeHost`, đăng ký `new WalletBridgeClient({ transport: host.createClientTransport() })` bằng `setSharedWalletBridgeClient`, rồi mount component của bạn bằng Vue Test Utils. Xem [Kiểm thử tích hợp của bạn](../testing-your-integration.md).
+Tạo một `WalletBridgeClient` với `ITransport` giả, đăng ký nó bằng `setSharedWalletBridgeClient`, rồi mount component của bạn bằng Vue Test Utils. Xem [Kiểm thử tích hợp của bạn](../testing-your-integration.md).

@@ -81,22 +81,13 @@ Without `allow-same-origin` the iframe gets an opaque origin (`null`), and the d
 
 ## Test it locally
 
-Use the [simulator](../testing-your-integration.md) to reproduce the problem on any browser:
-
-```ts
-import { MockBridgeHost } from '@hydraone/sdk/simulator';
-
-const host = new MockBridgeHost();
-host.setStorageBlock(true); // host storage requests now fail with ERR_STORAGE_UNAVAILABLE
-```
-
-In the DevTools widget, the Safari ITP switch does the same and also makes `localStorage` throw `SecurityError`. Reload and confirm your game recovers gracefully.
+To reproduce the problem on any browser, make `localStorage` throw `SecurityError` in the browser console (`Storage.prototype.setItem = () => { throw new DOMException('insecure', 'SecurityError'); }`) and reload. Confirm your game recovers gracefully.
 
 Then run the health check against the real host:
 
 ```ts
 import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),

@@ -6,11 +6,8 @@ const { version } = JSON.parse(readFileSync(new URL('./package.json', import.met
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
-    'cardano/index': 'src/cardano/index.ts',
     'vue/index': 'src/vue/index.ts',
     'react/index': 'src/react/index.ts',
-    'simulator/index': 'src/simulator/index.ts',
-    'diagnostics/index': 'src/diagnostics/index.ts',
     'cli/index': 'src/cli/index.ts',
   },
   format: ['esm', 'cjs'],

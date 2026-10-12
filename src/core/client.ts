@@ -1,6 +1,7 @@
 import type { ITransport } from './ports/transport';
 import type {
   AudioMutedHandler,
+  BalanceAsset,
   BridgeMessage,
   ConnectionState,
   DataSignature,
@@ -40,8 +41,8 @@ import {
   detectCardanoWallets,
 } from './adapters/direct-extension-transport';
 import { getWalletExtension, getWindowCardano } from './cardano-provider';
-import { checkBridgeHealth } from '../diagnostics/health-check';
-import type { BridgeHealthReport, CheckHealthOptions } from '../diagnostics/types';
+import { checkBridgeHealth } from './diagnostics/health-check';
+import type { BridgeHealthReport, CheckHealthOptions } from './diagnostics/types';
 
 /**
  * Generates a unique, unpredictable ID for each RPC request.
@@ -726,6 +727,27 @@ export class WalletBridgeClient {
     };
 
     return await this.executeRpc<string>(message, timeout);
+  }
+
+  /**
+   * Gets the wallet balance as a list of assets, already decoded by the host.
+   * Hosts that predate this request reject it; use getBalance() as the fallback.
+   *
+   * @param options Query options (timeoutMs).
+   * @returns Assets: `{ unit: 'lovelace', quantity }` plus one entry per native asset.
+   */
+  public async getBalanceAssets(options?: QueryOptions): Promise<BalanceAsset[]> {
+    this.assertConnected();
+    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
+    const message: BridgeMessage = {
+      id: generateId(),
+      type: 'GET_BALANCE_ASSETS',
+      payload: {},
+      timestamp: Date.now(),
+      source: 'hydra-client',
+    };
+
+    return await this.executeRpc<BalanceAsset[]>(message, timeout);
   }
 
   /**

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isReadyToRender" class="hydra-app">
+  <div class="hydra-app">
     <header class="header">
       <div class="logo">{{ projectName }}</div>
       <div class="wallet-badge" :class="{ connected: isConnected }">
@@ -77,8 +77,6 @@ const { client, isConnected, address, balanceADA, error, connect, disconnect } =
   useWalletBridgeClient({ autoConnect: import.meta.client && isEmbedded() });
 const { isAuthenticated, signIn, signOut } = useGameAuth();
 
-const isReadyToRender = ref(false);
-
 const healthText = computed(() =>
   health.value
     ? [
@@ -108,11 +106,8 @@ async function handleHealthCheck() {
   health.value = await client.checkHealth().catch(() => null);
 }
 
-onMounted(async () => {
+onMounted(() => {
   embedded.value = isEmbedded();
-  // Development only: opened in a top-level tab, this wraps the game in the HydraOne host UI
-  // and renders the game inside its iframe. Production builds skip it entirely.
-  isReadyToRender.value = await bootstrapDevShell(projectName);
 });
 </script>
 

@@ -137,4 +137,4 @@ Server rendering là an toàn: không có gì chạm vào `window` cho đến kh
 
 ## Kiểm thử
 
-Dùng [simulator](../testing-your-integration.md): tạo một `MockBridgeHost`, truyền `host.createClientTransport()` qua `options.transport`, và render component của bạn bằng `@testing-library/react`.
+Mock client trong test component: cung cấp một `ITransport` giả qua `options.transport` và render bằng `@testing-library/react`. Xem [Kiểm thử tích hợp của bạn](../testing-your-integration.md).

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** the `@hydraone/sdk/cardano`, `@hydraone/sdk/diagnostics` and `@hydraone/sdk/simulator` entry points are gone. The diagnostics functions are now exported from `@hydraone/sdk`.
+- `useWallet` and `useWalletBridgeClient` compute `balanceADA` and `balanceLovelace` with one call and no longer use `getUtxos()`. They ask the host for `GET_BALANCE_ASSETS` (new, decoded `{ unit, quantity }` list) and fall back to reading the lovelace of the CIP-30 `Value` from `getBalance()` for older hosts and direct wallet extensions.
+- New `WalletBridgeClient.getBalanceAssets()` and the `BalanceAsset` type.
+
+### Removed
+
+- **BREAKING:** the Cardano helpers (`getTotalLovelace`, `getAdaBalance`, `lovelaceToAda`, `adaToLovelace`, `getAssetQuantity`, `parseValue`, the CBOR decoder, the Bech32 address helpers and the hex byte helpers). The `stringToHex` / `hexToString` of the auth module remain.
+- **BREAKING:** the simulator (`MockBridgeHost`, `MockClientTransport`, `DevToolsWidget` / `mountDevTools`, `SafariItpStorageSimulator`, `initHydraDevShell`) and the dev shell bootstrap in the Next.js and Nuxt 3 templates.
+
 ### Added
 
 - `signIn` option `challengeEncoding` (`'auto' | 'utf8' | 'hex'`) to state how the challenge becomes the signed bytes.

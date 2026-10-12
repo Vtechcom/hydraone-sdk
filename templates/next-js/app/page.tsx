@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useWallet, useHydraAuth } from '@hydraone/sdk/react';
 import type { BridgeHealthReport } from '@hydraone/sdk';
-import { bootstrapDevShell, isEmbedded } from '../lib/hydra';
+import { isEmbedded } from '../lib/hydra';
 
 const PROJECT_NAME = '{{PROJECT_NAME}}';
 
@@ -17,21 +17,10 @@ const buttonBase: React.CSSProperties = {
 };
 
 export default function Home() {
-  const [isReadyToRender, setIsReadyToRender] = useState(false);
   const [health, setHealth] = useState<BridgeHealthReport | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const { client, isConnected, address, balanceADA, connect, disconnect } = useWallet();
   const { isAuthenticated, signIn, signOut } = useHydraAuth();
-
-  useEffect(() => {
-    // Development only: opened in a top-level tab, this wraps the game in the HydraOne
-    // host UI and renders the game inside its iframe. Production builds skip it entirely.
-    bootstrapDevShell(PROJECT_NAME).then(setIsReadyToRender);
-  }, []);
-
-  if (!isReadyToRender) {
-    return null;
-  }
 
   const embedded = isEmbedded();
 

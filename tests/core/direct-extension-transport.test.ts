@@ -259,6 +259,18 @@ describe('DirectExtensionTransport', () => {
       expect(res.payload.result).toBe('100000000');
     });
 
+    it('rejects GET_BALANCE_ASSETS as unsupported so the client falls back to GET_BALANCE', async () => {
+      await expect(
+        transport.request<any>({
+          id: 'req_balance_assets',
+          type: 'GET_BALANCE_ASSETS',
+          timestamp: Date.now(),
+          source: 'hydra-client',
+        }),
+      ).rejects.toMatchObject({ code: 'ERR_UNSUPPORTED_METHOD' });
+      expect(mockApi.getBalance).not.toHaveBeenCalled();
+    });
+
     it('handles GET_COLLATERAL', async () => {
       const res = await transport.request<any>({
         id: 'req_collat',

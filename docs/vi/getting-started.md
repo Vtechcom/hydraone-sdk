@@ -10,7 +10,7 @@ Trang này hướng dẫn từ bước cài đặt đến giao dịch đầu ti�
 
 - Node.js 20 trở lên cho tooling và server-side rendering
 - Một trình duyệt cho các tính năng ví
-- Một wallet extension CIP-30 (Eternl, Lace, Nami, Flint và các ví khác) khi chạy bên ngoài HydraOne App Center, hoặc [simulator](./testing-your-integration.md) tích hợp sẵn trong lúc phát triển
+- Một wallet extension CIP-30 (Eternl, Lace, Nami, Flint và các ví khác) khi chạy bên ngoài HydraOne App Center
 
 ## Cài đặt
 
@@ -62,28 +62,15 @@ Kiểm tra trạng thái bất kỳ lúc nào bằng `client.connectionState` (`
 
 ## Đọc số dư
 
-`getBalance()` trả về số dư theo chuẩn CIP-30, là một chuỗi hex mã hóa CBOR. Chuyển đổi bằng các tiện ích Cardano:
+`getBalance()` trả về số dư CIP-30, một chuỗi hex mã hóa CBOR. Các hook ví đọc phần lovelace của nó giúp bạn, chính xác và dưới dạng `bigint`:
 
 ```ts
-import { getAdaBalance } from '@hydraone/sdk/cardano';
-
-const ada = getAdaBalance([balanceCbor]); // for example "1234.56789"
+const { balanceADA, balanceLovelace } = useWallet(); // "1234.56789" và 1234567890n
 ```
 
-Các helper trong `@hydraone/sdk/cardano` dùng `bigint`, nên số lượng lovelace không bao giờ mất độ chính xác:
+Ngoài các hook, hãy giải mã `Value` CBOR bằng một thư viện Cardano.
 
-```ts
-import {
-  adaToLovelace,
-  lovelaceToAda,
-  getTotalLovelace,
-  getAssetQuantity,
-  cardanoHexToBech32,
-  stringToHex,
-} from '@hydraone/sdk/cardano';
-```
-
-Các truy vấn địa chỉ như `getUsedAddresses()` trả về đúng những gì ví hoặc host trả về. Ví CIP-30 trả về hex, còn host shell có thể trả về bech32. Hãy chuyển hex bằng `cardanoHexToBech32` trước khi hiển thị.
+Các truy vấn địa chỉ như `getUsedAddresses()` trả về đúng những gì ví hoặc host trả về. Ví CIP-30 trả về hex, còn host shell có thể trả về bech32. Hãy chuyển hex bằng một thư viện Bech32 trước khi hiển thị.
 
 ## Ký và gửi giao dịch
 

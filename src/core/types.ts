@@ -11,6 +11,7 @@ export type BridgeMessageType =
   | 'GET_USED_ADDRESSES'
   | 'GET_UTXOS'
   | 'GET_BALANCE'
+  | 'GET_BALANCE_ASSETS'
   | 'GET_COLLATERAL'
   | 'SIGN_TX'
   | 'SUBMIT_TX'
@@ -28,6 +29,14 @@ export type BridgeMessageType =
   | 'HOST_STORAGE_CLEAR'
   | 'RPC_RESPONSE'
   | 'RPC_ERROR';
+
+/**
+ * One entry of a wallet balance: `unit` is `'lovelace'` or `policyId + assetNameHex`, `quantity` a base-10 integer string.
+ */
+export interface BalanceAsset {
+  unit: string;
+  quantity: string;
+}
 
 /**
  * Origin of a bridge message.

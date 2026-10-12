@@ -44,11 +44,10 @@ flowchart TB
 | `ITransport`               | Port with `send`, `onMessage` and optional `destroy`. Everything above it is transport-agnostic. |
 | `PostMessageTransport`     | Iframe transport with origin and source validation and request/response correlation.             |
 | `DirectExtensionTransport` | Talks to a CIP-30 extension and translates RPC messages into wallet calls.                       |
-| `MockClientTransport`      | In-memory transport used by the simulator.                                                       |
 | `IStorage`                 | Port for async key-value storage.                                                                |
 | `GameAuthManager`          | CIP-8 login and JWT lifecycle on top of a client and a storage.                                  |
 
-Ports (`ITransport`, `IStorage`) keep the core free of browser details, which is why the same client works against the iframe host, an extension and the simulator.
+Ports (`ITransport`, `IStorage`) keep the core free of browser details, which is why the same client works against the iframe host, and an extension.
 
 ## Message protocol
 
@@ -82,7 +81,7 @@ sequenceDiagram
     H-->>G: THEME_CHANGED / AUDIO_MUTED_CHANGED (push events)
 ```
 
-Message types: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRESSES`, `GET_UTXOS`, `GET_BALANCE`, `GET_COLLATERAL`, `SIGN_TX`, `SUBMIT_TX`, `SIGN_DATA`, `AUDIO_MUTED_CHANGED`, `THEME_CHANGED`, `SET_ORIENTATION`, `TRIGGER_HAPTIC`, `REQUEST_DEPOSIT_MODAL`, `GET_PLAYER_PROFILE`, `AUTH_STATE_CHANGED`, `HOST_STORAGE_GET`, `HOST_STORAGE_SET`, `HOST_STORAGE_REMOVE`, `HOST_STORAGE_CLEAR`, `RPC_RESPONSE`, `RPC_ERROR`.
+Message types: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRESSES`, `GET_UTXOS`, `GET_BALANCE`, `GET_BALANCE_ASSETS`, `GET_COLLATERAL`, `SIGN_TX`, `SUBMIT_TX`, `SIGN_DATA`, `AUDIO_MUTED_CHANGED`, `THEME_CHANGED`, `SET_ORIENTATION`, `TRIGGER_HAPTIC`, `REQUEST_DEPOSIT_MODAL`, `GET_PLAYER_PROFILE`, `AUTH_STATE_CHANGED`, `HOST_STORAGE_GET`, `HOST_STORAGE_SET`, `HOST_STORAGE_REMOVE`, `HOST_STORAGE_CLEAR`, `RPC_RESPONSE`, `RPC_ERROR`.
 
 ## Security model
 
@@ -99,15 +98,10 @@ Message types: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRESSES`, `GET_UT
 
 One package, several entry points. Importing only what you need keeps your bundle small, and `sideEffects: false` lets bundlers drop the rest.
 
-| Entry point                 | Contents                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `@hydraone/sdk`             | Client, transports, storage adapters, auth, errors, types and the diagnostics functions. About 23 KB gzipped. |
-| `@hydraone/sdk/cardano`     | `bigint` ADA math, CBOR decoding, bech32 and hex helpers.                                                     |
-| `@hydraone/sdk/react`       | `HydraOneProvider`, `useWallet`, `useHydraAuth`, `useHostStorage`.                                            |
-| `@hydraone/sdk/vue`         | `useWalletBridgeClient`, `useGameAuth` and shared-instance setters.                                           |
-| `@hydraone/sdk/simulator`   | `MockBridgeHost`, `DevToolsWidget`, dev shell. Development only.                                              |
-| `@hydraone/sdk/diagnostics` | `checkBridgeHealth`, the individual checks and the report types.                                              |
+| Entry point           | Contents                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `@hydraone/sdk`       | Client, transports, storage adapters, auth, errors, types and diagnostics. About 23 KB gzipped. |
+| `@hydraone/sdk/react` | `HydraOneProvider`, `useWallet`, `useHydraAuth`, `useHostStorage`.                              |
+| `@hydraone/sdk/vue`   | `useWalletBridgeClient`, `useGameAuth` and shared-instance setters.                             |
 
 `react` and `vue` are optional peer dependencies and are never bundled. The CLI (`create-hydraone-game`) ships in the same package.
-
-The root entry re-exports everything from `/diagnostics`, because `client.checkHealth()` depends on it. Both import paths give you the same functions and types; `@hydraone/sdk/diagnostics` is the more explicit one when you only need diagnostics.

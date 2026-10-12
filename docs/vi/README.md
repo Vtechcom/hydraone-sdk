@@ -11,7 +11,7 @@
 | [Cấu hình](./configuration.md)                     | Mọi tùy chọn của client, transport và storage                 |
 | [Xử lý lỗi](./error-handling.md)                   | Các lớp lỗi, mã lỗi và cách khôi phục                         |
 | [Logging](./logging.md)                            | Debug output và logger tùy biến                               |
-| [Kiểm thử tích hợp](./testing-your-integration.md) | Mock host, DevTools widget, dev shell, diagnostics            |
+| [Kiểm thử tích hợp](./testing-your-integration.md) | Chẩn đoán cầu nối, checklist trước khi nộp                    |
 | [Kiến trúc](./architecture.md)                     | Các chế độ chạy, giao thức, mô hình bảo mật, cấu trúc package |
 | [FAQ](./faq.md)                                    | Trả lời ngắn cho các câu hỏi thường gặp                       |
 | [Khắc phục sự cố](./troubleshooting.md)            | Triệu chứng, nguyên nhân và cách sửa                          |

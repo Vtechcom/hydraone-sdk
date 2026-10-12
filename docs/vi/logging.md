@@ -48,7 +48,7 @@ export interface Logger {
 
 ## Các thành phần khác
 
-Option `logger` chỉ áp dụng cho `WalletBridgeClient`. Các class của simulator (`MockBridgeHost`, `MockClientTransport`, `DevToolsWidget`, dev shell) và CLI ghi thẳng ra `console`. `MockBridgeHost` và `MockClientTransport` nhận `debug: true`, khi đó `MockClientTransport` sẽ in mọi thông điệp nó gửi và nhận. Hãy tắt tùy chọn này bất cứ khi nào token hoặc chữ ký thật có thể đi qua. Simulator chỉ dành cho phát triển.
+Option `logger` chỉ áp dụng cho `WalletBridgeClient`. CLI ghi thẳng ra `console`.
 
 ## Chẩn đoán một kết nối
 
@@ -56,7 +56,7 @@ Option `logger` chỉ áp dụng cho `WalletBridgeClient`. Các class của simu
 
 ```ts
 import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),

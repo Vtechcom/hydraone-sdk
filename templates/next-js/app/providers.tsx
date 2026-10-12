@@ -5,7 +5,7 @@ import { HydraOneProvider } from '@hydraone/sdk/react';
 import { isEmbedded, resolveHostOrigin } from '../lib/hydra';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Embedded (HydraOne web client or dev shell): talk to the host over postMessage.
+  // Embedded (HydraOne web client): talk to the host over postMessage.
   // Standalone tab: the SDK falls back to a CIP-30 wallet extension.
   const embedded = isEmbedded();
 

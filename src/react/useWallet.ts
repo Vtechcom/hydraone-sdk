@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { HydraOneContext } from './context';
 import type { UseWalletOptions, UseWalletReturn } from './types';
-import { getTotalLovelace, getAdaBalance } from '../cardano';
+import { readLovelaceBalance, lovelaceToAdaString } from '../core/balance';
 import type {
   ConnectionState,
   HostInfo,
@@ -121,22 +121,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         return '0';
       }
 
-      // Prefer getUtxos() so total Lovelace and ADA are computed exactly with BigInt
-      const utxos = await client.getUtxos();
-      if (utxos && utxos.length > 0) {
-        const lovelace = getTotalLovelace(utxos);
-        const adaStr = getAdaBalance(utxos);
-        if (isMountedRef.current && client.isConnected) {
-          setBalanceLovelace(lovelace);
-          setBalanceADA(adaStr);
-        }
-        return adaStr;
-      }
-
-      // Fall back to getBalance() when no UTxOs are returned
-      const rawBalance = await client.getBalance();
-      const lovelace = getTotalLovelace(rawBalance ? [rawBalance] : []);
-      const adaStr = getAdaBalance(rawBalance ? [rawBalance] : []);
+      // The host sends decoded assets; for older hosts and direct extensions the CIP-30 Value is read instead
+      const lovelace = await readLovelaceBalance(client);
+      const adaStr = lovelaceToAdaString(lovelace);
       if (isMountedRef.current && client.isConnected) {
         setBalanceLovelace(lovelace);
         setBalanceADA(adaStr);

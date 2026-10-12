@@ -5,6 +5,7 @@ import {
   setSharedWalletBridgeClient,
 } from '../../src/vue/useWalletBridgeClient';
 import { WalletBridgeClient } from '../../src/core/client';
+import { HydraBridgeError } from '../../src/core/errors';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
 
@@ -80,19 +81,21 @@ class MockTransport implements ITransport {
       };
     }
 
-    if (msg.type === 'GET_UTXOS') {
+    if (msg.type === 'GET_BALANCE_ASSETS') {
+      // PostMessageTransport.request() rejects with the host's RPC_ERROR
+      throw new HydraBridgeError(
+        'Unsupported request type: GET_BALANCE_ASSETS',
+        'ERR_UNSUPPORTED_METHOD',
+      );
+    }
+
+    if (msg.type === 'GET_BALANCE') {
       return {
         id: msg.id || 'res_3',
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result: [
-            {
-              value: {
-                coins: 45000000n,
-              },
-            },
-          ],
+          result: '1a02aea540',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -207,7 +210,7 @@ describe('useWalletBridgeClient', () => {
     expect(hostInfo.value).toBeNull();
   });
 
-  it('connects the wallet via init() and updates the reactive address and balanceADA', async () => {
+  it('connects the wallet via init() and, on an older host, reads the balance from GET_BALANCE', async () => {
     const { isConnected, connectionState, address, balanceADA, balanceLovelace, init } =
       useWalletBridgeClient({ client });
 

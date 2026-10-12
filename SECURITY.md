@@ -42,4 +42,3 @@ Out of scope: vulnerabilities in wallet extensions, in the HydraOne host applica
 
 - Always set `appCenterOrigin` to the exact host origin. A wildcard is rejected in production.
 - Verify CIP-8 signatures and issue JWTs on your own server. The SDK decodes tokens and checks expiry but does not verify signatures.
-- Do not enable `debug` on the simulator transports with real tokens or signatures.

@@ -2,7 +2,7 @@ English | [Tiếng Việt](./README.vi.md)
 
 # @hydraone/sdk
 
-Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 login, React and Vue adapters, and a local simulator.
+Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 login, React and Vue adapters,.
 
 [![npm version](https://img.shields.io/npm/v/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
 [![npm downloads](https://img.shields.io/npm/dm/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
@@ -19,9 +19,7 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 - **CIP-8 one-click login** with JWT lifecycle management (`GameAuthManager`).
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
 - **Framework adapters**: React hooks (`@hydraone/sdk/react`) and Vue/Nuxt composables (`@hydraone/sdk/vue`).
-- **Cardano utilities** with exact `bigint` math, a small CBOR decoder and bech32 conversion (`@hydraone/sdk/cardano`).
-- **Local simulator**: a mock host, a floating DevTools widget and a dev shell (`@hydraone/sdk/simulator`).
-- **Health diagnostics** for the bridge (`@hydraone/sdk/diagnostics`).
+- **Health diagnostics** for the bridge.
 - **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt 3, Phaser 3).
 - Zero runtime dependencies. ESM and CommonJS builds with bundled type declarations.
 
@@ -73,7 +71,7 @@ try {
 
 Inside the App Center iframe the client talks to the host shell. Outside an iframe, `fallbackToExtension: true` makes it connect to an installed Cardano wallet extension instead.
 
-`getBalance()` returns the wallet balance exactly as CIP-30 defines it: a CBOR-encoded hex string. Pass it to `getAdaBalance([balanceCbor])` from `@hydraone/sdk/cardano` to get an ADA string (see [Reading balances](./docs/getting-started.md#reading-balances)).
+`getBalance()` returns the wallet balance exactly as CIP-30 defines it: a CBOR-encoded hex string. `useWallet().balanceADA` and `useWalletBridgeClient().balanceADA` read its lovelace for you (see [Reading balances](./docs/getting-started.md#reading-balances)).
 
 ## Configuration
 
@@ -251,58 +249,11 @@ export function setup() {
 
 See the [Vue guide](./docs/guides/vue.md).
 
-### Cardano utilities
-
-```ts
-import {
-  adaToLovelace,
-  lovelaceToAda,
-  getTotalLovelace,
-  getAdaBalance,
-  getAssetQuantity,
-  cardanoHexToBech32,
-  stringToHex,
-  hexToString,
-} from '@hydraone/sdk/cardano';
-
-export function demo(utxos: string[], addressHex: string) {
-  const lovelace: bigint = adaToLovelace('12.5');
-  const ada: string = lovelaceToAda(lovelace);
-  const total: bigint = getTotalLovelace(utxos);
-  const balance: string = getAdaBalance(utxos);
-  const qty: bigint = getAssetQuantity(utxos, 'a'.repeat(56), stringToHex('GOLD'));
-  const bech32: string = cardanoHexToBech32(addressHex);
-  return { ada, total, balance, qty, bech32, name: hexToString('476f6c64') };
-}
-```
-
-### Simulator
-
-```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
-import { MockBridgeHost, mountDevTools, initHydraDevShell } from '@hydraone/sdk/simulator';
-
-if (initHydraDevShell({ projectName: 'My Game' })) {
-  const host = new MockBridgeHost({
-    latencyMs: 200,
-    walletState: { balanceLovelace: 5_000_000_000n },
-  });
-  const client = new WalletBridgeClient({ transport: host.createClientTransport() });
-  mountDevTools({ host, client });
-
-  host.rejectNext('Rejected by the test');
-  host.setStorageBlock(true);
-  await client.init();
-}
-```
-
-Import the simulator in development only. It is not meant for production bundles. See [Testing your integration](./docs/testing-your-integration.md).
-
 ### Diagnostics
 
 ```ts
 import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),
@@ -361,7 +312,7 @@ const logger: Logger = {
 export const client = new WalletBridgeClient({ fallbackToExtension: true, debug: true, logger });
 ```
 
-The client logs only short messages and error objects, never request payloads. The exception is the simulator: `MockClientTransport` with `debug: true` prints every message, so keep that flag off when real tokens or signatures are involved.
+The client logs only short messages and error objects, never request payloads.
 
 ## ESM, CommonJS and TypeScript
 
@@ -371,7 +322,7 @@ The package ships ESM (`.js`) and CommonJS (`.cjs`) builds with matching `.d.ts`
 const { WalletBridgeClient } = require('@hydraone/sdk');
 ```
 
-Entry points: `@hydraone/sdk`, `@hydraone/sdk/cardano`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`, `@hydraone/sdk/simulator`, `@hydraone/sdk/diagnostics`. The root entry is about 23 KB gzipped. Import only the subpaths you need.
+Entry points: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. The root entry is about 23 KB gzipped. Import only the subpaths you need.
 
 ## API reference
 
@@ -385,7 +336,7 @@ The output is written to `docs/api/`. Guides live in [docs/](./docs/README.md).
 
 ## FAQ and troubleshooting
 
-- **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab. Set `fallbackToExtension: true` and install a CIP-30 wallet, or use the [simulator](./docs/testing-your-integration.md).
+- **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab. Set `fallbackToExtension: true` and install a CIP-30 wallet.
 - **`ERR_UNTRUSTED_ORIGIN` in the console**: `appCenterOrigin` must match the host shell origin exactly (scheme, host and port, no path). A wildcard is only accepted outside production.
 - **Session lost after reload on iOS Safari**: store the session with `HostStorageRelayAdapter`. See the [Safari ITP guide](./docs/guides/safari-itp.md).
 

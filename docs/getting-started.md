@@ -8,7 +8,7 @@ This page takes you from installation to your first signed transaction.
 
 - Node.js 20 or later for tooling and server-side rendering
 - A browser for the wallet features
-- A CIP-30 wallet extension (Eternl, Lace, Nami, Flint and others) when you run outside the HydraOne App Center, or the built-in [simulator](./testing-your-integration.md) during development
+- A CIP-30 wallet extension (Eternl, Lace, Nami, Flint and others) when you run outside the HydraOne App Center
 
 ## Install
 
@@ -60,28 +60,15 @@ Check the state at any time with `client.connectionState` (`'disconnected' | 'co
 
 ## Reading balances
 
-`getBalance()` returns the CIP-30 balance, a CBOR-encoded hex string. Convert it with the Cardano utilities:
+`getBalance()` returns the CIP-30 balance, a CBOR-encoded hex string. The wallet hooks read its lovelace for you, exactly and as a `bigint`:
 
 ```ts
-import { getAdaBalance } from '@hydraone/sdk/cardano';
-
-const ada = getAdaBalance([balanceCbor]); // for example "1234.56789"
+const { balanceADA, balanceLovelace } = useWallet(); // "1234.56789" and 1234567890n
 ```
 
-The helpers in `@hydraone/sdk/cardano` use `bigint`, so lovelace amounts never lose precision:
+Outside the hooks, decode the CBOR `Value` with a Cardano library.
 
-```ts
-import {
-  adaToLovelace,
-  lovelaceToAda,
-  getTotalLovelace,
-  getAssetQuantity,
-  cardanoHexToBech32,
-  stringToHex,
-} from '@hydraone/sdk/cardano';
-```
-
-Address queries such as `getUsedAddresses()` return exactly what the wallet or host returns. CIP-30 wallets return hex, while a host shell may return bech32. Convert hex with `cardanoHexToBech32` before displaying it.
+Address queries such as `getUsedAddresses()` return exactly what the wallet or host returns. CIP-30 wallets return hex, while a host shell may return bech32. Convert hex with a Bech32 library before displaying it.
 
 ## Sign and submit
 

@@ -1,6 +1,6 @@
 /**
  * Bridge Health Diagnostics Suite: self-diagnostics for the bridge connection
- * (@hydraone/sdk/diagnostics)
+ *
  */
 
 import type {
@@ -12,10 +12,10 @@ import type {
   LatencyCheckOptions,
   StorageCheckOptions,
 } from './types';
-import { HostStorageRelayAdapter } from '../core/adapters/storage/host-storage-relay';
-import type { IStorage } from '../core/ports/storage';
-import type { ITransport } from '../core/ports/transport';
-import { errorCode, errorMessage, errorName } from '../core/error-utils';
+import { HostStorageRelayAdapter } from '../adapters/storage/host-storage-relay';
+import type { IStorage } from '../ports/storage';
+import type { ITransport } from '../ports/transport';
+import { errorCode, errorMessage, errorName } from '../error-utils';
 
 /** Optional capabilities a client or transport may expose; probed at runtime. */
 interface PingCapable {
@@ -93,7 +93,7 @@ export function checkIframeSandbox(): DiagnosticCheckItem {
     };
   }
 
-  // 4. frameElement is accessible (same-origin iframe in testing/simulator)
+  // 4. frameElement is accessible (same-origin iframe in testing)
   let hasExplicitSandboxAttr = false;
   let sandboxTokens: string[] = [];
   try {

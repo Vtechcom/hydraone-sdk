@@ -2,7 +2,7 @@ import type { BridgeMessage, MessageHandler, UnsubscribeFn } from '../types';
 
 /**
  * Two-way messaging port between the core client and its environment
- * (postMessage, direct extension, mock simulator).
+ * (postMessage, direct extension).
  */
 export interface ITransport {
   /**

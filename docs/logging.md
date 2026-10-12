@@ -46,7 +46,7 @@ export interface Logger {
 
 ## Other components
 
-The `logger` option applies to `WalletBridgeClient`. The simulator classes (`MockBridgeHost`, `MockClientTransport`, `DevToolsWidget`, the dev shell) and the CLI write to `console` directly. `MockBridgeHost` and `MockClientTransport` accept `debug: true`, and `MockClientTransport` then prints every message it sends and receives. Keep that off whenever real tokens or signatures could pass through. The simulator is for development only.
+The `logger` option applies to `WalletBridgeClient`. The CLI writes to `console` directly.
 
 ## Diagnosing a connection
 
@@ -54,7 +54,7 @@ To see why a connection fails, run the health check instead of reading logs. It 
 
 ```ts
 import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),

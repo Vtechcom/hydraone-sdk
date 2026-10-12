@@ -1,7 +1,7 @@
 import { PostMessageTransport, WalletBridgeClient } from '@hydraone/sdk';
 import { setSharedWalletBridgeClient } from '@hydraone/sdk/vue';
 
-/** True when the page runs inside an iframe (the HydraOne web client or the local dev shell). */
+/** True when the page runs inside an iframe (the HydraOne web client). */
 export function isEmbedded(): boolean {
   if (typeof window === 'undefined') return false;
   try {
@@ -29,7 +29,7 @@ function getParentOrigin(): string | undefined {
 /**
  * Origin the game trusts for postMessage traffic.
  * - Production: the configured HydraOne web client origin.
- * - Development: this page's own origin when the local dev shell embeds it, otherwise the
+ * - Development: this page's own origin when the HydraOne web client embeds it, otherwise the
  *   configured origin (for example when localhost is loaded inside the real web client).
  */
 export function resolveHostOrigin(configuredOrigin: string): string {
@@ -55,24 +55,4 @@ export function setupHydraClient(configuredOrigin: string): WalletBridgeClient {
   });
   setSharedWalletBridgeClient(client);
   return client;
-}
-
-/**
- * Wraps the game in the local HydraOne dev shell (development only).
- * Resolves to true when the game should render, false when the shell took over the window.
- * The simulator is imported dynamically so it never reaches the production bundle.
- */
-export async function bootstrapDevShell(projectName: string): Promise<boolean> {
-  if (!import.meta.dev) return true;
-
-  const { initHydraDevShell, mountDevTools } = await import('@hydraone/sdk/simulator');
-  const shouldRenderGame = initHydraDevShell({
-    projectName,
-    enableMockWallet: true,
-    enableRealWallet: true,
-  });
-  if (shouldRenderGame) {
-    mountDevTools({ defaultCollapsed: true });
-  }
-  return shouldRenderGame;
 }

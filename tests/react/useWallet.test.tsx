@@ -77,24 +77,34 @@ class MockTransport implements ITransport {
       };
     }
 
-    if (msg.type === 'GET_UTXOS') {
+    if (msg.type === 'GET_BALANCE_ASSETS') {
+      return {
+        id: msg.id || 'res_3a',
+        type: 'RPC_RESPONSE',
+        payload: {
+          requestId: msg.id,
+          result: [
+            { unit: 'lovelace', quantity: '7500000' },
+            {
+              unit: 'a0b1c2d3e4f50123456789abcdef0123456789abcdef0123456789ab4859445241',
+              quantity: '5',
+            },
+          ],
+        } as any,
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      };
+    }
+
+    if (msg.type === 'GET_BALANCE') {
       return {
         id: msg.id || 'res_3',
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result: [
-            {
-              txHash: 'a'.repeat(64),
-              index: 0,
-              amount: [{ unit: 'lovelace', quantity: '5000000' }],
-            },
-            {
-              txHash: 'b'.repeat(64),
-              index: 1,
-              amount: [{ unit: 'lovelace', quantity: '2500000' }],
-            },
-          ],
+          // Value [7500000, {policy: {HYDRA: 5}}] as the host sends it
+          result:
+            '821a007270e0a1581ca0b1c2d3e4f50123456789abcdef0123456789abcdef0123456789aba145485944524105',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -260,7 +270,7 @@ describe('useWallet hook', () => {
     spy.mockRestore();
   });
 
-  it('connects via connect() and computes the BigInt balance', async () => {
+  it('connects via connect() and computes the BigInt balance from GET_BALANCE_ASSETS', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {

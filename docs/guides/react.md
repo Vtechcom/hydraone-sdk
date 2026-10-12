@@ -135,4 +135,4 @@ Server rendering is safe: nothing touches `window` until an effect runs. Balance
 
 ## Testing
 
-Use the [simulator](../testing-your-integration.md): create a `MockBridgeHost`, pass `host.createClientTransport()` through `options.transport`, and render your components with `@testing-library/react`.
+Mock the client in your component tests: provide a stub `ITransport` through `options.transport` and render with `@testing-library/react`. See [Testing your integration](../testing-your-integration.md).

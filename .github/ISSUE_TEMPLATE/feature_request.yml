@@ -31,8 +31,6 @@ body:
         - Storage
         - React adapter
         - Vue adapter
-        - Cardano utilities
-        - Simulator
         - Diagnostics
         - CLI and templates
         - Documentation

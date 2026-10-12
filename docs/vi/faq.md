@@ -22,7 +22,7 @@ Bất kỳ ví nào cài đặt CIP-30 trên `window.cardano`. Eternl, Lace, Nam
 
 ## Tại sao `getBalance()` trả về một chuỗi lạ?
 
-CIP-30 định nghĩa số dư là CBOR. Hãy chuyển đổi bằng `getAdaBalance([balanceCbor])` từ `@hydraone/sdk/cardano`, hoặc dùng `useWallet().balanceADA` / `useWalletBridgeClient().balanceADA`, hai thứ này làm việc đó giúp bạn.
+CIP-30 định nghĩa số dư là CBOR. Hãy dùng `useWallet().balanceADA` / `useWalletBridgeClient().balanceADA`, hai thứ này đọc phần lovelace giúp bạn, hoặc giải mã `Value` bằng một thư viện Cardano.
 
 ## Tại sao số lượng là `bigint`?
 
@@ -43,10 +43,6 @@ Có. Package phát hành cả bản ESM và CommonJS cùng type tương ứng.
 ## Kích thước của nó là bao nhiêu?
 
 Entry gốc khoảng 23 KB sau gzip, và mỗi subpath là một entry riêng. Chạy `pnpm run size` trong repository để xem số liệu hiện tại.
-
-## Simulator có thuộc về production không?
-
-Không. Chỉ import `@hydraone/sdk/simulator` trong các bản build phát triển.
 
 ## API reference ở đâu?
 

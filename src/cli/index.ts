@@ -83,7 +83,7 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
 
   console.log(`
 ${style('HydraOne Game Scaffolder', 'cyan')} ${style(`(v${CLI_VERSION})`, 'dim')}
-${style('Scaffold a Cardano Web3 game with the HydraOne SDK and DevTools simulator', 'dim')}
+${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
 `);
 
   let projectName = args.projectName;

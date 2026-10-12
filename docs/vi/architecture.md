@@ -46,11 +46,10 @@ flowchart TB
 | `ITransport`               | Port gồm `send`, `onMessage` và `destroy` (tùy chọn). Mọi thứ phía trên nó đều không phụ thuộc vào transport. |
 | `PostMessageTransport`     | Transport cho iframe, có kiểm tra origin và source cùng việc ghép cặp request/response theo correlation.      |
 | `DirectExtensionTransport` | Làm việc với extension CIP-30 và chuyển các thông điệp RPC thành lời gọi ví.                                  |
-| `MockClientTransport`      | Transport trong bộ nhớ, được simulator sử dụng.                                                               |
 | `IStorage`                 | Port cho lưu trữ key-value bất đồng bộ.                                                                       |
 | `GameAuthManager`          | Đăng nhập CIP-8 và vòng đời JWT, xây trên một client và một storage.                                          |
 
-Các port (`ITransport`, `IStorage`) giữ cho phần lõi không dính đến chi tiết của trình duyệt. Nhờ vậy cùng một client chạy được với iframe host, extension và simulator.
+Các port (`ITransport`, `IStorage`) giữ cho phần lõi không dính đến chi tiết của trình duyệt. Nhờ vậy cùng một client chạy được với iframe host, và extension.
 
 ## Giao thức thông điệp
 
@@ -84,7 +83,7 @@ sequenceDiagram
     H-->>G: THEME_CHANGED / AUDIO_MUTED_CHANGED (push events)
 ```
 
-Các loại thông điệp: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRESSES`, `GET_UTXOS`, `GET_BALANCE`, `GET_COLLATERAL`, `SIGN_TX`, `SUBMIT_TX`, `SIGN_DATA`, `AUDIO_MUTED_CHANGED`, `THEME_CHANGED`, `SET_ORIENTATION`, `TRIGGER_HAPTIC`, `REQUEST_DEPOSIT_MODAL`, `GET_PLAYER_PROFILE`, `AUTH_STATE_CHANGED`, `HOST_STORAGE_GET`, `HOST_STORAGE_SET`, `HOST_STORAGE_REMOVE`, `HOST_STORAGE_CLEAR`, `RPC_RESPONSE`, `RPC_ERROR`.
+Các loại thông điệp: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRESSES`, `GET_UTXOS`, `GET_BALANCE`, `GET_BALANCE_ASSETS`, `GET_COLLATERAL`, `SIGN_TX`, `SUBMIT_TX`, `SIGN_DATA`, `AUDIO_MUTED_CHANGED`, `THEME_CHANGED`, `SET_ORIENTATION`, `TRIGGER_HAPTIC`, `REQUEST_DEPOSIT_MODAL`, `GET_PLAYER_PROFILE`, `AUTH_STATE_CHANGED`, `HOST_STORAGE_GET`, `HOST_STORAGE_SET`, `HOST_STORAGE_REMOVE`, `HOST_STORAGE_CLEAR`, `RPC_RESPONSE`, `RPC_ERROR`.
 
 ## Mô hình bảo mật
 
@@ -101,15 +100,10 @@ Các loại thông điệp: `CLIENT_READY`, `HOST_ACK`, `PING`, `GET_USED_ADDRES
 
 Một package, nhiều entry point. Chỉ import những gì bạn cần sẽ giữ bundle nhỏ, và `sideEffects: false` cho phép bundler loại bỏ phần còn lại.
 
-| Entry point                 | Nội dung                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `@hydraone/sdk`             | Client, transport, storage adapter, auth, lỗi, type và các hàm diagnostics. Khoảng 23 KB sau khi gzip. |
-| `@hydraone/sdk/cardano`     | Phép tính ADA bằng `bigint`, giải mã CBOR, các helper bech32 và hex.                                   |
-| `@hydraone/sdk/react`       | `HydraOneProvider`, `useWallet`, `useHydraAuth`, `useHostStorage`.                                     |
-| `@hydraone/sdk/vue`         | `useWalletBridgeClient`, `useGameAuth` và các hàm setter cho instance dùng chung.                      |
-| `@hydraone/sdk/simulator`   | `MockBridgeHost`, `DevToolsWidget`, dev shell. Chỉ dùng khi phát triển.                                |
-| `@hydraone/sdk/diagnostics` | `checkBridgeHealth`, các check riêng lẻ và các type của report.                                        |
+| Entry point           | Nội dung                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `@hydraone/sdk`       | Client, transport, storage adapter, auth, lỗi, type và diagnostics. Khoảng 23 KB sau khi gzip. |
+| `@hydraone/sdk/react` | `HydraOneProvider`, `useWallet`, `useHydraAuth`, `useHostStorage`.                             |
+| `@hydraone/sdk/vue`   | `useWalletBridgeClient`, `useGameAuth` và các hàm setter cho instance dùng chung.              |
 
 `react` và `vue` là peer dependency tùy chọn và không bao giờ được đóng gói vào bundle. CLI (`create-hydraone-game`) nằm trong cùng package.
-
-Entry gốc re-export mọi thứ từ `/diagnostics` vì `client.checkHealth()` phụ thuộc vào nó. Cả hai đường import cho ra cùng các hàm và type; `@hydraone/sdk/diagnostics` tường minh hơn khi bạn chỉ cần diagnostics.

@@ -9,7 +9,7 @@ English | [Tiếng Việt](./vi/README.md)
 | [Configuration](./configuration.md)                       | Every client, transport and storage option           |
 | [Error handling](./error-handling.md)                     | Error classes, codes and recovery patterns           |
 | [Logging](./logging.md)                                   | Debug output and custom loggers                      |
-| [Testing your integration](./testing-your-integration.md) | Mock host, DevTools widget, dev shell, diagnostics   |
+| [Testing your integration](./testing-your-integration.md) | Bridge health diagnostics, release checklist         |
 | [Architecture](./architecture.md)                         | Modes, protocol, security model, package layout      |
 | [FAQ](./faq.md)                                           | Short answers to common questions                    |
 | [Troubleshooting](./troubleshooting.md)                   | Symptoms, causes and fixes                           |

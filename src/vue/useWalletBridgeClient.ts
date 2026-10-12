@@ -12,7 +12,7 @@ import type {
   PlayerProfile,
 } from '../core/types';
 import { WalletBridgeClient } from '../core/client';
-import { getTotalLovelace, getAdaBalance } from '../cardano';
+import { readLovelaceBalance, lovelaceToAdaString } from '../core/balance';
 import type { UseWalletBridgeClientOptions, UseWalletBridgeClientReturn } from './types';
 
 /**
@@ -107,20 +107,9 @@ export function useWalletBridgeClient(
         balanceLovelace.value = null;
         return '0';
       }
-      // Prefer getUtxos() so total Lovelace and ADA are computed exactly
-      const utxos = await client.getUtxos();
-      if (utxos && utxos.length > 0) {
-        const lovelace = getTotalLovelace(utxos);
-        const adaStr = getAdaBalance(utxos);
-        balanceLovelace.value = lovelace;
-        balanceADA.value = adaStr;
-        return adaStr;
-      }
-
-      // Fall back to getBalance() when no UTxOs are returned
-      const rawBalance = await client.getBalance();
-      const lovelace = getTotalLovelace(rawBalance ? [rawBalance] : []);
-      const adaStr = getAdaBalance(rawBalance ? [rawBalance] : []);
+      // The host sends decoded assets; for older hosts and direct extensions the CIP-30 Value is read instead
+      const lovelace = await readLovelaceBalance(client);
+      const adaStr = lovelaceToAdaString(lovelace);
       balanceLovelace.value = lovelace;
       balanceADA.value = adaStr;
       return adaStr;

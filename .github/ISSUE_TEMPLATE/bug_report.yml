@@ -37,7 +37,6 @@ body:
       options:
         - Embedded in the HydraOne App Center iframe
         - Standalone browser tab with a wallet extension
-        - Simulator (MockBridgeHost or dev shell)
         - Server-side rendering or Node.js
     validations:
       required: true

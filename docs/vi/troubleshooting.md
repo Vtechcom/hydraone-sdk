@@ -7,7 +7,7 @@
 Hãy bắt đầu với health check; nó chỉ ra những vấn đề phổ biến nhất và cách khắc phục:
 
 ```ts
-import { checkBridgeHealth } from '@hydraone/sdk/diagnostics';
+import { checkBridgeHealth } from '@hydraone/sdk';
 
 const report = await checkBridgeHealth(client);
 console.log(report.summary);
@@ -15,7 +15,7 @@ console.log(report.summary);
 
 | Triệu chứng                                                         | Nguyên nhân có thể                                                                               | Cách khắc phục                                                                                                                  |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `init()` bị reject với `ERR_NOT_IN_IFRAME`                          | Trang là một tab thông thường và `fallbackToExtension` đang tắt, hoặc chưa cài extension ví nào. | Bật `fallbackToExtension`, cài một ví CIP-30, hoặc phát triển bằng [simulator](./testing-your-integration.md).                  |
+| `init()` bị reject với `ERR_NOT_IN_IFRAME`                          | Trang là một tab thông thường và `fallbackToExtension` đang tắt, hoặc chưa cài extension ví nào. | Bật `fallbackToExtension`, cài một ví CIP-30.                                                                                   |
 | `init()` bị reject với `ERR_TIMEOUT` ("Handshake ... timed out")    | Host không trả lời `CLIENT_READY` trong `handshakeTimeoutMs` (3 s).                              | Kiểm tra bạn được nhúng vào đúng host, `appCenterOrigin` chính xác và host đang chạy. Tăng `handshakeTimeoutMs` trên mạng chậm. |
 | `HydraSecurityError` / `ERR_UNTRUSTED_ORIGIN` trong console         | `appCenterOrigin` không khớp origin của bên gửi, hoặc thông điệp không đến từ `window.parent`.   | Dùng đúng origin (scheme, host, port, không có path). Chỉ đặt `checkIframeSource: false` cho mục đích test.                     |
 | Constructor ném lỗi "Wildcard origin ... not allowed in production" | `appCenterOrigin: '*'` khi `env` là `production`.                                                | Dùng origin thật.                                                                                                               |
@@ -28,7 +28,6 @@ console.log(report.summary);
 | Diagnostics: "Iframe sandbox is missing allow-same-origin"          | Iframe của host thiếu cờ sandbox.                                                                | Thêm `allow-scripts allow-same-origin` vào thuộc tính `sandbox` của iframe.                                                     |
 | `signIn` không trả về `token`                                       | Không truyền `token` và cũng không có `exchangeToken`.                                           | Cung cấp `exchangeToken` trong options của manager hoặc ở lời gọi.                                                              |
 | `signIn` ném `ERR_AUTH_EXPIRED`                                     | JWT mà backend của bạn trả về đã hết hạn.                                                        | Kiểm tra đồng hồ server và thời hạn token; dùng `clockToleranceSeconds` cho độ lệch nhỏ.                                        |
-| `getAdaBalance` ném `ERR_INVALID_PARAMS`                            | Bạn truyền thẳng chuỗi CBOR.                                                                     | Truyền một mảng: `getAdaBalance([balanceCbor])`.                                                                                |
 | Hydration mismatch trong Next.js hoặc Nuxt                          | Dữ liệu ví được render rỗng trên server và đầy đủ trên client.                                   | Render một trạng thái trung tính cho đến khi `isConnected` là true, hoặc dùng `<ClientOnly>`.                                   |
 | Không tìm thấy type khi `moduleResolution: node`                    | Chế độ resolution cũ bỏ qua `exports`.                                                           | Dùng `bundler`, `node16` hoặc `nodenext`.                                                                                       |
 | `requestDepositModal` bị reject với `ERR_NOT_IN_IFRAME`             | Game chạy bên ngoài App Center.                                                                  | Đây là hành vi mong đợi ở standalone mode; bảo vệ lời gọi bằng `client.isStandaloneBrowser()`.                                  |

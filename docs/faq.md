@@ -20,11 +20,11 @@ Any wallet that implements CIP-30 on `window.cardano`. Eternl, Lace, Nami, Flint
 
 ## Why does `getBalance()` return a strange string?
 
-CIP-30 defines the balance as CBOR. Convert it with `getAdaBalance([balanceCbor])` from `@hydraone/sdk/cardano`, or use `useWallet().balanceADA` / `useWalletBridgeClient().balanceADA`, which do it for you.
+CIP-30 defines the balance as CBOR. Use `useWallet().balanceADA` / `useWalletBridgeClient().balanceADA`, which read the lovelace for you, or decode the `Value` with a Cardano library.
 
 ## Why are amounts `bigint`?
 
-Lovelace values can exceed `Number.MAX_SAFE_INTEGER` once native assets and large balances are involved. The Cardano helpers use `bigint` so no precision is lost.
+Lovelace values can exceed `Number.MAX_SAFE_INTEGER` once native assets and large balances are involved. The wallet hooks read the balance as a `bigint` so no precision is lost.
 
 ## Is it safe to use in production with `appCenterOrigin: '*'`?
 
@@ -41,10 +41,6 @@ Yes. The package ships ESM and CommonJS builds with matching types.
 ## How big is it?
 
 The root entry is about 23 KB gzipped, and each subpath is a separate entry. Run `pnpm run size` in the repository to see the current numbers.
-
-## Does the simulator belong in production?
-
-No. Import `@hydraone/sdk/simulator` only in development builds.
 
 ## Where is the API reference?
 

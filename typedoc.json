@@ -1,12 +1,5 @@
 {
-  "entryPoints": [
-    "src/index.ts",
-    "src/cardano/index.ts",
-    "src/react/index.ts",
-    "src/vue/index.ts",
-    "src/simulator/index.ts",
-    "src/diagnostics/index.ts"
-  ],
+  "entryPoints": ["src/index.ts", "src/react/index.ts", "src/vue/index.ts"],
   "out": "docs/api",
   "tsconfig": "tsconfig.json",
   "excludePrivate": true,

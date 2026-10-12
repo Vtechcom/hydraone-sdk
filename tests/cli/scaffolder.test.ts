@@ -155,7 +155,7 @@ describe('create-hydraone-game CLI', () => {
       const appVue = fs.readFileSync(path.join(targetDir, 'app.vue'), 'utf-8');
       expect(appVue).toContain('test-nuxt-game');
       expect(appVue).toContain('@hydraone/sdk/vue');
-      expect(appVue).toContain('bootstrapDevShell');
+      expect(appVue).not.toContain('bootstrapDevShell');
 
       expect(fs.existsSync(path.join(targetDir, 'nuxt.config.ts'))).toBe(true);
       expect(fs.existsSync(path.join(targetDir, 'tsconfig.json'))).toBe(true);
@@ -189,7 +189,7 @@ describe('create-hydraone-game CLI', () => {
       const page = fs.readFileSync(path.join(targetDir, 'app/page.tsx'), 'utf-8');
       expect(page).toContain('useWallet');
       expect(page).toContain('useHydraAuth');
-      expect(page).toContain('bootstrapDevShell');
+      expect(page).not.toContain('bootstrapDevShell');
     });
 
     it('scaffolds the Phaser 3 template and substitutes placeholders', async () => {
@@ -313,7 +313,7 @@ describe('scaffolder template hygiene', () => {
         const dir = path.join(tmp, template);
         await scaffoldProject({ projectName: `demo-${template}`, targetDir: dir, template });
         expect(fs.existsSync(path.join(dir, '.env.example'))).toBe(true);
-        expect(fs.readFileSync(path.join(dir, helper), 'utf-8')).toContain('bootstrapDevShell');
+        expect(fs.readFileSync(path.join(dir, helper), 'utf-8')).toContain('resolveHostOrigin');
       }
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });

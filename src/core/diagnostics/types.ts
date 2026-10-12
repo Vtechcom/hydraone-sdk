@@ -1,6 +1,6 @@
 /**
  * Types and interfaces for the Bridge Health Diagnostics Suite
- * (@hydraone/sdk/diagnostics)
+ *
  */
 
 /**
@@ -124,7 +124,7 @@ export interface LatencyCheckOptions {
   warningThresholdMs?: number;
 }
 
-import type { IStorage } from '../core/ports/storage';
+import type { IStorage } from '../ports/storage';
 
 /**
  * Options for the storage check

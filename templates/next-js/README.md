@@ -9,9 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). In development the page renders a copy of the HydraOne web client (header, wallet button, game viewport) and loads your game inside it, so you test exactly what players will see. Use the mock wallet (1,000 ADA) or connect Eternl/Lace.
-
-The dev shell and DevTools widget are imported dynamically and only when `NODE_ENV !== 'production'`, so they never reach your production bundle.
+Open [http://localhost:3000](http://localhost:3000). The game runs standalone in development; once it is embedded in the HydraOne web client it talks to the host over postMessage.
 
 ## Deploy and publish
 
@@ -30,6 +28,5 @@ Click **Check host bridge** on the page to run `checkBridgeHealth` (iframe sandb
 ## What is included
 
 - `app/providers.tsx` - `<HydraOneProvider>` configured for embedded or standalone mode.
-- `lib/hydra.ts` - embed detection, host origin resolution and the development-only dev shell bootstrap.
+- `lib/hydra.ts` - embed detection, host origin resolution.
 - `@hydraone/sdk/react` - `useWallet()`, `useHydraAuth()` and `useHostStorage()` hooks.
-- `@hydraone/sdk/simulator` - dev shell, mock wallet, rejection and Safari ITP simulation (development only).

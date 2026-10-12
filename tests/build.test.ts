@@ -23,21 +23,6 @@ describe('Build Output Verification', () => {
     expect(esmContent).toContain('HydraBridgeError');
     expect(esmContent).toContain('SDK_VERSION');
 
-    const cardanoEsm = path.join(distPath, 'cardano/index.js');
-    const cardanoCjs = path.join(distPath, 'cardano/index.cjs');
-    const cardanoDts = path.join(distPath, 'cardano/index.d.ts');
-
-    expect(fs.existsSync(cardanoEsm)).toBe(true);
-    expect(fs.existsSync(cardanoCjs)).toBe(true);
-    expect(fs.existsSync(cardanoDts)).toBe(true);
-
-    const cardanoEsmContent = fs.readFileSync(cardanoEsm, 'utf-8');
-    expect(cardanoEsmContent).toContain('getTotalLovelace');
-    expect(cardanoEsmContent).toContain('getAdaBalance');
-    expect(cardanoEsmContent).toContain('getAssetQuantity');
-    expect(cardanoEsmContent).toContain('stringToHex');
-    expect(cardanoEsmContent).toContain('hexToString');
-
     const vueEsm = path.join(distPath, 'vue/index.js');
     const vueCjs = path.join(distPath, 'vue/index.cjs');
     const vueDts = path.join(distPath, 'vue/index.d.ts');
@@ -48,6 +33,7 @@ describe('Build Output Verification', () => {
 
     const vueEsmContent = fs.readFileSync(vueEsm, 'utf-8');
     expect(vueEsmContent).toContain('useWalletBridgeClient');
+    expect(vueEsmContent).toContain('lovelaceFromValueHex');
     expect(vueEsmContent).toContain('useGameAuth');
     // vue must stay an external peer dependency and not be bundled into dist/vue/index.js
     expect(vueEsmContent).toMatch(/from ["']vue["']/);
@@ -65,38 +51,9 @@ describe('Build Output Verification', () => {
     expect(reactEsmContent).toContain('useWallet');
     expect(reactEsmContent).toContain('useHydraAuth');
     expect(reactEsmContent).toContain('useHostStorage');
+    expect(reactEsmContent).toContain('lovelaceFromValueHex');
     // react must stay an external peer dependency and not be bundled into dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);
-
-    const simulatorEsm = path.join(distPath, 'simulator/index.js');
-    const simulatorCjs = path.join(distPath, 'simulator/index.cjs');
-    const simulatorDts = path.join(distPath, 'simulator/index.d.ts');
-
-    expect(fs.existsSync(simulatorEsm)).toBe(true);
-    expect(fs.existsSync(simulatorCjs)).toBe(true);
-    expect(fs.existsSync(simulatorDts)).toBe(true);
-
-    const simulatorEsmContent = fs.readFileSync(simulatorEsm, 'utf-8');
-    expect(simulatorEsmContent).toContain('MockBridgeHost');
-    expect(simulatorEsmContent).toContain('MockClientTransport');
-    expect(simulatorEsmContent).toContain('encodeLovelaceToCbor');
-    expect(simulatorEsmContent).toContain('DevToolsWidget');
-    expect(simulatorEsmContent).toContain('mountDevTools');
-    expect(simulatorEsmContent).toContain('SafariItpStorageSimulator');
-
-    const diagnosticsEsm = path.join(distPath, 'diagnostics/index.js');
-    const diagnosticsCjs = path.join(distPath, 'diagnostics/index.cjs');
-    const diagnosticsDts = path.join(distPath, 'diagnostics/index.d.ts');
-
-    expect(fs.existsSync(diagnosticsEsm)).toBe(true);
-    expect(fs.existsSync(diagnosticsCjs)).toBe(true);
-    expect(fs.existsSync(diagnosticsDts)).toBe(true);
-
-    const diagnosticsEsmContent = fs.readFileSync(diagnosticsEsm, 'utf-8');
-    expect(diagnosticsEsmContent).toContain('checkBridgeHealth');
-    expect(diagnosticsEsmContent).toContain('checkIframeSandbox');
-    expect(diagnosticsEsmContent).toContain('checkPostMessageLatency');
-    expect(diagnosticsEsmContent).toContain('checkStorageHealth');
 
     expect(esmContent).toContain('checkBridgeHealth');
 

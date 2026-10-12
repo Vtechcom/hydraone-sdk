@@ -123,7 +123,7 @@ export interface UseWalletBridgeClientReturn {
   disconnect: () => void;
 
   /**
-   * Refreshes the wallet balance from UTxOs or getBalance
+   * Refreshes the wallet balance (GET_BALANCE_ASSETS, falling back to getBalance())
    */
   refreshBalance: () => Promise<string>;
 

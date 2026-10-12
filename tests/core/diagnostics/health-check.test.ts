@@ -5,23 +5,118 @@ import {
   checkIframeSandbox,
   checkPostMessageLatency,
   checkStorageHealth,
-} from '../../src/diagnostics/health-check';
-import { MockBridgeHost, MockClientTransport } from '../../src/simulator';
-import { WalletBridgeClient } from '../../src/core/client';
-import { HostStorageRelayAdapter } from '../../src/core/adapters/storage/host-storage-relay';
-import { SafariItpStorageSimulator } from '../../src/simulator/devtools-ui';
+} from '../../../src/core/diagnostics/health-check';
+import { WalletBridgeClient } from '../../../src/core/client';
+import { HostStorageRelayAdapter } from '../../../src/core/adapters/storage/host-storage-relay';
 
-describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
-  let host: MockBridgeHost;
-  let transport: MockClientTransport;
+import type { BridgeMessage, ITransport, MessageHandler, UnsubscribeFn } from '../../../src';
+
+/** Minimal in-test host: answers the handshake, PING and host storage relay messages. */
+class FakeHost implements ITransport {
+  private handlers = new Set<MessageHandler>();
+  private store = new Map<string, string>();
+  private latencyMs = 0;
+  private storageBlocked = false;
+  private timers = new Set<ReturnType<typeof setTimeout>>();
+
+  setLatency(ms: number): void {
+    this.latencyMs = ms;
+  }
+
+  setStorageBlock(enabled: boolean): void {
+    this.storageBlocked = enabled;
+  }
+
+  async send(message: BridgeMessage): Promise<void> {
+    const reply = this.reply(message);
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      for (const h of this.handlers) h(reply);
+    }, this.latencyMs);
+    this.timers.add(timer);
+  }
+
+  onMessage(handler: MessageHandler): UnsubscribeFn {
+    this.handlers.add(handler);
+    return () => {
+      this.handlers.delete(handler);
+    };
+  }
+
+  destroy(): void {
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear();
+    this.handlers.clear();
+  }
+
+  private respond(requestId: string, type: string, payload: object): BridgeMessage {
+    return {
+      id: `reply-${requestId}`,
+      type,
+      payload: { requestId, ...payload },
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    };
+  }
+
+  private reply(message: BridgeMessage): BridgeMessage {
+    const { id, type } = message;
+    const payload = message.payload as { key?: string; value?: string } | undefined;
+    if (type === 'CLIENT_READY') {
+      return this.respond(id, 'HOST_ACK', {
+        hostInfo: { appName: 'HydraOne Test Host', version: '1.0.0', theme: 'dark' },
+      });
+    }
+    if (type === 'PING') {
+      return this.respond(id, 'RPC_RESPONSE', { result: { pong: true, timestamp: Date.now() } });
+    }
+    if (type.startsWith('HOST_STORAGE_')) {
+      if (this.storageBlocked) {
+        return this.respond(id, 'RPC_ERROR', {
+          error: { code: 'ERR_STORAGE_UNAVAILABLE', message: 'Host storage access blocked' },
+        });
+      }
+      const key = payload?.key ?? '';
+      if (type === 'HOST_STORAGE_SET') this.store.set(key, payload?.value ?? '');
+      if (type === 'HOST_STORAGE_REMOVE') this.store.delete(key);
+      if (type === 'HOST_STORAGE_CLEAR') this.store.clear();
+      const result = type === 'HOST_STORAGE_GET' ? (this.store.get(key) ?? null) : null;
+      return this.respond(id, 'RPC_RESPONSE', { result });
+    }
+    return this.respond(id, 'RPC_RESPONSE', { result: null });
+  }
+}
+
+/** Makes localStorage throw SecurityError, as Safari ITP does. */
+class SafariItpStorageSimulator {
+  private spies: Array<{ mockRestore(): void }> = [];
+  public isActive = false;
+
+  enable(): void {
+    const throwSecurityError = () => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    };
+    for (const name of ['getItem', 'setItem', 'removeItem', 'clear'] as const) {
+      this.spies.push(vi.spyOn(window.localStorage, name).mockImplementation(throwSecurityError));
+    }
+    this.isActive = true;
+  }
+
+  disable(): void {
+    for (const spy of this.spies) spy.mockRestore();
+    this.spies = [];
+    this.isActive = false;
+  }
+}
+
+describe('Bridge Health Diagnostics Suite', () => {
+  let host: FakeHost;
+  let transport: FakeHost;
   let client: WalletBridgeClient;
 
   beforeEach(async () => {
-    host = new MockBridgeHost({
-      appName: 'HydraOne Test Host',
-      walletName: 'TestMockWallet',
-    });
-    transport = new MockClientTransport(host);
+    host = new FakeHost();
+    transport = host;
     client = new WalletBridgeClient({
       transport,
       isIframeFn: () => true,
@@ -148,7 +243,7 @@ describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
   });
 
   describe('2. PostMessage Latency Checks (checkPostMessageLatency & client.ping)', () => {
-    it('client.ping() sends a PING message and receives a pong from MockBridgeHost', async () => {
+    it('client.ping() sends a PING message and receives a pong from the host', async () => {
       const res = await client.ping();
       expect(res.pong).toBe(true);
       expect(typeof res.timestamp).toBe('number');
@@ -222,7 +317,7 @@ describe('Bridge Health Diagnostics Suite (@hydraone/sdk/diagnostics)', () => {
       }
     });
 
-    it('reports PASS for Host Storage Relay when connected to MockBridgeHost', async () => {
+    it('reports PASS for Host Storage Relay when connected to the host', async () => {
       const relayStorage = new HostStorageRelayAdapter({
         transport,
       });
