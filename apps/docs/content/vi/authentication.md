@@ -1,4 +1,6 @@
-[English](../authentication.md) | Tiếng Việt
+---
+title: "Xác thực"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -142,4 +144,4 @@ Các helper này chỉ giải mã token. Chúng không xác minh chữ ký: đó
 
 - Luôn tạo challenge trên server, để dùng một lần và có thời hạn ngắn, đồng thời gắn nó với phiên. Challenge do client tự chọn có thể bị phát lại.
 - Xác minh chữ ký CIP-8 và việc key khớp với địa chỉ ở backend trước khi cấp JWT.
-- Storage bên trong iframe cross-origin có thể bị Safari chặn hoặc xóa. Dùng `HostStorageRelayAdapter` để phiên tồn tại sau khi tải lại trang. Nếu không liên lạc được với host, adapter ném `ERR_STORAGE_UNAVAILABLE` thay vì âm thầm ghi token vào một nơi kém an toàn hơn. Xem [hướng dẫn Safari ITP](./guides/safari-itp.md).
+- Storage bên trong iframe cross-origin có thể bị Safari chặn hoặc xóa. Dùng `HostStorageRelayAdapter` để phiên tồn tại sau khi tải lại trang. Nếu không liên lạc được với host, adapter ném `ERR_STORAGE_UNAVAILABLE` thay vì âm thầm ghi token vào một nơi kém an toàn hơn. Xem [hướng dẫn Safari ITP](/vi/guides/safari-itp).

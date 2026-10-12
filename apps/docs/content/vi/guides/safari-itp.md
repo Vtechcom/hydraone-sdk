@@ -1,4 +1,6 @@
-[English](../../guides/safari-itp.md) | Tiếng Việt
+---
+title: "Safari ITP và host storage"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 

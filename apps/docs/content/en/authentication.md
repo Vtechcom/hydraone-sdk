@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/authentication.md)
+---
+title: "Authentication"
+---
 
 # Authentication
 
@@ -140,4 +142,4 @@ These helpers only decode the token. They do not verify the signature: that is y
 
 - Always generate the challenge on your server, make it single-use and short-lived, and bind it to the session. A challenge chosen by the client can be replayed.
 - Verify the CIP-8 signature and the key-to-address binding on the backend before issuing the JWT.
-- Storage inside a cross-origin iframe may be blocked or wiped by Safari. Use `HostStorageRelayAdapter` so the session survives reloads. If the host is unreachable the adapter throws `ERR_STORAGE_UNAVAILABLE` rather than silently writing the token to a less safe place. See the [Safari ITP guide](./guides/safari-itp.md).
+- Storage inside a cross-origin iframe may be blocked or wiped by Safari. Use `HostStorageRelayAdapter` so the session survives reloads. If the host is unreachable the adapter throws `ERR_STORAGE_UNAVAILABLE` rather than silently writing the token to a less safe place. See the [Safari ITP guide](/guides/safari-itp).

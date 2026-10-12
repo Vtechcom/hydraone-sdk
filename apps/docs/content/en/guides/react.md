@@ -1,4 +1,6 @@
-English | [Tiếng Việt](../vi/guides/react.md)
+---
+title: "React and Next.js"
+---
 
 # React and Next.js
 
@@ -41,7 +43,7 @@ export function App() {
 }
 ```
 
-Props: `client`, `authManager`, `storage`, `appCenterOrigin`, `options`, `autoConnect`, `autoRefreshBalance`. See [Configuration](../configuration.md#react-provider).
+Props: `client`, `authManager`, `storage`, `appCenterOrigin`, `options`, `autoConnect`, `autoRefreshBalance`. See [Configuration](/configuration#react-provider).
 
 Defaults worth knowing:
 
@@ -135,4 +137,4 @@ Server rendering is safe: nothing touches `window` until an effect runs. Balance
 
 ## Testing
 
-Mock the client in your component tests: provide a stub `ITransport` through `options.transport` and render with `@testing-library/react`. See [Testing your integration](../testing-your-integration.md).
+Mock the client in your component tests: provide a stub `ITransport` through `options.transport` and render with `@testing-library/react`. See [Testing your integration](/testing-your-integration).

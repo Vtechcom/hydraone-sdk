@@ -1,4 +1,6 @@
-[English](../error-handling.md) | Tiếng Việt
+---
+title: "Xử lý lỗi"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 

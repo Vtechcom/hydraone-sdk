@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/logging.md)
+---
+title: "Logging"
+---
 
 # Logging
 
@@ -42,7 +44,7 @@ export interface Logger {
 
 - Logged: short English messages and the error object that triggered them.
 - Not logged by the client: request payloads, signatures, tokens, addresses or balances.
-- Errors you catch yourself carry `details`, which can echo host data. See [Error handling](./error-handling.md#serialization-and-safety) before forwarding them.
+- Errors you catch yourself carry `details`, which can echo host data. See [Error handling](/error-handling#serialization-and-safety) before forwarding them.
 
 ## Other components
 
@@ -66,4 +68,4 @@ for (const check of report.checks) {
 }
 ```
 
-See [Testing your integration](./testing-your-integration.md#diagnostics).
+See [Testing your integration](/testing-your-integration#diagnostics).

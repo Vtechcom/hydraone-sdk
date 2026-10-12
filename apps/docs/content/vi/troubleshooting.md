@@ -1,4 +1,6 @@
-[English](../troubleshooting.md) | Tiếng Việt
+---
+title: "Xử lý sự cố"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -23,7 +25,7 @@ console.log(report.summary);
 | `ERR_INVALID_OPTIONS`                                               | Client trong iframe không có transport.                                                          | Truyền một `transport`.                                                                                                         |
 | `ERR_USER_REJECTED`                                                 | Người chơi đã hủy hộp thoại của ví.                                                              | Đây không phải tình trạng lỗi; để người chơi thử lại.                                                                           |
 | `ERR_TIMEOUT` ở `signTx`                                            | Người chơi không phản hồi trong `signingTimeoutMs` (2 phút), hoặc host bị treo.                  | Tăng giá trị này bằng `{ timeoutMs }` cho từng lời gọi hoặc trong options.                                                      |
-| Người chơi bị đăng xuất sau khi reload trên Safari                  | Storage bị phân vùng hoặc bị xóa.                                                                | Dùng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](./guides/safari-itp.md).                                             |
+| Người chơi bị đăng xuất sau khi reload trên Safari                  | Storage bị phân vùng hoặc bị xóa.                                                                | Dùng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](/vi/guides/safari-itp).                                             |
 | `ERR_STORAGE_UNAVAILABLE`                                           | Không kết nối được host relay hoặc storage bị chặn.                                              | Kiểm tra transport đã kết nối, host xử lý các thông điệp `HOST_STORAGE_*`, và iframe sandbox. Yêu cầu người chơi đăng nhập lại. |
 | Diagnostics: "Iframe sandbox is missing allow-same-origin"          | Iframe của host thiếu cờ sandbox.                                                                | Thêm `allow-scripts allow-same-origin` vào thuộc tính `sandbox` của iframe.                                                     |
 | `signIn` không trả về `token`                                       | Không truyền `token` và cũng không có `exchangeToken`.                                           | Cung cấp `exchangeToken` trong options của manager hoặc ở lời gọi.                                                              |
@@ -34,4 +36,4 @@ console.log(report.summary);
 
 ## Vẫn chưa giải quyết được?
 
-Bật `debug: true` cùng một [logger](./logging.md), chạy health check, và mở một issue kèm report (xóa địa chỉ và token trước). Xem [SUPPORT.md](../../SUPPORT.md).
+Bật `debug: true` cùng một [logger](/vi/logging), chạy health check, và mở một issue kèm report (xóa địa chỉ và token trước). Xem [SUPPORT.md](https://github.com/Vtechcom/hydraone-sdk/blob/main/SUPPORT.md).

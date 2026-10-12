@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/troubleshooting.md)
+---
+title: "Troubleshooting"
+---
 
 # Troubleshooting
 
@@ -21,7 +23,7 @@ console.log(report.summary);
 | `ERR_INVALID_OPTIONS`                                              | A client inside an iframe has no transport.                                                             | Pass a `transport`.                                                                                                                             |
 | `ERR_USER_REJECTED`                                                | The player cancelled the wallet prompt.                                                                 | Not an error condition; let the player try again.                                                                                               |
 | `ERR_TIMEOUT` on `signTx`                                          | The player did not respond within `signingTimeoutMs` (2 min), or the host hung.                         | Raise it with `{ timeoutMs }` per call or in the options.                                                                                       |
-| Player is logged out after reload on Safari                        | Storage was partitioned or wiped.                                                                       | Use `HostStorageRelayAdapter`. See the [Safari ITP guide](./guides/safari-itp.md).                                                              |
+| Player is logged out after reload on Safari                        | Storage was partitioned or wiped.                                                                       | Use `HostStorageRelayAdapter`. See the [Safari ITP guide](/guides/safari-itp).                                                              |
 | `ERR_STORAGE_UNAVAILABLE`                                          | The host relay is unreachable or storage is blocked.                                                    | Verify the transport is connected, the host handles `HOST_STORAGE_*` messages, and the iframe sandbox. Ask the player to sign in again.         |
 | Diagnostics: "Iframe sandbox is missing allow-same-origin"         | The host iframe lacks the sandbox flag.                                                                 | Add `allow-scripts allow-same-origin` to the iframe `sandbox` attribute.                                                                        |
 | `signIn` returns no `token`                                        | No `token` and no `exchangeToken` were provided.                                                        | Provide `exchangeToken` in the manager options or the call.                                                                                     |
@@ -32,4 +34,4 @@ console.log(report.summary);
 
 ## Still stuck?
 
-Turn on `debug: true` with a [logger](./logging.md), run the health check, and open an issue with the report (remove addresses and tokens first). See [SUPPORT.md](../SUPPORT.md).
+Turn on `debug: true` with a [logger](/logging), run the health check, and open an issue with the report (remove addresses and tokens first). See [SUPPORT.md](https://github.com/Vtechcom/hydraone-sdk/blob/main/SUPPORT.md).

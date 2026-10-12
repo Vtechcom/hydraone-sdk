@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/glossary.md)
+---
+title: "Glossary"
+---
 
 # Glossary
 

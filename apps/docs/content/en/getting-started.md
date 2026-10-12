@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/getting-started.md)
+---
+title: "Getting started"
+---
 
 # Getting started
 
@@ -132,6 +134,6 @@ export async function device(client: WalletBridgeClient) {
 
 ## Next steps
 
-- [Authentication](./authentication.md) to add CIP-8 login
-- [Testing your integration](./testing-your-integration.md) to develop without the App Center
-- [React guide](./guides/react.md) or [Vue guide](./guides/vue.md)
+- [Authentication](/authentication) to add CIP-8 login
+- [Testing your integration](/testing-your-integration) to develop without the App Center
+- [React guide](/guides/react) or [Vue guide](/guides/vue)

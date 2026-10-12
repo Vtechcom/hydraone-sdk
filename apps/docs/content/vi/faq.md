@@ -1,4 +1,6 @@
-[English](../faq.md) | Tiếng Việt
+---
+title: "Câu hỏi thường gặp"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -46,8 +48,8 @@ Entry gốc khoảng 23 KB sau gzip, và mỗi subpath là một entry riêng. C
 
 ## API reference ở đâu?
 
-Tạo bằng `pnpm run docs`; kết quả được ghi vào `docs/api/`.
+Tạo bằng `pnpm run docs:api`; kết quả được ghi vào `packages/sdk/docs/api/`.
 
 ## Tôi báo lỗi hay lỗ hổng bảo mật như thế nào?
 
-Lỗi thông thường: mở một GitHub issue. Lỗ hổng bảo mật: dùng kênh báo cáo riêng tư như mô tả trong [SECURITY.md](../../SECURITY.md).
+Lỗi thông thường: mở một GitHub issue. Lỗ hổng bảo mật: dùng kênh báo cáo riêng tư như mô tả trong [SECURITY.md](https://github.com/Vtechcom/hydraone-sdk/blob/main/SECURITY.md).

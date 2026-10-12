@@ -1,4 +1,6 @@
-[English](../testing-your-integration.md) | Tiếng Việt
+---
+title: "Kiểm thử tích hợp của bạn"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -33,6 +35,6 @@ console.log(report.status, report.summary);
 ## Trước khi nộp game
 
 - Chạy game trong một iframe thật bên trong HydraOne web client.
-- Mở game trong Safari và xác nhận việc reload vẫn giữ người chơi ở trạng thái đã đăng nhập (xem [Safari ITP](./guides/safari-itp.md)).
+- Mở game trong Safari và xác nhận việc reload vẫn giữ người chơi ở trạng thái đã đăng nhập (xem [Safari ITP](/vi/guides/safari-itp)).
 - Từ chối một chữ ký trong ví và xác nhận UI phục hồi được sau yêu cầu bị hủy.
 - Chạy `checkBridgeHealth` với host thật và sửa mọi `FAIL`.

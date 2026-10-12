@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/architecture.md)
+---
+title: "Architecture"
+---
 
 # Architecture
 

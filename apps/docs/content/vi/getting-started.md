@@ -1,4 +1,6 @@
-[English](../getting-started.md) | Tiếng Việt
+---
+title: "Bắt đầu nhanh"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -134,6 +136,6 @@ export async function device(client: WalletBridgeClient) {
 
 ## Bước tiếp theo
 
-- [Xác thực](./authentication.md) để thêm đăng nhập CIP-8
-- [Kiểm thử tích hợp](./testing-your-integration.md) để phát triển mà không cần App Center
-- [Hướng dẫn React](./guides/react.md) hoặc [hướng dẫn Vue](./guides/vue.md)
+- [Xác thực](/vi/authentication) để thêm đăng nhập CIP-8
+- [Kiểm thử tích hợp](/vi/testing-your-integration) để phát triển mà không cần App Center
+- [Hướng dẫn React](/vi/guides/react) hoặc [hướng dẫn Vue](/vi/guides/vue)

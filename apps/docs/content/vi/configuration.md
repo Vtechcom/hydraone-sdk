@@ -1,4 +1,6 @@
-[English](../configuration.md) | Tiếng Việt
+---
+title: "Cấu hình"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -20,7 +22,7 @@ Mọi tùy chọn đều là tùy chọn trừ khi được đánh dấu bắt b
 | `preferredWallet`     | `string`              | ví đầu tiên tìm thấy | Khóa của ví ưu tiên ở chế độ fallback, ví dụ `eternl`, `lace`, `nami`.         |
 | `cardanoProvider`     | `Record<string, any>` | `window.cardano`     | Object wallet provider tùy biến, chủ yếu dùng cho test.                        |
 | `isIframeFn`          | `() => boolean`       | có sẵn               | Hàm phát hiện iframe tùy biến, chủ yếu dùng cho test.                          |
-| `debug`               | `boolean`             | `false`              | Phát cảnh báo thông qua logger. Xem [Logging](./logging.md).                   |
+| `debug`               | `boolean`             | `false`              | Phát cảnh báo thông qua logger. Xem [Logging](/vi/logging).                   |
 | `logger`              | `Logger`              | `console`            | Nơi nhận debug output.                                                         |
 
 Ghi đè theo từng lần gọi: các truy vấn nhận `{ timeoutMs }` (`QueryOptions`) và các lệnh ký nhận `{ timeoutMs }` (`SignOptions`).

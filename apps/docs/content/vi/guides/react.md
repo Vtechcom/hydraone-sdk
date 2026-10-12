@@ -1,4 +1,6 @@
-[English](../../guides/react.md) | Tiếng Việt
+---
+title: "React và Next.js"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -43,7 +45,7 @@ export function App() {
 }
 ```
 
-Props: `client`, `authManager`, `storage`, `appCenterOrigin`, `options`, `autoConnect`, `autoRefreshBalance`. Xem [Cấu hình](../configuration.md#react-provider).
+Props: `client`, `authManager`, `storage`, `appCenterOrigin`, `options`, `autoConnect`, `autoRefreshBalance`. Xem [Cấu hình](/vi/configuration#react-provider).
 
 Các giá trị mặc định cần biết:
 
@@ -137,4 +139,4 @@ Server rendering là an toàn: không có gì chạm vào `window` cho đến kh
 
 ## Kiểm thử
 
-Mock client trong test component: cung cấp một `ITransport` giả qua `options.transport` và render bằng `@testing-library/react`. Xem [Kiểm thử tích hợp của bạn](../testing-your-integration.md).
+Mock client trong test component: cung cấp một `ITransport` giả qua `options.transport` và render bằng `@testing-library/react`. Xem [Kiểm thử tích hợp của bạn](/vi/testing-your-integration).

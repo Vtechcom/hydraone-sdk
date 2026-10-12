@@ -1,4 +1,6 @@
-English | [Tiếng Việt](../vi/guides/vue.md)
+---
+title: "Vue and Nuxt"
+---
 
 # Vue and Nuxt
 
@@ -82,4 +84,4 @@ Call `installHydra()` before any component uses the composables, for example in 
 
 ## Testing
 
-Create a `WalletBridgeClient` with a stub `ITransport`, register it with `setSharedWalletBridgeClient`, and mount your component with Vue Test Utils. See [Testing your integration](../testing-your-integration.md).
+Create a `WalletBridgeClient` with a stub `ITransport`, register it with `setSharedWalletBridgeClient`, and mount your component with Vue Test Utils. See [Testing your integration](/testing-your-integration).

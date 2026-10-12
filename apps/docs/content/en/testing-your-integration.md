@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/testing-your-integration.md)
+---
+title: "Testing your integration"
+---
 
 # Testing your integration
 
@@ -31,6 +33,6 @@ console.log(report.status, report.summary);
 ## Before you submit a game
 
 - Run the game in a real iframe inside the HydraOne web client.
-- Open it in Safari and confirm a reload keeps the player signed in (see [Safari ITP](./guides/safari-itp.md)).
+- Open it in Safari and confirm a reload keeps the player signed in (see [Safari ITP](/guides/safari-itp)).
 - Reject a signature in the wallet and confirm the UI recovers from the cancelled request.
 - Run `checkBridgeHealth` against the real host and fix every `FAIL`.

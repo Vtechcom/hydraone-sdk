@@ -1,4 +1,6 @@
-[English](../../guides/vue.md) | Tiếng Việt
+---
+title: "Vue và Nuxt"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -84,4 +86,4 @@ Gọi `installHydra()` trước khi bất kỳ component nào dùng các composa
 
 ## Kiểm thử
 
-Tạo một `WalletBridgeClient` với `ITransport` giả, đăng ký nó bằng `setSharedWalletBridgeClient`, rồi mount component của bạn bằng Vue Test Utils. Xem [Kiểm thử tích hợp của bạn](../testing-your-integration.md).
+Tạo một `WalletBridgeClient` với `ITransport` giả, đăng ký nó bằng `setSharedWalletBridgeClient`, rồi mount component của bạn bằng Vue Test Utils. Xem [Kiểm thử tích hợp của bạn](/vi/testing-your-integration).

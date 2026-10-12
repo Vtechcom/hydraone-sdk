@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/faq.md)
+---
+title: "FAQ"
+---
 
 # FAQ
 
@@ -44,8 +46,8 @@ The root entry is about 23 KB gzipped, and each subpath is a separate entry. Run
 
 ## Where is the API reference?
 
-Generate it with `pnpm run docs`; it is written to `docs/api/`.
+Generate it with `pnpm run docs:api`; it is written to `packages/sdk/docs/api/`.
 
 ## How do I report a bug or a vulnerability?
 
-Bugs: open a GitHub issue. Vulnerabilities: use private reporting as described in [SECURITY.md](../SECURITY.md).
+Bugs: open a GitHub issue. Vulnerabilities: use private reporting as described in [SECURITY.md](https://github.com/Vtechcom/hydraone-sdk/blob/main/SECURITY.md).

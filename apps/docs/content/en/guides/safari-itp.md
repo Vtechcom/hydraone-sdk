@@ -1,4 +1,6 @@
-English | [Tiếng Việt](../vi/guides/safari-itp.md)
+---
+title: "Safari ITP and host storage"
+---
 
 # Safari ITP and host storage
 

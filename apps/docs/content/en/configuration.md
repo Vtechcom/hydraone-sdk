@@ -1,4 +1,6 @@
-English | [Tiếng Việt](./vi/configuration.md)
+---
+title: "Configuration"
+---
 
 # Configuration
 
@@ -18,7 +20,7 @@ All options are optional unless marked required.
 | `preferredWallet`     | `string`              | first detected     | Preferred wallet key in fallback mode, for example `eternl`, `lace`, `nami`.      |
 | `cardanoProvider`     | `Record<string, any>` | `window.cardano`   | Custom wallet provider object, mainly for tests.                                  |
 | `isIframeFn`          | `() => boolean`       | built-in detection | Custom iframe detection, mainly for tests.                                        |
-| `debug`               | `boolean`             | `false`            | Emit warnings through the logger. See [Logging](./logging.md).                    |
+| `debug`               | `boolean`             | `false`            | Emit warnings through the logger. See [Logging](/logging).                    |
 | `logger`              | `Logger`              | `console`          | Destination for debug output.                                                     |
 
 Per-call overrides: queries take `{ timeoutMs }` (`QueryOptions`) and signing calls take `{ timeoutMs }` (`SignOptions`).

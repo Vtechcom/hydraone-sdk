@@ -1,4 +1,6 @@
-[English](../logging.md) | Tiếng Việt
+---
+title: "Ghi log"
+---
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
@@ -44,7 +46,7 @@ export interface Logger {
 
 - Được ghi: các thông báo ngắn bằng tiếng Anh và object lỗi đã kích hoạt chúng.
 - Client không ghi: payload của request, chữ ký, token, địa chỉ hay số dư.
-- Các lỗi bạn tự bắt sẽ mang `details`, có thể chứa lại dữ liệu từ host. Xem [Xử lý lỗi](./error-handling.md#serialization-và-an-toàn) trước khi chuyển tiếp chúng đi.
+- Các lỗi bạn tự bắt sẽ mang `details`, có thể chứa lại dữ liệu từ host. Xem [Xử lý lỗi](/vi/error-handling#serialization-và-an-toàn) trước khi chuyển tiếp chúng đi.
 
 ## Các thành phần khác
 
@@ -68,4 +70,4 @@ for (const check of report.checks) {
 }
 ```
 
-Xem [Kiểm thử tích hợp của bạn](./testing-your-integration.md#chẩn-đoán).
+Xem [Kiểm thử tích hợp của bạn](/vi/testing-your-integration#chẩn-đoán).
