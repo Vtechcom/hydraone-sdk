@@ -31,6 +31,9 @@ export default defineNuxtConfig({
     }
   },
 
+  // Default dev port for the docs site; `nuxt dev --port <n>` or NUXT_PORT still override it.
+  devServer: { port: 3002 },
+
   experimental: { asyncContext: true },
 
   compatibilityDate: '2026-06-30',
@@ -43,7 +46,7 @@ export default defineNuxtConfig({
   },
 
   vite: {
-    optimizeDeps: { include: ['animejs'] }
+    optimizeDeps: { include: ['animejs', 'mermaid'] }
   },
 
   eslint: {

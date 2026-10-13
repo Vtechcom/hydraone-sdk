@@ -1,4 +1,13 @@
-import { ref, onScopeDispose, getCurrentScope, getCurrentInstance, onMounted } from 'vue';
+import {
+  ref,
+  inject,
+  hasInjectionContext,
+  onScopeDispose,
+  getCurrentScope,
+  getCurrentInstance,
+  onMounted,
+} from 'vue';
+import { HYDRA_CLIENT_KEY } from './plugin';
 import type {
   ConnectionState,
   HostInfo,
@@ -31,7 +40,12 @@ export function getSharedWalletBridgeClient(
       fallbackToExtension: options?.fallbackToExtension ?? true,
       ...options,
     };
-    sharedClientInstance = new WalletBridgeClient(clientOptions);
+    const client = new WalletBridgeClient(clientOptions);
+    // A module-level singleton on the server would be shared by every request, so only cache on the client.
+    if (typeof window === 'undefined') {
+      return client;
+    }
+    sharedClientInstance = client;
   }
   return sharedClientInstance;
 }
@@ -56,8 +70,11 @@ export function setSharedWalletBridgeClient(client: WalletBridgeClient | null): 
 export function useWalletBridgeClient(
   options?: UseWalletBridgeClientOptions,
 ): UseWalletBridgeClientReturn {
-  // 1. Resolve the client (options.client, then the shared client)
-  const client: WalletBridgeClient = options?.client ?? getSharedWalletBridgeClient(options);
+  // 1. Resolve the client (options.client, then the app-level plugin, then the shared client)
+  const client: WalletBridgeClient =
+    options?.client ??
+    (hasInjectionContext() ? inject(HYDRA_CLIENT_KEY, null) : null) ??
+    getSharedWalletBridgeClient(options);
 
   // 2. Create the reactive refs with safe initial values
   const connectionState = ref<ConnectionState>(client.connectionState);

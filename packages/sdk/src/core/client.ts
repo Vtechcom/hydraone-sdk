@@ -40,6 +40,7 @@ import {
   DirectExtensionTransport,
   detectCardanoWallets,
 } from './adapters/direct-extension-transport';
+import { PostMessageTransport } from './adapters/post-message-transport';
 import { getWalletExtension, getWindowCardano } from './cardano-provider';
 import { checkBridgeHealth } from './diagnostics/health-check';
 import type { BridgeHealthReport, CheckHealthOptions } from './diagnostics/types';
@@ -102,14 +103,20 @@ export class WalletBridgeClient {
   private readonly eventListeners = new Map<string, Set<(payload: unknown) => void>>();
 
   constructor(options: WalletBridgeClientOptions) {
-    if (!options || (!options.transport && !options.fallbackToExtension)) {
+    const transport =
+      options?.transport ??
+      (options?.appCenterOrigin
+        ? new PostMessageTransport({ appCenterOrigin: options.appCenterOrigin })
+        : undefined);
+
+    if (!options || (!transport && !options.fallbackToExtension)) {
       throw new HydraBridgeError(
         'Transport must be provided to WalletBridgeClient unless fallbackToExtension is enabled',
         'ERR_INVALID_OPTIONS',
       );
     }
 
-    this.transport = options.transport;
+    this.transport = transport;
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
     this.pingTimeoutMs = options.pingTimeoutMs ?? TIERED_TIMEOUTS.PING;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;

@@ -184,6 +184,12 @@ export interface UseGameAuthOptions {
   client?: WalletBridgeClient;
 
   /**
+   * Origin of the Host Shell, used to build the shared client when none exists yet.
+   * Ignored when `client` or `authManager` is given, or when the shared client already exists.
+   */
+  appCenterOrigin?: string | string[];
+
+  /**
    * Checks the saved session (checkSession) when the component mounts on the client.
    * Defaults to true.
    */

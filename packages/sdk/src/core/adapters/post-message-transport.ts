@@ -26,7 +26,12 @@ import { errorMessage } from '../error-utils';
  * unique IDs are generated and concurrent requests are multiplexed via the in-flight map.
  */
 export class PostMessageTransport implements ITransport {
+  /** Primary host origin (the first one when several are configured). */
   public readonly appCenterOrigin: string;
+  /** Every origin accepted for incoming messages. */
+  public readonly allowedOrigins: readonly string[];
+  /** Host origin confirmed by an accepted incoming message, used as the postMessage target. */
+  private verifiedOrigin?: string;
   private readonly targetWindow?: PostMessageTarget;
   private readonly sourceWindow?: MessageEventSource;
   public readonly env: string;
@@ -38,16 +43,28 @@ export class PostMessageTransport implements ITransport {
   private isDestroyed = false;
 
   constructor(options: PostMessageTransportOptions) {
+    const rawOrigins = options
+      ? Array.isArray(options.appCenterOrigin)
+        ? options.appCenterOrigin
+        : [options.appCenterOrigin]
+      : [];
     if (
-      !options ||
-      typeof options.appCenterOrigin !== 'string' ||
-      options.appCenterOrigin.trim() === ''
+      rawOrigins.length === 0 ||
+      rawOrigins.some((o) => typeof o !== 'string' || o.trim() === '')
     ) {
       throw new HydraTransportError('appCenterOrigin must be provided');
     }
 
-    const trimmedOrigin = options.appCenterOrigin.trim();
-    const normalizedOrigin = trimmedOrigin === '*' ? '*' : trimmedOrigin.replace(/\/+$/, '');
+    // A wildcard makes every other entry redundant, so it collapses the list to '*'
+    const normalizedList = [
+      ...new Set(
+        rawOrigins.map((o) => {
+          const trimmed = o.trim();
+          return trimmed === '*' ? '*' : trimmed.replace(/\/+$/, '');
+        }),
+      ),
+    ];
+    const normalizedOrigin = normalizedList.includes('*') ? '*' : normalizedList[0]!;
     const env =
       options.env ??
       (typeof process !== 'undefined' && process.env?.NODE_ENV
@@ -62,6 +79,7 @@ export class PostMessageTransport implements ITransport {
     }
 
     this.appCenterOrigin = normalizedOrigin;
+    this.allowedOrigins = normalizedOrigin === '*' ? ['*'] : normalizedList;
     this.targetWindow = options.targetWindow;
     this.sourceWindow =
       options.sourceWindow ??
@@ -86,7 +104,10 @@ export class PostMessageTransport implements ITransport {
 
     // 1. Zero-trust origin check. Foreign messages (extensions, devtools, other frames) are
     // dropped: throwing here would surface as an uncaught error in the window listener.
-    if (this.appCenterOrigin !== '*' && event.origin !== this.appCenterOrigin) {
+    if (
+      this.appCenterOrigin !== '*' &&
+      (typeof event.origin !== 'string' || !this.allowedOrigins.includes(event.origin))
+    ) {
       return;
     }
 
@@ -113,6 +134,11 @@ export class PostMessageTransport implements ITransport {
     const message = data as BridgeMessage;
     if (typeof message.id !== 'string' || typeof message.type !== 'string') {
       return;
+    }
+
+    // Origin and source passed, so later replies can target this exact host
+    if (this.allowedOrigins.length > 1 && typeof event.origin === 'string') {
+      this.verifiedOrigin = event.origin;
     }
 
     // 4. Multiplexing & Correlation ID
@@ -200,7 +226,9 @@ export class PostMessageTransport implements ITransport {
     }
 
     try {
-      target.postMessage(message, this.appCenterOrigin);
+      for (const targetOrigin of this.resolveTargetOrigins()) {
+        target.postMessage(message, targetOrigin);
+      }
     } catch (err) {
       throw new HydraTransportError(
         `Failed to send postMessage: ${errorMessage(err, 'Unable to serialize message')}`,
@@ -357,6 +385,47 @@ export class PostMessageTransport implements ITransport {
       }
     }
     return false;
+  }
+
+  /**
+   * postMessage takes a single targetOrigin, so with several allowed hosts pick the right one:
+   * the origin of the last accepted message, then the parent frame's origin when it is allowed.
+   * If neither is known, post to each allowed origin; the browser delivers only to the window
+   * whose origin matches, so no other site receives the message.
+   */
+  private resolveTargetOrigins(): readonly string[] {
+    if (this.allowedOrigins.length === 1) {
+      return this.allowedOrigins;
+    }
+    if (this.verifiedOrigin) {
+      return [this.verifiedOrigin];
+    }
+    const parentOrigin = this.getParentOrigin();
+    if (parentOrigin && this.allowedOrigins.includes(parentOrigin)) {
+      return [parentOrigin];
+    }
+    return this.allowedOrigins;
+  }
+
+  /**
+   * Best-effort origin of the embedding page
+   */
+  private getParentOrigin(): string | undefined {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    try {
+      const ancestor = window.location?.ancestorOrigins?.[0];
+      if (ancestor) {
+        return ancestor;
+      }
+      if (typeof document !== 'undefined' && document.referrer) {
+        return new URL(document.referrer).origin;
+      }
+    } catch {
+      // Cross-origin access can throw; fall through to broadcasting
+    }
+    return undefined;
   }
 
   /**

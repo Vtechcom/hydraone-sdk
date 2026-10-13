@@ -131,8 +131,12 @@ export interface MessageEventSource {
  * Options for PostMessageTransport.
  */
 export interface PostMessageTransportOptions {
-  /** Origin of the host shell (for example 'https://alpha.hydraone.app'). */
-  appCenterOrigin: string;
+  /**
+   * Origin of the host shell (for example 'https://alpha.hydraone.app'), or several origins
+   * when the app can be embedded by more than one host (for example staging and production).
+   * Incoming messages are accepted from any listed origin.
+   */
+  appCenterOrigin: string | string[];
   /** Window that receives outgoing messages (defaults to window.parent inside an iframe). */
   targetWindow?: PostMessageTarget;
   /** Window that emits incoming message events (defaults to window in a browser). */
@@ -206,6 +210,12 @@ export interface HostAckPayload {
 export interface WalletBridgeClientOptions {
   /** Transport adapter implementing ITransport (optional when fallbackToExtension is enabled). */
   transport?: ITransport;
+  /**
+   * Origin of the Host Shell. When set and no `transport` is given, the client creates a
+   * PostMessageTransport for this origin and owns it (destroy() releases it).
+   * An explicit `transport` always takes precedence. Accepts several origins.
+   */
+  appCenterOrigin?: string | string[];
   /** Handshake timeout in ms (default: 3000). */
   handshakeTimeoutMs?: number;
   /** PING latency probe timeout in ms (default: 3000). */

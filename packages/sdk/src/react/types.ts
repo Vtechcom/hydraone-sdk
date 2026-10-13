@@ -67,8 +67,9 @@ export interface HydraOneProviderProps {
 
   /**
    * Origin of the Host Shell / App Center (for example: 'https://alpha.hydraone.app').
+   * Pass an array to allow several hosts.
    */
-  appCenterOrigin?: string;
+  appCenterOrigin?: string | string[];
 
   /**
    * Detailed configuration options for WalletBridgeClient

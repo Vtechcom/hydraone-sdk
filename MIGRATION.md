@@ -56,10 +56,10 @@ new WalletBridgeClient({
 After:
 
 ```ts
-import { WalletBridgeClient, PostMessageTransport } from '@hydraone/sdk';
+import { WalletBridgeClient } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
-  transport: new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' }),
+  appCenterOrigin: 'https://alpha.hydraone.app',
   handshakeTimeoutMs: 5000,
   queryTimeoutMs: 10000,
   debug: true,

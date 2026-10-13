@@ -19,11 +19,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `WalletBridgeClient` option `appCenterOrigin`: when no `transport` is given, the client creates a `PostMessageTransport` for that origin and destroys it in `destroy()`. An explicit `transport` still wins. `useWalletBridgeClient` and `useGameAuth` accept it too, so Vue no longer needs a hand-built transport.
+- `appCenterOrigin` accepts an array of origins (`PostMessageTransport`, `WalletBridgeClient`, `HydraOneProvider`, the Vue composables). Incoming messages are accepted from any listed origin; replies go to the origin of the last accepted message. `transport.allowedOrigins` lists them and `transport.appCenterOrigin` stays the first one.
+- `@hydraone/sdk/vue`: `createHydraOne` plugin (with `HYDRA_CLIENT_KEY` and `HYDRA_AUTH_KEY`) that gives each app instance its own client and auth manager, so server rendering no longer shares state between requests. The composables look up `options`, then the plugin, then the shared instance.
 - `signIn` option `challengeEncoding` (`'auto' | 'utf8' | 'hex'`) to state how the challenge becomes the signed bytes.
 - `getAssetQuantity` fourth parameter `encoding` (`'auto' | 'hex' | 'utf8'`) to state how a string asset name is read.
 
 ### Fixed
 
+- `HydraOneProvider` now destroys the client (and the transport it created) on unmount. It skips a client or transport you passed in, and defers the call one tick so React StrictMode's remount does not destroy a client in use.
+- `@hydraone/sdk/react` now starts with `"use client"`, so Next.js App Router accepts the provider and hooks when they are imported from a Server Component.
+- The shared Vue client and auth manager are no longer cached when `window` is undefined, so server rendering cannot leak them across requests.
+- `useGameAuth({ appCenterOrigin })` now builds the shared client with that origin; before, it created a client without a transport.
 - `DirectExtensionTransport` (standalone mode) now answers `GET_CHANGE_ADDRESS`, `GET_UNUSED_ADDRESSES`, `GET_REWARD_ADDRESSES` and `GET_NETWORK_ID`; before, `getChangeAddress()`, `getUnusedAddresses()`, `getRewardAddresses()` and `getNetworkId()` failed with `ERR_UNSUPPORTED_METHOD`, which also broke the change-address fallback of `signIn`.
 - `DirectExtensionTransport` no longer reports wallet or node failures as `HydraUserRejectedError`. CIP-30 error codes are now read per operation (`signTx` 2, `signData` 3, `enable` -3 mean "user declined"), and a bare "rejected" or "refused" in a message no longer counts.
 - `SafeLocalStorageAdapter` no longer returns a value that `removeItem` or `clear` could not delete from the browser storage, so a signed-out JWT cannot come back after a failed removal.

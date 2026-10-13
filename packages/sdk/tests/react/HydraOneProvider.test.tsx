@@ -103,3 +103,56 @@ describe('HydraOneProvider and Context', () => {
     spy.mockRestore();
   });
 });
+
+describe('HydraOneProvider lifecycle', () => {
+  it('destroys the client it created on unmount', async () => {
+    let captured: WalletBridgeClient | undefined;
+    function Capture(): null {
+      captured = useHydraOneContext().client;
+      return null;
+    }
+    const { unmount } = render(
+      <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+        <Capture />
+      </HydraOneProvider>,
+    );
+
+    unmount();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(captured?.isDestroyed).toBe(true);
+  });
+
+  it('keeps the client alive through a StrictMode remount', async () => {
+    let captured: WalletBridgeClient | undefined;
+    function Capture(): null {
+      captured = useHydraOneContext().client;
+      return null;
+    }
+    render(
+      <React.StrictMode>
+        <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+          <Capture />
+        </HydraOneProvider>
+      </React.StrictMode>,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(captured?.isDestroyed).toBe(false);
+  });
+
+  it('does not destroy a client passed in by the caller', async () => {
+    const client = new WalletBridgeClient({ transport: new MockTransport() });
+    const { unmount } = render(
+      <HydraOneProvider client={client}>
+        <ConsumerComponent />
+      </HydraOneProvider>,
+    );
+
+    unmount();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(client.isDestroyed).toBe(false);
+    client.destroy();
+  });
+});

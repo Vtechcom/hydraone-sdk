@@ -1,4 +1,14 @@
-import { ref, computed, onScopeDispose, getCurrentScope, getCurrentInstance, onMounted } from 'vue';
+import {
+  ref,
+  computed,
+  inject,
+  hasInjectionContext,
+  onScopeDispose,
+  getCurrentScope,
+  getCurrentInstance,
+  onMounted,
+} from 'vue';
+import { HYDRA_AUTH_KEY } from './plugin';
 import type { ComputedRef } from 'vue';
 import type { AuthSession, SignInParams, AuthState } from '../core/types';
 import { GameAuthManager, isJwtExpired } from '../core/auth';
@@ -16,14 +26,20 @@ let sharedAuthManagerInstance: GameAuthManager | null = null;
  */
 export function getSharedGameAuthManager(options?: UseGameAuthOptions): GameAuthManager {
   if (!sharedAuthManagerInstance) {
-    const client = options?.client ?? getSharedWalletBridgeClient();
+    const client =
+      options?.client ??
+      getSharedWalletBridgeClient(
+        options?.appCenterOrigin ? { appCenterOrigin: options.appCenterOrigin } : undefined,
+      );
     const storage =
       typeof window !== 'undefined' ? new SafeLocalStorageAdapter() : new InMemoryStorageAdapter();
 
-    sharedAuthManagerInstance = new GameAuthManager({
-      client,
-      storage,
-    });
+    const manager = new GameAuthManager({ client, storage });
+    // Same reason as the shared client: a module-level singleton on the server leaks across requests.
+    if (typeof window === 'undefined') {
+      return manager;
+    }
+    sharedAuthManagerInstance = manager;
   }
   return sharedAuthManagerInstance;
 }
@@ -48,6 +64,7 @@ export function useGameAuth(options?: UseGameAuthOptions): UseGameAuthReturn {
   // 1. Resolve the GameAuthManager (authManager option, then a dedicated client, then the shared manager)
   const authManager: GameAuthManager =
     options?.authManager ??
+    (!options?.client && hasInjectionContext() ? inject(HYDRA_AUTH_KEY, null) : null) ??
     (options?.client
       ? new GameAuthManager({
           client: options.client,

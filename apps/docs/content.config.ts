@@ -4,6 +4,8 @@ import { defineContentConfig, defineCollection, z } from '@nuxt/content'
 const locales = ['en', 'vi'] as const
 
 const docsSchema = z.object({
+  // Required so every page carries its own summary; the page header renders it under the title.
+  description: z.string().min(1),
   links: z.array(z.object({
     label: z.string(),
     icon: z.string(),

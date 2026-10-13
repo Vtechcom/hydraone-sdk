@@ -91,12 +91,12 @@ onMounted(async () => {
           :alt="header?.logo?.alt"
           data-brand-item
           data-brand-logo
-          class="size-9 shrink-0 opacity-0 transition-transform duration-300 ease-out will-change-transform group-hover/brand:scale-110"
+          class="size-10 shrink-0 opacity-0 transition-transform duration-300 ease-out will-change-transform group-hover/brand:scale-110"
         />
 
         <span
           v-if="header?.title"
-          class="flex flex-col gap-0.5"
+          class="flex flex-col gap-1"
         >
           <span
             data-brand-item

@@ -53,6 +53,9 @@ export function HydraOneProvider({
 
   // Create the client instance once and keep it stable across renders
   const clientRef = useRef<WalletBridgeClient | null>(null);
+  // True only when this provider built the client and its transport, so it is safe to destroy
+  const ownsClientRef = useRef(false);
+  const destroyTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   if (!clientRef.current) {
     if (clientProp) {
       clientRef.current = clientProp;
@@ -67,6 +70,7 @@ export function HydraOneProvider({
         ...options,
       };
       clientRef.current = new WalletBridgeClient(clientOptions);
+      ownsClientRef.current = !options?.transport;
     }
   }
   const activeClient = clientProp ?? clientRef.current;
@@ -97,6 +101,24 @@ export function HydraOneProvider({
       });
     }
   }, [activeClient, autoConnect]);
+
+  // Release the client (and the PostMessageTransport it created) on unmount. The destroy is deferred
+  // one tick so React StrictMode's simulated unmount/remount does not kill the client in use.
+  useEffect(() => {
+    if (!ownsClientRef.current) {
+      return;
+    }
+    const client = clientRef.current;
+    if (destroyTimerRef.current) {
+      clearTimeout(destroyTimerRef.current);
+      destroyTimerRef.current = undefined;
+    }
+    return () => {
+      destroyTimerRef.current = setTimeout(() => {
+        client?.destroy();
+      }, 0);
+    };
+  }, []);
 
   const contextValue = useMemo<HydraOneContextValue>(
     () => ({
