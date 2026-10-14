@@ -10,7 +10,6 @@
   "ignore": [
     "@hydraone/template-next-js",
     "@hydraone/template-nuxt",
-    "@hydraone/template-phaser-3",
     "@hydraone/docs"
   ]
 }

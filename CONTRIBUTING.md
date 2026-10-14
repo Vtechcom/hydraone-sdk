@@ -6,7 +6,7 @@ Thanks for helping improve `@hydraone/sdk`. This guide covers setup, conventions
 
 ## Set up
 
-You need Node.js 22 (see `.nvmrc`; the package supports Node 20 and later) and [pnpm](https://pnpm.io).
+You need Node.js 22 or later (see `.nvmrc`) and [pnpm](https://pnpm.io).
 
 ```bash
 git clone https://github.com/Vtechcom/hydraone-sdk.git
@@ -14,7 +14,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-The repository is a pnpm monorepo: `packages/sdk` is the SDK, `packages/sdk/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
+The repository is a pnpm monorepo: `packages/sdk` is the SDK, `packages/host` is the host-side bridge, `packages/sdk/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
 
 ## Scripts
 

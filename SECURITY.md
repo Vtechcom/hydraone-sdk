@@ -19,7 +19,7 @@ Report it privately with GitHub's private vulnerability reporting:
 2. Describe the issue, the affected version and entry point, and steps or a proof of concept to reproduce it.
 3. Tell us whether you plan to publish your own write-up, and when.
 
-Only the maintainers can read the report. No dedicated security email address has been published yet. If you cannot use GitHub, open a public issue that says only that you need a private contact, without any details, and a maintainer will reply with one.
+Only the maintainers can read the report. If you cannot use GitHub, email <info@vtechcom.org> with the subject "Security report: hydraone-sdk". Keep the first message short and leave out exploit details until a maintainer replies.
 
 ## What to expect
 
@@ -34,7 +34,7 @@ We publish a GitHub security advisory and a patched release when a fix ships, an
 
 ## Scope
 
-In scope: the code published as `@hydraone/sdk`, including the message validation in `PostMessageTransport`, the storage adapters, the authentication helpers and the CLI templates.
+In scope: the code published as `@hydraone/sdk` and `@hydraone/host`, including the message validation in `PostMessageTransport`, the storage adapters, the authentication helpers and the CLI templates.
 
 Out of scope: vulnerabilities in wallet extensions, in the HydraOne host application itself, in your own backend, or in third-party dependencies that are not reachable through this package. Report those to their owners.
 

@@ -76,7 +76,7 @@ export default defineNuxtConfig({
   },
 
   llms: {
-    domain: 'https://alpha.hydraone.app',
+    domain: 'https://developers.hydraone.app',
     title: 'HydraOne SDK',
     description: 'Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth and React/Vue adapters.',
     // Locale-aware handler lives in server/routes/raw/.
