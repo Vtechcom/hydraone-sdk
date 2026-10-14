@@ -60,8 +60,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import type { BridgeHealthReport } from '@hydraone/sdk';
-import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
+import type { BridgeHealthReport } from '@hydraone-sdk/core';
+import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
 
 const projectName = '{{PROJECT_NAME}}';
 const config = useRuntimeConfig();

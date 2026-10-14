@@ -111,9 +111,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.12.0(jiti@2.7.0))
-      '@hydraone/sdk':
+      '@hydraone-sdk/core':
         specifier: workspace:*
-        version: link:../sdk
+        version: link:../core
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
@@ -139,7 +139,7 @@ importers:
         specifier: ^3.0.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@26.6.4)(happy-dom@20.14.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1)
 
-  packages/sdk:
+  packages/core:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: ^0.18.5
@@ -208,9 +208,9 @@ importers:
         specifier: ^3.5.43
         version: 3.5.43(typescript@6.0.3)
 
-  packages/sdk/templates/next-js:
+  packages/core/templates/next-js:
     dependencies:
-      '@hydraone/sdk':
+      '@hydraone-sdk/core':
         specifier: workspace:*
         version: link:../..
       next:
@@ -236,9 +236,9 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/sdk/templates/nuxt:
+  packages/core/templates/nuxt:
     dependencies:
-      '@hydraone/sdk':
+      '@hydraone-sdk/core':
         specifier: workspace:*
         version: link:../..
       vue:

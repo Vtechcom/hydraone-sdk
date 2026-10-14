@@ -1,5 +1,5 @@
 /**
- * @hydraone/sdk/vue — Official Vue 3.5+ & Nuxt 3 / Nuxt 4 Headless Composables
+ * @hydraone-sdk/core/vue — Official Vue 3.5+ & Nuxt 3 / Nuxt 4 Headless Composables
  */
 
 // Types

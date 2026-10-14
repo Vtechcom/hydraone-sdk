@@ -1,4 +1,4 @@
-import type { BalanceAsset, PlayerProfile, ThemeMode, Utxo } from '@hydraone/sdk';
+import type { BalanceAsset, PlayerProfile, ThemeMode, Utxo } from '@hydraone-sdk/core';
 
 export type HostPaginate = { page: number; limit: number };
 export type HostRequestPayload = Record<string, unknown>;

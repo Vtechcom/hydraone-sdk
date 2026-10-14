@@ -10,7 +10,7 @@
 
 ## What is supported
 
-The latest release gets fixes. See the [versioning policy](./README.md#versioning-and-support) and the [CHANGELOG](./packages/sdk/CHANGELOG.md). Wallet extension bugs and HydraOne host application issues belong to those projects.
+The latest release gets fixes. See the [versioning policy](./README.md#versioning-and-support) and the [CHANGELOG](./packages/core/CHANGELOG.md). Wallet extension bugs and HydraOne host application issues belong to those projects.
 
 ## Response expectations
 

@@ -160,12 +160,12 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
             {
               label: 'Nuxt (Vue 3.5+ Headless Composables)',
               value: 'nuxt',
-              description: 'Includes @hydraone/sdk/vue and an SSR-safe setup',
+              description: 'Includes @hydraone-sdk/core/vue and an SSR-safe setup',
             },
             {
               label: 'Next.js (React 19+ Headless Hooks & Provider)',
               value: 'next-js',
-              description: 'Includes @hydraone/sdk/react and HydraOneProvider',
+              description: 'Includes @hydraone-sdk/core/react and HydraOneProvider',
             },
           ],
         );

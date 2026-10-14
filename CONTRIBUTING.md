@@ -2,7 +2,7 @@ English | [Tiếng Việt](./CONTRIBUTING.vi.md)
 
 # Contributing
 
-Thanks for helping improve `@hydraone/sdk`. This guide covers setup, conventions and the pull request process. By participating you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
+Thanks for helping improve `@hydraone-sdk/core`. This guide covers setup, conventions and the pull request process. By participating you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Set up
 
@@ -14,7 +14,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-The repository is a pnpm monorepo: `packages/sdk` is the SDK, `packages/host` is the host-side bridge, `packages/sdk/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
+The repository is a pnpm monorepo: `packages/core` is the SDK, `packages/host` is the host-side bridge, `packages/core/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
 
 ## Scripts
 
@@ -27,7 +27,7 @@ The repository is a pnpm monorepo: `packages/sdk` is the SDK, `packages/host` is
 | `pnpm run typecheck`     | Run `tsc --noEmit` (sources and tests).                           |
 | `pnpm test`              | Run the Vitest suite. `test:watch` for watch mode.                |
 | `pnpm run test:coverage` | Run the suite with V8 coverage.                                   |
-| `pnpm run docs:api`      | Generate the TypeDoc API reference into `packages/sdk/docs/api/`. |
+| `pnpm run docs:api`      | Generate the TypeDoc API reference into `packages/core/docs/api/`. |
 | `pnpm run size`          | Check bundle size limits (run after `build`).                     |
 | `pnpm run changeset`     | Add a changeset describing your change.                           |
 

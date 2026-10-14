@@ -177,11 +177,11 @@ describe('create-hydraone-game CLI', () => {
       expect(fs.existsSync(pkgJsonPath)).toBe(true);
       const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
       expect(pkgJson.name).toBe('test-nuxt-game');
-      expect(pkgJson.dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
+      expect(pkgJson.dependencies['@hydraone-sdk/core']).toBe(`^${CLI_VERSION}`);
 
       const appVue = fs.readFileSync(path.join(targetDir, 'app.vue'), 'utf-8');
       expect(appVue).toContain('test-nuxt-game');
-      expect(appVue).toContain('@hydraone/sdk/vue');
+      expect(appVue).toContain('@hydraone-sdk/core/vue');
       expect(appVue).not.toContain('bootstrapDevShell');
 
       expect(fs.existsSync(path.join(targetDir, 'nuxt.config.ts'))).toBe(true);
@@ -204,7 +204,7 @@ describe('create-hydraone-game CLI', () => {
       const pkgJsonPath = path.join(targetDir, 'package.json');
       const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
       expect(pkgJson.name).toBe('test-next-game');
-      expect(pkgJson.dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
+      expect(pkgJson.dependencies['@hydraone-sdk/core']).toBe(`^${CLI_VERSION}`);
 
       const layout = fs.readFileSync(path.join(targetDir, 'app/layout.tsx'), 'utf-8');
       expect(layout).toContain('Providers');
@@ -387,7 +387,7 @@ describe('scaffolder template hygiene', () => {
         await scaffoldProject({ projectName: `ws-${template}`, targetDir: dir, template });
         const pkg = fs.readFileSync(path.join(dir, 'package.json'), 'utf-8');
         expect(pkg).not.toContain('workspace:');
-        expect(JSON.parse(pkg).dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
+        expect(JSON.parse(pkg).dependencies['@hydraone-sdk/core']).toBe(`^${CLI_VERSION}`);
       }
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });

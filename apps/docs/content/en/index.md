@@ -15,7 +15,7 @@ seo:
   :::
 
 #title
-Build HydraOne games with [@hydraone/sdk]{.text-primary}.
+Build HydraOne games with [@hydraone-sdk/core]{.text-primary}.
 
 #description
 Wallet bridge, CIP-8 authentication and React/Vue adapters for games and dApps running on Cardano. Ship once and run inside the App Center or in a plain browser tab.
@@ -148,7 +148,7 @@ Your game runs in an iframe and reaches the wallet through the App Center.
   steps:
     - icon: i-lucide-package
       title: Install
-      text: Add @hydraone/sdk, or scaffold a project with create-hydraone-game.
+      text: Add @hydraone-sdk/core, or scaffold a project with create-hydraone-game.
     - icon: i-lucide-plug
       title: Connect
       text: Create a WalletBridgeClient with the App Center origin and call init().
@@ -178,7 +178,7 @@ Pick your stack. Every example creates the client for you from the App Center or
   samples:
     - label: TypeScript
       code: |
-        import { WalletBridgeClient } from '@hydraone/sdk';
+        import { WalletBridgeClient } from '@hydraone-sdk/core';
 
         const client = new WalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',
@@ -191,7 +191,7 @@ Pick your stack. Every example creates the client for you from the App Center or
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
-        import { HydraOneProvider, useWallet } from '@hydraone/sdk/react';
+        import { HydraOneProvider, useWallet } from '@hydraone-sdk/core/react';
 
         function Balance() {
           const { isConnected, address, balanceADA, connect } = useWallet();
@@ -209,7 +209,7 @@ Pick your stack. Every example creates the client for you from the App Center or
     - label: Vue
       code: |
         <script setup lang="ts">
-        import { useWalletBridgeClient } from '@hydraone/sdk/vue';
+        import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
         const { isConnected, address, balanceADA, connect } = useWalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',

@@ -1,6 +1,6 @@
 packages:
   - 'packages/*'
-  - 'packages/sdk/templates/*'
+  - 'packages/core/templates/*'
   - 'apps/*'
 
 allowBuilds:

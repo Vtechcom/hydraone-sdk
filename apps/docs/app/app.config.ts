@@ -51,9 +51,9 @@ export default defineAppConfig({
       'aria-label': 'HydraOne SDK on GitHub'
     }, {
       'icon': 'i-simple-icons-npm',
-      'to': 'https://www.npmjs.com/package/@hydraone/sdk',
+      'to': 'https://www.npmjs.com/package/@hydraone-sdk/core',
       'target': '_blank',
-      'aria-label': '@hydraone/sdk on npm'
+      'aria-label': '@hydraone-sdk/core on npm'
     }, {
       'icon': 'i-simple-icons-discord',
       'to': 'https://discord.com/invite/4eXjD9uESE',

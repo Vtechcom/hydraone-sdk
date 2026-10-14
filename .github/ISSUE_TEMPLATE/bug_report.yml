@@ -26,7 +26,7 @@ body:
   - type: input
     id: sdk-version
     attributes:
-      label: '@hydraone/sdk version'
+      label: '@hydraone-sdk/core version'
       placeholder: 0.1.0
     validations:
       required: true

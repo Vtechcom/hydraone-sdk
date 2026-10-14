@@ -4,7 +4,7 @@
 
 # Đóng góp
 
-Cảm ơn bạn đã giúp cải thiện `@hydraone/sdk`. Hướng dẫn này nói về cách thiết lập môi trường, quy ước và quy trình pull request. Khi tham gia, bạn đồng ý với [Code of Conduct](./CODE_OF_CONDUCT.md).
+Cảm ơn bạn đã giúp cải thiện `@hydraone-sdk/core`. Hướng dẫn này nói về cách thiết lập môi trường, quy ước và quy trình pull request. Khi tham gia, bạn đồng ý với [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Thiết lập
 
@@ -16,7 +16,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-Repository là một pnpm monorepo: `packages/sdk` là SDK, `packages/sdk/templates/*` là các template dự án mà CLI sử dụng, và `apps/docs` là trang tài liệu (Nuxt). Chạy các script bên dưới từ thư mục gốc của repository.
+Repository là một pnpm monorepo: `packages/core` là SDK, `packages/core/templates/*` là các template dự án mà CLI sử dụng, và `apps/docs` là trang tài liệu (Nuxt). Chạy các script bên dưới từ thư mục gốc của repository.
 
 ## Scripts
 
@@ -29,7 +29,7 @@ Repository là một pnpm monorepo: `packages/sdk` là SDK, `packages/sdk/templa
 | `pnpm run typecheck`     | Chạy `tsc --noEmit` (mã nguồn và test).                   |
 | `pnpm test`              | Chạy bộ test Vitest. `test:watch` cho chế độ watch.       |
 | `pnpm run test:coverage` | Chạy bộ test kèm coverage V8.                             |
-| `pnpm run docs:api`      | Sinh tài liệu API TypeDoc vào `packages/sdk/docs/api/`.   |
+| `pnpm run docs:api`      | Sinh tài liệu API TypeDoc vào `packages/core/docs/api/`.   |
 | `pnpm run size`          | Kiểm tra giới hạn kích thước bundle (chạy sau `build`).   |
 | `pnpm run changeset`     | Thêm một changeset mô tả thay đổi của bạn.                |
 

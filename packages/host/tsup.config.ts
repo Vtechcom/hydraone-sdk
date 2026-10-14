@@ -10,5 +10,5 @@ export default defineConfig({
   splitting: false,
   target: 'es2022',
   outDir: 'dist',
-  external: ['@hydraone/sdk'],
+  external: ['@hydraone-sdk/core'],
 });

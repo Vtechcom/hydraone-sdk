@@ -6,7 +6,7 @@ This guide lists breaking changes and how to move to them. Each section is for u
 
 ## Pre-release builds to 0.1.0
 
-0.1.0 is the first public release. If you used an internal or pre-release build, apply the changes below. The package name stays `@hydraone/sdk`.
+0.1.0 is the first public release. If you used an internal or pre-release build, apply the changes below. The package name stays `@hydraone-sdk/core`.
 
 ### React: removed aliases
 
@@ -15,7 +15,7 @@ This guide lists breaking changes and how to move to them. Each section is for u
 Before:
 
 ```tsx
-import { useHydraOne, useAuth } from '@hydraone/sdk/react';
+import { useHydraOne, useAuth } from '@hydraone-sdk/core/react';
 
 const { client } = useHydraOne();
 const { isAuthenticated } = useAuth();
@@ -24,7 +24,7 @@ const { isAuthenticated } = useAuth();
 After:
 
 ```tsx
-import { useHydraOneContext, useHydraAuth } from '@hydraone/sdk/react';
+import { useHydraOneContext, useHydraAuth } from '@hydraone-sdk/core/react';
 
 const { client } = useHydraOneContext();
 const { isAuthenticated } = useHydraAuth();
@@ -56,7 +56,7 @@ new WalletBridgeClient({
 After:
 
 ```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
+import { WalletBridgeClient } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -68,7 +68,7 @@ const client = new WalletBridgeClient({
 
 ### Documentation script
 
-`pnpm run docs` used to serve a static portal. It now generates the TypeDoc API reference into `packages/sdk/docs/api/`.
+`pnpm run docs` used to serve a static portal. It now generates the TypeDoc API reference into `packages/core/docs/api/`.
 
 ### CLI output
 

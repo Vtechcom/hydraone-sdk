@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-A Web3 game scaffolded with `create-hydraone-game`, built with **Next.js** and **@hydraone/sdk**.
+A Web3 game scaffolded with `create-hydraone-game`, built with **Next.js** and **@hydraone-sdk/core**.
 
 ## Develop
 
@@ -29,4 +29,4 @@ Click **Check host bridge** on the page to run `checkBridgeHealth` (iframe sandb
 
 - `app/providers.tsx` - `<HydraOneProvider>` configured with the host origin.
 - `lib/hydra.ts` - embed detection, host origin resolution.
-- `@hydraone/sdk/react` - `useWallet()`, `useHydraAuth()` and `useHostStorage()` hooks.
+- `@hydraone-sdk/core/react` - `useWallet()`, `useHydraAuth()` and `useHostStorage()` hooks.

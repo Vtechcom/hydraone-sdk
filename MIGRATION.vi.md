@@ -8,7 +8,7 @@ Tài liệu này liệt kê các breaking change và cách chuyển sang phiên 
 
 ## Từ bản pre-release lên 0.1.0
 
-0.1.0 là bản phát hành công khai đầu tiên. Nếu bạn từng dùng bản nội bộ hoặc bản pre-release, hãy áp dụng các thay đổi dưới đây. Tên package vẫn là `@hydraone/sdk`.
+0.1.0 là bản phát hành công khai đầu tiên. Nếu bạn từng dùng bản nội bộ hoặc bản pre-release, hãy áp dụng các thay đổi dưới đây. Tên package vẫn là `@hydraone-sdk/core`.
 
 ### React: đã xóa các alias
 
@@ -17,7 +17,7 @@ Tài liệu này liệt kê các breaking change và cách chuyển sang phiên 
 Trước:
 
 ```tsx
-import { useHydraOne, useAuth } from '@hydraone/sdk/react';
+import { useHydraOne, useAuth } from '@hydraone-sdk/core/react';
 
 const { client } = useHydraOne();
 const { isAuthenticated } = useAuth();
@@ -26,7 +26,7 @@ const { isAuthenticated } = useAuth();
 Sau:
 
 ```tsx
-import { useHydraOneContext, useHydraAuth } from '@hydraone/sdk/react';
+import { useHydraOneContext, useHydraAuth } from '@hydraone-sdk/core/react';
 
 const { client } = useHydraOneContext();
 const { isAuthenticated } = useHydraAuth();
@@ -58,7 +58,7 @@ new WalletBridgeClient({
 Sau:
 
 ```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
+import { WalletBridgeClient } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -70,7 +70,7 @@ const client = new WalletBridgeClient({
 
 ### Script tài liệu
 
-`pnpm run docs` trước đây phục vụ một portal tĩnh. Nay nó sinh tài liệu API TypeDoc vào `packages/sdk/docs/api/`.
+`pnpm run docs` trước đây phục vụ một portal tĩnh. Nay nó sinh tài liệu API TypeDoc vào `packages/core/docs/api/`.
 
 ### Đầu ra của CLI
 

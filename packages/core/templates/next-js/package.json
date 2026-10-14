@@ -1,5 +1,5 @@
 {
-  "name": "@hydraone/template-next-js",
+  "name": "@hydraone-sdk/template-next-js",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@hydraone/sdk": "workspace:*",
+    "@hydraone-sdk/core": "workspace:*",
     "next": "^16.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

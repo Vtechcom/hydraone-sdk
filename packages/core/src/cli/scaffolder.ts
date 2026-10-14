@@ -192,8 +192,8 @@ export async function scaffoldProject(
   const replacements: Record<string, string> = {
     '{{PROJECT_NAME}}': actualProjectName,
     '{{SDK_VERSION}}': `^${CLI_VERSION}`,
-    '@hydraone/template-nuxt': actualProjectName,
-    '@hydraone/template-next-js': actualProjectName,
+    '@hydraone-sdk/template-nuxt': actualProjectName,
+    '@hydraone-sdk/template-next-js': actualProjectName,
     'workspace:*': `^${CLI_VERSION}`,
   };
 

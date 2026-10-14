@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { HydraOneProvider } from '@hydraone/sdk/react';
+import { HydraOneProvider } from '@hydraone-sdk/core/react';
 import { isEmbedded, resolveHostOrigin } from '../lib/hydra';
 
 export function Providers({ children }: { children: React.ReactNode }) {

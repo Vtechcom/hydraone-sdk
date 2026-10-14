@@ -1,5 +1,5 @@
 /**
- * @hydraone/sdk — Official Game & dApp Developer Toolkit for HydraOne on Cardano
+ * @hydraone-sdk/core — Official Game & dApp Developer Toolkit for HydraOne on Cardano
  */
 
 /** Version of this SDK, injected from package.json at build time. */

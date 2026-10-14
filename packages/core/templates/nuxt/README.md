@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-A Web3 game scaffolded with `create-hydraone-game`, built with **Nuxt 4** and **@hydraone/sdk**.
+A Web3 game scaffolded with `create-hydraone-game`, built with **Nuxt 4** and **@hydraone-sdk/core**.
 
 ## Develop
 
@@ -28,4 +28,4 @@ Click **Check host bridge** on the page to run `checkBridgeHealth` (iframe sandb
 ## What is included
 
 - `utils/hydra.ts` - client setup and host origin resolution.
-- `@hydraone/sdk/vue` - SSR-safe composables `useWalletBridgeClient` and `useGameAuth`.
+- `@hydraone-sdk/core/vue` - SSR-safe composables `useWalletBridgeClient` and `useGameAuth`.

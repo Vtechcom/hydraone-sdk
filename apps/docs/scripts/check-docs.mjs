@@ -1,5 +1,5 @@
 // Validates the docs content: front matter, no duplicate H1, internal links and EN/VI parity.
-// Run with: pnpm --filter @hydraone/docs check
+// Run with: pnpm --filter @hydraone-sdk/docs check
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'

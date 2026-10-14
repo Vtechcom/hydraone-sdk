@@ -17,7 +17,7 @@ import type {
   HostRequestPayload,
   RegisteredIframe,
 } from './types';
-import type { BridgeMessage, HostInfo, PlayerProfile } from '@hydraone/sdk';
+import type { BridgeMessage, HostInfo, PlayerProfile } from '@hydraone-sdk/core';
 
 const DEFAULT_HOST_NAME = 'HydraOne Host';
 const DEFAULT_HOST_VERSION = '1.0.0';
@@ -47,7 +47,7 @@ const resolveValue = <T>(value: T | (() => T)): T =>
   typeof value === 'function' ? (value as () => T)() : value;
 
 /**
- * Creates the host side of the `@hydraone/sdk` bridge: origin whitelist, iframe registry, request
+ * Creates the host side of the `@hydraone-sdk/core` bridge: origin whitelist, iframe registry, request
  * dispatch (wallet, host storage, orientation, haptics...) and event fan-out to embedded apps.
  * The embedding app only supplies a HostWalletAdapter and calls the returned functions.
  */

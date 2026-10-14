@@ -1,23 +1,23 @@
 English | [Tiếng Việt](https://github.com/Vtechcom/hydraone-sdk/blob/main/README.vi.md)
 
-# @hydraone/sdk
+# @hydraone-sdk/core
 
 Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 login, React and Vue adapters.
 
-[![npm version](https://img.shields.io/npm/v/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
-[![npm downloads](https://img.shields.io/npm/dm/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
+[![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
+[![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![CI](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/npm/l/@hydraone/sdk.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/sdk/tsconfig.json)
-[![Node.js](https://img.shields.io/node/v/@hydraone/sdk.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/sdk/package.json)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/@hydraone/sdk.svg)](https://bundlephobia.com/package/@hydraone/sdk)
+[![License: Apache-2.0](https://img.shields.io/npm/l/@hydraone-sdk/core.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/core/tsconfig.json)
+[![Node.js](https://img.shields.io/node/v/@hydraone-sdk/core.svg)](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/core/package.json)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/@hydraone-sdk/core.svg)](https://bundlephobia.com/package/@hydraone-sdk/core)
 
 ## Features
 
 - **Wallet bridge** between a game running in an iframe and the HydraOne App Center host shell, over `postMessage` with strict origin validation and correlation IDs.
 - **CIP-8 one-click login** with JWT lifecycle management (`GameAuthManager`).
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
-- **Framework adapters**: React hooks (`@hydraone/sdk/react`) and Vue/Nuxt composables (`@hydraone/sdk/vue`).
+- **Framework adapters**: React hooks (`@hydraone-sdk/core/react`) and Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Health diagnostics** for the bridge.
 - **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt).
 - Zero runtime dependencies. ESM and CommonJS builds with bundled type declarations.
@@ -31,11 +31,11 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 ## Installation
 
 ```bash
-npm install @hydraone/sdk
+npm install @hydraone-sdk/core
 # or
-yarn add @hydraone/sdk
-pnpm add @hydraone/sdk
-bun add @hydraone/sdk
+yarn add @hydraone-sdk/core
+pnpm add @hydraone-sdk/core
+bun add @hydraone-sdk/core
 ```
 
 Start a new project from a template:
@@ -49,7 +49,7 @@ Templates: `next-js`, `nuxt`. Run `npx create-hydraone-game --help` for all opti
 ## Quick start
 
 ```ts
-import { WalletBridgeClient, HydraBridgeError } from '@hydraone/sdk';
+import { WalletBridgeClient, HydraBridgeError } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -105,7 +105,7 @@ See [Configuration](https://developers.hydraone.app/reference/client-options) fo
 ### Wallet (CIP-30)
 
 ```ts
-import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@hydraone/sdk';
+import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@hydraone-sdk/core';
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
@@ -132,7 +132,7 @@ import {
   HostStorageRelayAdapter,
   GameAuthManager,
   parseJwt,
-} from '@hydraone/sdk';
+} from '@hydraone-sdk/core';
 
 const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
 const client = new WalletBridgeClient({ transport });
@@ -171,7 +171,7 @@ import {
   InMemoryStorageAdapter,
   buildStorageKey,
   type IStorage,
-} from '@hydraone/sdk';
+} from '@hydraone-sdk/core';
 
 const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
 
@@ -190,7 +190,7 @@ Safari partitions or wipes storage for cross-origin iframes. `HostStorageRelayAd
 
 ```tsx
 import React from 'react';
-import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone/sdk/react';
+import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
 
 function Game() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
@@ -225,7 +225,7 @@ Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See th
 ### Vue and Nuxt
 
 ```ts
-import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
+import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
 
 export function setup() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
@@ -248,8 +248,8 @@ See the [Vue guide](https://developers.hydraone.app/guides/vue-nuxt).
 ### Diagnostics
 
 ```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk';
+import { WalletBridgeClient } from '@hydraone-sdk/core';
+import { checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -298,7 +298,7 @@ Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANS
 The SDK is silent by default. Set `debug: true` to emit warnings, and pass a `logger` to route them into your own logging:
 
 ```ts
-import { WalletBridgeClient, type Logger } from '@hydraone/sdk';
+import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';
 
 const logger: Logger = {
   warn: (message, ...args) => console.warn(`[sdk] ${message}`, ...args),
@@ -319,10 +319,10 @@ The client logs only short messages and error objects, never request payloads.
 The package ships ESM (`.js`) and CommonJS (`.cjs`) builds with matching `.d.ts` and `.d.cts` declarations, so it works with `import` and `require` under `moduleResolution` set to `node16`, `nodenext` or `bundler`. It declares `"sideEffects": false`, so bundlers can tree-shake unused exports.
 
 ```js
-const { WalletBridgeClient } = require('@hydraone/sdk');
+const { WalletBridgeClient } = require('@hydraone-sdk/core');
 ```
 
-Entry points: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. The root entry is about 22 KB gzipped. Import only the subpaths you need.
+Entry points: `@hydraone-sdk/core`, `@hydraone-sdk/core/react`, `@hydraone-sdk/core/vue`. The root entry is about 22 KB gzipped. Import only the subpaths you need.
 
 ## API reference
 
@@ -332,7 +332,7 @@ The API reference is generated from the TSDoc comments with TypeDoc. Build it lo
 pnpm run docs:api
 ```
 
-The output is written to `packages/sdk/docs/api/`. Guides live in [docs/](https://developers.hydraone.app/getting-started/introduction).
+The output is written to `packages/core/docs/api/`. Guides live in [docs/](https://developers.hydraone.app/getting-started/introduction).
 
 ## FAQ and troubleshooting
 
@@ -344,7 +344,7 @@ More answers are in the [FAQ](https://developers.hydraone.app/help/faq) and [Tro
 
 ## Versioning and support
 
-The SDK follows [Semantic Versioning](https://semver.org). While the version is below 1.0.0, minor releases may include breaking changes; each one is listed in the [CHANGELOG](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/sdk/CHANGELOG.md) with migration steps in [MIGRATION](https://github.com/Vtechcom/hydraone-sdk/blob/main/MIGRATION.md). Security fixes go to the latest release. See [SUPPORT](https://github.com/Vtechcom/hydraone-sdk/blob/main/SUPPORT.md) for where to ask questions.
+The SDK follows [Semantic Versioning](https://semver.org). While the version is below 1.0.0, minor releases may include breaking changes; each one is listed in the [CHANGELOG](https://github.com/Vtechcom/hydraone-sdk/blob/main/packages/core/CHANGELOG.md) with migration steps in [MIGRATION](https://github.com/Vtechcom/hydraone-sdk/blob/main/MIGRATION.md). Security fixes go to the latest release. See [SUPPORT](https://github.com/Vtechcom/hydraone-sdk/blob/main/SUPPORT.md) for where to ask questions.
 
 ## Contributing, security and license
 

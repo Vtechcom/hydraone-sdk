@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWallet, useHydraAuth } from '@hydraone/sdk/react';
-import type { BridgeHealthReport } from '@hydraone/sdk';
+import { useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
+import type { BridgeHealthReport } from '@hydraone-sdk/core';
 import { isEmbedded } from '../lib/hydra';
 
 const PROJECT_NAME = '{{PROJECT_NAME}}';

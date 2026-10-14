@@ -1,5 +1,5 @@
-import { PostMessageTransport, WalletBridgeClient } from '@hydraone/sdk';
-import { setSharedWalletBridgeClient } from '@hydraone/sdk/vue';
+import { PostMessageTransport, WalletBridgeClient } from '@hydraone-sdk/core';
+import { setSharedWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
 /** True when the page runs inside an iframe (the HydraOne web client). */
 export function isEmbedded(): boolean {

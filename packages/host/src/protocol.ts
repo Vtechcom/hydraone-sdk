@@ -1,4 +1,4 @@
-import type { BridgeMessage, Utxo } from '@hydraone/sdk';
+import type { BridgeMessage, Utxo } from '@hydraone-sdk/core';
 
 /** Error codes a host answers with in `RPC_ERROR`. */
 export const HOST_ERROR_CODES = {

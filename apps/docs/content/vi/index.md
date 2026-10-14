@@ -15,7 +15,7 @@ seo:
   :::
 
 #title
-Xây dựng game HydraOne với [@hydraone/sdk]{.text-primary}.
+Xây dựng game HydraOne với [@hydraone-sdk/core]{.text-primary}.
 
 #description
 Wallet bridge, xác thực CIP-8 và adapter React/Vue cho game và dApp chạy trên Cardano. Viết một lần, chạy trong App Center hoặc trong một tab trình duyệt thường.
@@ -148,7 +148,7 @@ Cùng một đoạn code client chạy được khi nhúng trong App Center và 
   steps:
     - icon: i-lucide-package
       title: Cài đặt
-      text: Thêm @hydraone/sdk, hoặc dựng dự án bằng create-hydraone-game.
+      text: Thêm @hydraone-sdk/core, hoặc dựng dự án bằng create-hydraone-game.
     - icon: i-lucide-plug
       title: Kết nối
       text: Tạo WalletBridgeClient với origin của App Center rồi gọi init().
@@ -178,7 +178,7 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
   samples:
     - label: TypeScript
       code: |
-        import { WalletBridgeClient } from '@hydraone/sdk';
+        import { WalletBridgeClient } from '@hydraone-sdk/core';
 
         const client = new WalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',
@@ -191,7 +191,7 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
-        import { HydraOneProvider, useWallet } from '@hydraone/sdk/react';
+        import { HydraOneProvider, useWallet } from '@hydraone-sdk/core/react';
 
         function Balance() {
           const { isConnected, address, balanceADA, connect } = useWallet();
@@ -209,7 +209,7 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
     - label: Vue
       code: |
         <script setup lang="ts">
-        import { useWalletBridgeClient } from '@hydraone/sdk/vue';
+        import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
         const { isConnected, address, balanceADA, connect } = useWalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',

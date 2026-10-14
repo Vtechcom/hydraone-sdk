@@ -8,8 +8,8 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@hydraone/template-next-js",
-    "@hydraone/template-nuxt",
-    "@hydraone/docs"
+    "@hydraone-sdk/template-next-js",
+    "@hydraone-sdk/template-nuxt",
+    "@hydraone-sdk/docs"
   ]
 }

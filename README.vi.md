@@ -2,24 +2,24 @@
 
 > Bản dịch này đồng bộ với bản tiếng Anh tại commit 63aa236. Khi hai bản khác nhau, bản tiếng Anh là bản chính.
 
-# @hydraone/sdk
+# @hydraone-sdk/core
 
 SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu nối ví, đăng nhập CIP-8, adapter cho React và Vue, và trình giả lập chạy cục bộ.
 
-[![npm version](https://img.shields.io/npm/v/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
-[![npm downloads](https://img.shields.io/npm/dm/@hydraone/sdk.svg)](https://www.npmjs.com/package/@hydraone/sdk)
+[![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
+[![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![CI](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/npm/l/@hydraone/sdk.svg)](./LICENSE)
+[![License: Apache-2.0](https://img.shields.io/npm/l/@hydraone-sdk/core.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](./tsconfig.json)
-[![Node.js](https://img.shields.io/node/v/@hydraone/sdk.svg)](./package.json)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/@hydraone/sdk.svg)](https://bundlephobia.com/package/@hydraone/sdk)
+[![Node.js](https://img.shields.io/node/v/@hydraone-sdk/core.svg)](./package.json)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/@hydraone-sdk/core.svg)](https://bundlephobia.com/package/@hydraone-sdk/core)
 
 ## Tính năng
 
 - **Cầu nối ví** giữa game chạy trong iframe và host shell của HydraOne App Center, qua `postMessage` với kiểm tra origin nghiêm ngặt và correlation ID.
 - **Đăng nhập CIP-8 một chạm** kèm quản lý vòng đời JWT (`GameAuthManager`).
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
-- **Adapter cho framework**: React hooks (`@hydraone/sdk/react`) và Vue/Nuxt composables (`@hydraone/sdk/vue`).
+- **Adapter cho framework**: React hooks (`@hydraone-sdk/core/react`) và Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Chẩn đoán sức khỏe** cho cầu nối.
 - **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt).
 - Không có runtime dependency. Có bản build ESM và CommonJS kèm type declaration đóng gói sẵn.
@@ -33,11 +33,11 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 ## Cài đặt
 
 ```bash
-npm install @hydraone/sdk
+npm install @hydraone-sdk/core
 # or
-yarn add @hydraone/sdk
-pnpm add @hydraone/sdk
-bun add @hydraone/sdk
+yarn add @hydraone-sdk/core
+pnpm add @hydraone-sdk/core
+bun add @hydraone-sdk/core
 ```
 
 Khởi tạo dự án mới từ template:
@@ -51,7 +51,7 @@ Các template: `next-js`, `nuxt`. Chạy `npx create-hydraone-game --help` để
 ## Bắt đầu nhanh
 
 ```ts
-import { WalletBridgeClient, HydraBridgeError } from '@hydraone/sdk';
+import { WalletBridgeClient, HydraBridgeError } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -107,7 +107,7 @@ Xem [Configuration](./apps/docs/content/vi/4.reference/1.client-options.md) đ�
 ### Ví (CIP-30)
 
 ```ts
-import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@hydraone/sdk';
+import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@hydraone-sdk/core';
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
@@ -134,7 +134,7 @@ import {
   HostStorageRelayAdapter,
   GameAuthManager,
   parseJwt,
-} from '@hydraone/sdk';
+} from '@hydraone-sdk/core';
 
 const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
 const client = new WalletBridgeClient({ transport });
@@ -173,7 +173,7 @@ import {
   InMemoryStorageAdapter,
   buildStorageKey,
   type IStorage,
-} from '@hydraone/sdk';
+} from '@hydraone-sdk/core';
 
 const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
 
@@ -192,7 +192,7 @@ Safari phân vùng hoặc xóa storage của các iframe cross-origin. `HostStor
 
 ```tsx
 import React from 'react';
-import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone/sdk/react';
+import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
 
 function Game() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
@@ -227,7 +227,7 @@ Cũng được export: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`
 ### Vue và Nuxt
 
 ```ts
-import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
+import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
 
 export function setup() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
@@ -250,8 +250,8 @@ Xem [hướng dẫn Vue](./apps/docs/content/vi/3.guides/5.vue-nuxt.md).
 ### Chẩn đoán
 
 ```ts
-import { WalletBridgeClient } from '@hydraone/sdk';
-import { checkBridgeHealth } from '@hydraone/sdk';
+import { WalletBridgeClient } from '@hydraone-sdk/core';
+import { checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -300,7 +300,7 @@ Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TR
 SDK mặc định im lặng. Đặt `debug: true` để ghi cảnh báo, và truyền `logger` để chuyển chúng vào hệ thống log của bạn:
 
 ```ts
-import { WalletBridgeClient, type Logger } from '@hydraone/sdk';
+import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';
 
 const logger: Logger = {
   warn: (message, ...args) => console.warn(`[sdk] ${message}`, ...args),
@@ -321,10 +321,10 @@ Client chỉ ghi các thông điệp ngắn và đối tượng lỗi, không ba
 Package phát hành bản build ESM (`.js`) và CommonJS (`.cjs`) kèm declaration `.d.ts` và `.d.cts` tương ứng, nên dùng được với `import` và `require` khi `moduleResolution` là `node16`, `nodenext` hoặc `bundler`. Package khai báo `"sideEffects": false`, nên bundler có thể tree-shake các export không dùng.
 
 ```js
-const { WalletBridgeClient } = require('@hydraone/sdk');
+const { WalletBridgeClient } = require('@hydraone-sdk/core');
 ```
 
-Các entry point: `@hydraone/sdk`, `@hydraone/sdk/react`, `@hydraone/sdk/vue`. Entry gốc nặng khoảng 23 KB sau khi gzip. Chỉ import những subpath bạn cần.
+Các entry point: `@hydraone-sdk/core`, `@hydraone-sdk/core/react`, `@hydraone-sdk/core/vue`. Entry gốc nặng khoảng 23 KB sau khi gzip. Chỉ import những subpath bạn cần.
 
 ## Tài liệu API
 
@@ -334,7 +334,7 @@ Tài liệu API được sinh từ các comment TSDoc bằng TypeDoc. Build cụ
 pnpm run docs:api
 ```
 
-Kết quả được ghi vào `packages/sdk/docs/api/`. Các hướng dẫn nằm trong [docs/](./apps/docs/content/vi/1.getting-started/1.introduction.md).
+Kết quả được ghi vào `packages/core/docs/api/`. Các hướng dẫn nằm trong [docs/](./apps/docs/content/vi/1.getting-started/1.introduction.md).
 
 ## FAQ và xử lý sự cố
 

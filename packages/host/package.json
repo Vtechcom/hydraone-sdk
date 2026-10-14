@@ -1,7 +1,7 @@
 {
-  "name": "@hydraone/host",
+  "name": "@hydraone-sdk/host",
   "version": "0.1.0",
-  "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone/sdk",
+  "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone-sdk/core",
   "keywords": ["cardano", "hydra", "hydraone", "host", "iframe", "cip-30", "wallet-bridge"],
   "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
   "bugs": {
@@ -51,12 +51,12 @@
     "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
   },
   "peerDependencies": {
-    "@hydraone/sdk": ">=0.1.0"
+    "@hydraone-sdk/core": ">=0.1.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
-    "@hydraone/sdk": "workspace:*",
+    "@hydraone-sdk/core": "workspace:*",
     "@types/node": "^26.6.4",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
