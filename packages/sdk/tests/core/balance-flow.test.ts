@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { WalletBridgeClient } from '../../src/core/client';
-import { DirectExtensionTransport } from '../../src/core/adapters/transport/direct-extension-transport';
 import { readLovelaceBalance } from '../../src/core/wallet/balance';
 import type { ITransport } from '../../src/core/ports/transport';
-import type { BridgeMessage, CIP30Api } from '../../src/core/types';
+import type { BridgeMessage } from '../../src/core/types';
 
-/** A host that answers like useWalletBridgeHost: decoded assets, and the Value CBOR for GET_BALANCE. */
+/** A host that answers GET_BALANCE with decoded assets. */
 class HostTransport implements ITransport {
   public sent: string[] = [];
-  constructor(private readonly supportsAssets: boolean) {}
   async send(): Promise<void> {}
   onMessage(): () => void {
     return () => {};
@@ -32,52 +30,22 @@ class HostTransport implements ITransport {
         source: 'hydra-host',
       } as never;
     }
-    if (msg.type === 'GET_BALANCE_ASSETS') {
-      if (!this.supportsAssets) {
-        throw Object.assign(new Error('Unsupported request type'), {
-          code: 'ERR_UNSUPPORTED_METHOD',
-        });
-      }
+    if (msg.type === 'GET_BALANCE') {
       return reply([
         { unit: 'lovelace', quantity: '1234567890' },
         { unit: 'a'.repeat(56) + '01', quantity: '5' },
       ]);
     }
-    if (msg.type === 'GET_BALANCE') return reply('821a499602d2a0'); // same 1234.56789 ADA, as a Value
     return reply(null);
   }
 }
 
 describe('balance flow: client -> host -> lovelace', () => {
-  it('new host: one GET_BALANCE_ASSETS call and no GET_BALANCE', async () => {
-    const transport = new HostTransport(true);
+  it('a single GET_BALANCE call returns the lovelace', async () => {
+    const transport = new HostTransport();
     const client = new WalletBridgeClient({ transport, isIframeFn: () => true });
     await client.init();
     expect(await readLovelaceBalance(client)).toBe(1234567890n);
-    expect(transport.sent.filter((t) => t.startsWith('GET_BALANCE'))).toEqual([
-      'GET_BALANCE_ASSETS',
-    ]);
-  });
-
-  it('old host: GET_BALANCE_ASSETS fails, GET_BALANCE gives the same amount', async () => {
-    const transport = new HostTransport(false);
-    const client = new WalletBridgeClient({ transport, isIframeFn: () => true });
-    await client.init();
-    expect(await readLovelaceBalance(client)).toBe(1234567890n);
-    expect(transport.sent.filter((t) => t.startsWith('GET_BALANCE'))).toEqual([
-      'GET_BALANCE_ASSETS',
-      'GET_BALANCE',
-    ]);
-  });
-
-  it('direct extension: the wallet CBOR Value is read after GET_BALANCE_ASSETS is unsupported', async () => {
-    const api = {
-      getNetworkId: async () => 0,
-      getBalance: async () => '821a499602d2a0',
-    } as unknown as CIP30Api;
-    const transport = new DirectExtensionTransport({ api, walletName: 'eternl' });
-    const client = new WalletBridgeClient({ transport, isIframeFn: () => true });
-    await client.init();
-    expect(await readLovelaceBalance(client)).toBe(1234567890n);
+    expect(transport.sent.filter((t) => t.startsWith('GET_BALANCE'))).toEqual(['GET_BALANCE']);
   });
 });

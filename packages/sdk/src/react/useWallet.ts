@@ -121,7 +121,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         return '0';
       }
 
-      // The host sends decoded assets; for older hosts and direct extensions the CIP-30 Value is read instead
+      // The host sends decoded assets
       const lovelace = await readLovelaceBalance(client);
       const adaStr = lovelaceToAdaString(lovelace);
       if (isMountedRef.current && client.isConnected) {

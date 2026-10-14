@@ -158,7 +158,6 @@ Cùng một đoạn code client chạy được khi nhúng trong App Center và 
     - icon: i-lucide-rocket
       title: Phát hành
       text: Kiểm tra bridge bằng health check rồi gửi game của bạn lên App Center.
-  note: Chạy ngoài App Center? Đặt fallbackToExtension và cùng đoạn code đó sẽ nói chuyện với extension ví CIP-30.
   ---
   :::
 ::
@@ -183,13 +182,13 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
 
         const client = new WalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',
-          fallbackToExtension: true,
         });
 
         await client.init();
         const [address] = await client.getUsedAddresses();
         const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const txHash = await client.submitTx(witnessSet);
+        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
         import { HydraOneProvider, useWallet } from '@hydraone/sdk/react';

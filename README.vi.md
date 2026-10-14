@@ -17,19 +17,18 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 ## Tính năng
 
 - **Cầu nối ví** giữa game chạy trong iframe và host shell của HydraOne App Center, qua `postMessage` với kiểm tra origin nghiêm ngặt và correlation ID.
-- **Fallback độc lập** sang các tiện ích ví trên trình duyệt (`window.cardano`, CIP-30) khi game chạy ngoài App Center.
 - **Đăng nhập CIP-8 một chạm** kèm quản lý vòng đời JWT (`GameAuthManager`).
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
 - **Adapter cho framework**: React hooks (`@hydraone/sdk/react`) và Vue/Nuxt composables (`@hydraone/sdk/vue`).
 - **Chẩn đoán sức khỏe** cho cầu nối.
-- **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt, Phaser 3).
+- **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt).
 - Không có runtime dependency. Có bản build ESM và CommonJS kèm type declaration đóng gói sẵn.
 
 ## Yêu cầu
 
 - Node.js 20 trở lên cho tooling và server-side rendering.
 - Môi trường trình duyệt cho các tính năng ví (`window`, `postMessage`).
-- Peer dependency tùy chọn, chỉ cần cho adapter bạn dùng: `react` >= 18, `vue` >= 3.3, `phaser` >= 3.60.
+- Peer dependency tùy chọn, chỉ cần cho adapter bạn dùng: `react` >= 18, `vue` >= 3.3.
 
 ## Cài đặt
 
@@ -44,10 +43,10 @@ bun add @hydraone/sdk
 Khởi tạo dự án mới từ template:
 
 ```bash
-npx create-hydraone-game my-game --template phaser-3
+npx create-hydraone-game my-game --template next-js
 ```
 
-Các template: `next-js`, `nuxt`, `phaser-3`. Chạy `npx create-hydraone-game --help` để xem mọi tùy chọn.
+Các template: `next-js`, `nuxt`. Chạy `npx create-hydraone-game --help` để xem mọi tùy chọn.
 
 ## Bắt đầu nhanh
 
@@ -56,14 +55,13 @@ import { WalletBridgeClient, HydraBridgeError } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
-  fallbackToExtension: true,
 });
 
 try {
   await client.init();
   const [address] = await client.getUsedAddresses();
-  const balanceCbor = await client.getBalance();
-  console.log(`Connected as ${address}, balance (CBOR hex): ${balanceCbor}`);
+  const balance = await client.getBalance();
+  console.log(`Connected as ${address}, balance:`, balance);
 } catch (err) {
   if (err instanceof HydraBridgeError) {
     console.error(`[${err.code}] ${err.message}`);
@@ -71,28 +69,25 @@ try {
 }
 ```
 
-Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài iframe, `fallbackToExtension: true` làm client kết nối tới tiện ích ví Cardano đã cài.
+Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài iframe không có host, nên `init()` bị reject với `ERR_NOT_IN_IFRAME`.
 
-`getBalance()` trả về số dư ví đúng như CIP-30 định nghĩa: một chuỗi hex mã hóa CBOR. `useWallet().balanceADA` và `useWalletBridgeClient().balanceADA` đọc phần lovelace của chuỗi này giúp bạn (xem [Đọc số dư](./apps/docs/content/vi/3.guides/1.wallet-operations.md)).
+`getBalance()` trả về số dư ví dưới dạng danh sách asset (`{ unit, quantity }`, với `unit` là `lovelace` hoặc `policyId + assetNameHex`). `useWallet().balanceADA` và `useWalletBridgeClient().balanceADA` đọc phần lovelace giúp bạn (xem [Đọc số dư](./apps/docs/content/vi/3.guides/1.wallet-operations.md)).
 
 ## Cấu hình
 
 `new WalletBridgeClient(options)` nhận:
 
-| Option                | Type                  | Mặc định         | Mô tả                                                                                         |
-| --------------------- | --------------------- | ---------------- | --------------------------------------------------------------------------------------------- |
-| `transport`           | `ITransport`          | không có         | Transport adapter. Chỉ được bỏ qua khi bật `fallbackToExtension`.                             |
-| `handshakeTimeoutMs`  | `number`              | `3000`           | Thời gian chờ tối đa cho handshake `CLIENT_READY`.                                            |
-| `pingTimeoutMs`       | `number`              | `3000`           | Thời gian chờ tối đa cho phép đo độ trễ `ping()`.                                             |
-| `queryTimeoutMs`      | `number`              | `15000`          | Timeout mặc định cho các truy vấn trạng thái ví.                                              |
-| `signingTimeoutMs`    | `number`              | `120000`         | Timeout mặc định cho ký và gửi giao dịch, vì các bước này chờ người dùng.                     |
-| `autoConnect`         | `boolean`             | `false`          | Chạy handshake ngay khi client được khởi tạo.                                                 |
-| `fallbackToExtension` | `boolean`             | `false`          | Dùng `window.cardano` khi chạy ngoài iframe.                                                  |
-| `preferredWallet`     | `string`              | ví phát hiện đầu | Ví ưu tiên ở chế độ fallback, ví dụ `'eternl'`, `'lace'`, `'nami'`.                           |
-| `cardanoProvider`     | `Record<string, any>` | `window.cardano` | Đối tượng `window.cardano` tùy chỉnh, chủ yếu dùng cho test.                                  |
-| `isIframeFn`          | `() => boolean`       | tự phát hiện     | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                        |
-| `debug`               | `boolean`             | `false`          | Ghi cảnh báo qua logger.                                                                      |
-| `logger`              | `Logger`              | `console`        | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/3.guides/7.logging-debugging.md). |
+| Option               | Type            | Mặc định     | Mô tả                                                                                         |
+| -------------------- | --------------- | ------------ | --------------------------------------------------------------------------------------------- |
+| `transport`          | `ITransport`    | không có     | Transport adapter. Có thể bỏ qua khi đã đặt `appCenterOrigin`.                                |
+| `handshakeTimeoutMs` | `number`        | `3000`       | Thời gian chờ tối đa cho handshake `CLIENT_READY`.                                            |
+| `pingTimeoutMs`      | `number`        | `3000`       | Thời gian chờ tối đa cho phép đo độ trễ `ping()`.                                             |
+| `queryTimeoutMs`     | `number`        | `15000`      | Timeout mặc định cho các truy vấn trạng thái ví.                                              |
+| `signingTimeoutMs`   | `number`        | `120000`     | Timeout mặc định cho ký và gửi giao dịch, vì các bước này chờ người dùng.                     |
+| `autoConnect`        | `boolean`       | `false`      | Chạy handshake ngay khi client được khởi tạo.                                                 |
+| `isIframeFn`         | `() => boolean` | tự phát hiện | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                        |
+| `debug`              | `boolean`       | `false`      | Ghi cảnh báo qua logger.                                                                      |
+| `logger`             | `Logger`        | `console`    | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/3.guides/7.logging-debugging.md). |
 
 `new PostMessageTransport(options)` nhận:
 
@@ -117,7 +112,8 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
     const witnessSet = await client.signTx(unsignedTxCbor, true, { timeoutMs: 60_000 });
-    const txHash = await client.submitTx(witnessSet);
+    const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+    const txHash = await client.submitTx(signedTx);
     return txHash;
   } catch (err) {
     if (err instanceof HydraUserRejectedError) return null;
@@ -127,7 +123,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Các truy vấn khác: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getRewardAddresses`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onAudioMutedChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
+Các truy vấn khác: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onAudioMutedChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
 
 ### Đăng nhập CIP-8
 
@@ -274,7 +270,7 @@ for (const check of report.checks) {
 ```text
 npx create-hydraone-game [project-name] [options]
 
-  -t, --template <name>   next-js, nuxt or phaser-3
+  -t, --template <name>   next-js or nuxt
   --pm <package-manager>  pnpm, npm, yarn or bun
   --force                 Use the target directory even if it is not empty
   -y, --yes               Skip prompts and use defaults
@@ -290,14 +286,14 @@ Mọi lỗi do SDK ném ra đều là `HydraBridgeError` với `code` ổn đị
 | ------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
 | `ERR_TIMEOUT`             | `HydraTimeoutError`      | Một request hoặc handshake vượt quá timeout.                                               |
 | `ERR_USER_REJECTED`       | `HydraUserRejectedError` | Người dùng từ chối một yêu cầu của ví.                                                     |
-| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | Không tìm thấy host shell hay tiện ích ví, hoặc tính năng đòi hỏi iframe.                  |
+| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | Không tìm thấy host shell, hoặc trang không nằm trong iframe.                              |
 | `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | Một tin nhắn không qua được kiểm tra origin, hoặc dùng origin ký tự đại diện ở production. |
 | `ERR_AUTH_EXPIRED`        | `HydraAuthError`         | Phiên JWT đã hết hạn.                                                                      |
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage bị chặn hoặc không liên lạc được host relay.                                       |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | Client chưa kết nối, đã bị hủy, hoặc không có địa chỉ ví.                                  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |
 
-Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
+Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
 
 ## Logging và debug
 
@@ -311,7 +307,11 @@ const logger: Logger = {
   error: (message, ...args) => console.error(`[sdk] ${message}`, ...args),
 };
 
-export const client = new WalletBridgeClient({ fallbackToExtension: true, debug: true, logger });
+export const client = new WalletBridgeClient({
+  appCenterOrigin: 'https://alpha.hydraone.app',
+  debug: true,
+  logger,
+});
 ```
 
 Client chỉ ghi các thông điệp ngắn và đối tượng lỗi, không bao giờ ghi payload của request.
@@ -338,7 +338,7 @@ Kết quả được ghi vào `packages/sdk/docs/api/`. Các hướng dẫn nằ
 
 ## FAQ và xử lý sự cố
 
-- **`ERR_NOT_IN_IFRAME` khi gọi `init()`**: game đang chạy trong một tab thường. Đặt `fallbackToExtension: true` và cài một ví CIP-30, hoặc dùng [trình giả lập](./apps/docs/content/vi/3.guides/8.testing-and-health-checks.md).
+- **`ERR_NOT_IN_IFRAME` khi gọi `init()`**: game đang chạy trong một tab thường, nơi không có host shell. Hãy mở nó bên trong HydraOne web client.
 - **`ERR_UNTRUSTED_ORIGIN` trong console**: `appCenterOrigin` phải khớp chính xác origin của host shell (scheme, host và port, không có path). Ký tự đại diện chỉ được chấp nhận ngoài production.
 - **Mất phiên sau khi reload trên iOS Safari**: lưu phiên bằng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](./apps/docs/content/vi/3.guides/6.safari-itp-storage.md).
 

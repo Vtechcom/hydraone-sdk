@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import {
   validateProjectName,
   checkTargetDir,
@@ -105,8 +105,35 @@ describe('create-hydraone-game CLI', () => {
     });
 
     it('parses -t with a space-separated value', () => {
-      const args = parseCliArgs(['test-app', '-t', 'phaser-3']);
-      expect(args.template).toBe('phaser-3');
+      const args = parseCliArgs(['test-app', '-t', 'next-js']);
+      expect(args.template).toBe('next-js');
+    });
+
+    it('keeps everything after the first = in an inline value', () => {
+      expect(parseCliArgs(['--template=a=b']).template).toBe('a=b');
+    });
+
+    it.each([
+      [['app', '--template']],
+      [['app', '--template', '--force']],
+      [['app', '--pm']],
+      [['app', '--pm', '-y']],
+      [['app', '--template=']],
+      [['app', '--pm=']],
+    ])('throws when an option has no value: %j', (argv) => {
+      expect(() => parseCliArgs(argv)).toThrow(/requires a value/);
+    });
+
+    it('rejects an unsupported package manager', () => {
+      expect(() => parseCliArgs(['app', '--pm', 'foo'])).toThrow(/Invalid package manager "foo"/);
+      expect(() => parseCliArgs(['app', '--pm=foo'])).toThrow(/Invalid package manager "foo"/);
+      for (const pm of ['pnpm', 'npm', 'yarn', 'bun']) {
+        expect(parseCliArgs(['app', '--pm', pm]).packageManager).toBe(pm);
+      }
+    });
+
+    it('rejects unknown options instead of dropping them silently', () => {
+      expect(() => parseCliArgs(['app', '--forse'])).toThrow(/Unknown option "--forse"/);
     });
 
     it('parses --help and -h', () => {
@@ -122,7 +149,7 @@ describe('create-hydraone-game CLI', () => {
 
   describe('4. Project Scaffolding Engine (scaffoldProject)', () => {
     it('lists every shipped template as supported', () => {
-      expect(SUPPORTED_TEMPLATES).toEqual(['nuxt', 'next-js', 'phaser-3']);
+      expect(SUPPORTED_TEMPLATES).toEqual(['nuxt', 'next-js']);
     });
 
     it('throws when the template is not supported', async () => {
@@ -150,7 +177,7 @@ describe('create-hydraone-game CLI', () => {
       expect(fs.existsSync(pkgJsonPath)).toBe(true);
       const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
       expect(pkgJson.name).toBe('test-nuxt-game');
-      expect(pkgJson.dependencies['@hydraone/sdk']).toBeDefined();
+      expect(pkgJson.dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
 
       const appVue = fs.readFileSync(path.join(targetDir, 'app.vue'), 'utf-8');
       expect(appVue).toContain('test-nuxt-game');
@@ -177,7 +204,7 @@ describe('create-hydraone-game CLI', () => {
       const pkgJsonPath = path.join(targetDir, 'package.json');
       const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
       expect(pkgJson.name).toBe('test-next-game');
-      expect(pkgJson.dependencies['@hydraone/sdk']).toBeDefined();
+      expect(pkgJson.dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
 
       const layout = fs.readFileSync(path.join(targetDir, 'app/layout.tsx'), 'utf-8');
       expect(layout).toContain('Providers');
@@ -190,32 +217,6 @@ describe('create-hydraone-game CLI', () => {
       expect(page).toContain('useWallet');
       expect(page).toContain('useHydraAuth');
       expect(page).not.toContain('bootstrapDevShell');
-    });
-
-    it('scaffolds the Phaser 3 template and substitutes placeholders', async () => {
-      const targetDir = path.join(tempDir, 'test-phaser');
-      const result = await scaffoldProject({
-        projectName: 'test-phaser-game',
-        targetDir,
-        template: 'phaser-3',
-      });
-
-      expect(result.template).toBe('phaser-3');
-      expect(fs.existsSync(targetDir)).toBe(true);
-
-      const pkgJsonPath = path.join(targetDir, 'package.json');
-      const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-      expect(pkgJson.name).toBe('test-phaser-game');
-      expect(pkgJson.dependencies['@hydraone/sdk']).toBeDefined();
-      expect(pkgJson.dependencies['phaser']).toBeDefined();
-
-      const indexHtml = fs.readFileSync(path.join(targetDir, 'index.html'), 'utf-8');
-      expect(indexHtml).toContain('test-phaser-game');
-
-      const mainTs = fs.readFileSync(path.join(targetDir, 'src/main.ts'), 'utf-8');
-      expect(mainTs).toContain('WalletBridgeClient');
-      expect(mainTs).toContain('mountDevTools');
-      expect(mainTs).toContain('test-phaser-game');
     });
 
     it('keeps a scoped package name in package.json', async () => {
@@ -272,12 +273,63 @@ describe('create-hydraone-game CLI', () => {
     });
 
     it('fails when --template is invalid', () => {
-      expect(() => {
-        execSync(
-          `node "${binScript}" "${path.join(tempDir, 'invalid-tmpl')}" --template bogus-template --yes`,
-          { encoding: 'utf-8', stdio: 'pipe' },
-        );
-      }).toThrow();
+      const result = spawnSync(
+        'node',
+        [binScript, path.join(tempDir, 'invalid-tmpl'), '--template', 'bogus-template', '--yes'],
+        { encoding: 'utf-8' },
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Invalid template "bogus-template"');
+    });
+
+    it('exits 1 with a clear message for an option without a value or an unknown option', () => {
+      const missing = spawnSync('node', [binScript, 'app', '--template'], { encoding: 'utf-8' });
+      expect(missing.status).toBe(1);
+      expect(missing.stderr).toContain('requires a value');
+
+      const unknown = spawnSync('node', [binScript, 'app', '--forse'], { encoding: 'utf-8' });
+      expect(unknown.status).toBe(1);
+      expect(unknown.stderr).toContain('Unknown option "--forse"');
+    });
+
+    it('refuses a non-empty directory without --force and scaffolds into it with --force', () => {
+      const targetDir = path.join(tempDir, 'occupied');
+      fs.mkdirSync(targetDir);
+      fs.writeFileSync(path.join(targetDir, 'keep.txt'), 'mine');
+
+      const refused = spawnSync('node', [binScript, targetDir, '--template', 'nuxt', '--yes'], {
+        encoding: 'utf-8',
+      });
+      expect(refused.status).toBe(1);
+      expect(fs.existsSync(path.join(targetDir, 'package.json'))).toBe(false);
+
+      const forced = spawnSync(
+        'node',
+        [binScript, targetDir, '--template', 'nuxt', '--yes', '--force'],
+        { encoding: 'utf-8' },
+      );
+      expect(forced.status).toBe(0);
+      expect(fs.existsSync(path.join(targetDir, 'package.json'))).toBe(true);
+      expect(fs.readFileSync(path.join(targetDir, 'keep.txt'), 'utf-8')).toBe('mine');
+    });
+
+    it('uses the nuxt template by default with --yes', () => {
+      const targetDir = path.join(tempDir, 'default-tmpl');
+      const result = spawnSync('node', [binScript, targetDir, '--yes'], { encoding: 'utf-8' });
+      expect(result.status).toBe(0);
+      expect(fs.existsSync(path.join(targetDir, 'app.vue'))).toBe(true);
+    });
+
+    it('prints the real directory in the cd hint for a scoped project name', () => {
+      const result = spawnSync(
+        'node',
+        [binScript, '@scope/scoped-game', '--template', 'nuxt', '--yes'],
+        { encoding: 'utf-8', cwd: tempDir },
+      );
+      expect(result.status).toBe(0);
+      expect(fs.existsSync(path.join(tempDir, 'scoped-game', 'package.json'))).toBe(true);
+      expect(result.stdout).toContain('cd scoped-game');
+      expect(result.stdout).not.toContain('cd @scope/scoped-game');
     });
   });
 });
@@ -300,6 +352,45 @@ describe('scaffolder template hygiene', () => {
     } finally {
       fs.rmSync(src, { recursive: true, force: true });
       fs.rmSync(dest, { recursive: true, force: true });
+    }
+  });
+
+  it('copies binary assets byte for byte, whatever their extension', async () => {
+    const src = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-src-'));
+    const dest = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-dest-'));
+    try {
+      // Bytes that are not valid UTF-8 and contain NUL would be corrupted by a text round-trip
+      const bytes = Buffer.from([0x00, 0xff, 0xfe, 0x80, 0x81, 0x00, 0xc3, 0x28, 0x7b, 0x7b]);
+      const names = ['font.woff2', 'model.glb', 'clip.mp4', 'doc.pdf', 'face.ttf'];
+      for (const name of names) {
+        fs.writeFileSync(path.join(src, name), bytes);
+      }
+      fs.writeFileSync(path.join(src, 'note.txt'), 'hello {{NAME}}');
+
+      await copyTemplateDir(src, dest, { '{{NAME}}': 'world' });
+
+      for (const name of names) {
+        expect(fs.readFileSync(path.join(dest, name)).equals(bytes)).toBe(true);
+      }
+      expect(fs.readFileSync(path.join(dest, 'note.txt'), 'utf-8')).toBe('hello world');
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(dest, { recursive: true, force: true });
+    }
+  });
+
+  it('never leaves a workspace: range in a scaffolded project', async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-ws-'));
+    try {
+      for (const template of ['nuxt', 'next-js'] as const) {
+        const dir = path.join(tmp, template);
+        await scaffoldProject({ projectName: `ws-${template}`, targetDir: dir, template });
+        const pkg = fs.readFileSync(path.join(dir, 'package.json'), 'utf-8');
+        expect(pkg).not.toContain('workspace:');
+        expect(JSON.parse(pkg).dependencies['@hydraone/sdk']).toBe(`^${CLI_VERSION}`);
+      }
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
     }
   });
 

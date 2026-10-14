@@ -190,6 +190,8 @@ export class AuthManager {
   private readonly defaultExchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
   private readonly listeners: Set<AuthStateHandler> = new Set();
   private hostUnsubscribe?: UnsubscribeFn;
+  /** Bumped by signOut()/destroy() so an in-flight signIn cannot persist a session that ended. */
+  private sessionEpoch = 0;
 
   private currentState: AuthState = {
     isAuthenticated: false,
@@ -287,6 +289,8 @@ export class AuthManager {
       );
     }
 
+    const epoch = this.sessionEpoch;
+
     // 1. Resolve the signing address
     let address = params.address?.trim();
     if (!address) {
@@ -334,8 +338,11 @@ export class AuthManager {
     let claims: Record<string, unknown> | null = null;
 
     if (token) {
+      if (epoch !== this.sessionEpoch) {
+        throw new HydraAuthError('Sign-in was cancelled because the session ended while signing');
+      }
       if (isJwtExpired(token, this.clockToleranceSeconds)) {
-        throw new HydraAuthError('Received JWT token is expired', { token });
+        throw new HydraAuthError('Received JWT token is expired');
       }
 
       claims = parseJwt(token);
@@ -389,7 +396,7 @@ export class AuthManager {
         token: null,
         address: null,
         claims: null,
-        error: new HydraAuthError('JWT session has expired', { expiredToken: token }),
+        error: new HydraAuthError('JWT session has expired'),
       });
       return null;
     }
@@ -430,7 +437,7 @@ export class AuthManager {
     }
 
     if (isJwtExpired(token, this.clockToleranceSeconds)) {
-      throw new HydraAuthError('Cannot set session: JWT token is expired', { token });
+      throw new HydraAuthError('Cannot set session: JWT token is expired');
     }
 
     const claims = parseJwt(token);
@@ -504,6 +511,7 @@ export class AuthManager {
    * Logs the player out: clears the token and address from storage and emits AUTH_STATE_CHANGED
    */
   public async signOut(): Promise<void> {
+    this.sessionEpoch++;
     try {
       await Promise.all([
         this.storage.removeItem(this.tokenStorageKey),
@@ -541,6 +549,7 @@ export class AuthManager {
    * Removes all internal listeners and the host event subscription to avoid memory leaks
    */
   public destroy(): void {
+    this.sessionEpoch++;
     if (typeof this.hostUnsubscribe === 'function') {
       this.hostUnsubscribe();
       this.hostUnsubscribe = undefined;

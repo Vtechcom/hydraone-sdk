@@ -6,6 +6,33 @@ import { askQuestion, createReadline, selectOption, style } from './prompts';
 import { CLI_VERSION } from './types';
 export { CLI_VERSION } from './types';
 
+const PACKAGE_MANAGERS: readonly PackageManager[] = ['pnpm', 'npm', 'yarn', 'bun'];
+
+/** Value of a space-separated flag such as `--template nuxt`; a missing value or another flag is an error. */
+function readFlagValue(argv: string[], index: number, flag: string): string {
+  const value = argv[index + 1];
+  if (value === undefined || value.startsWith('-')) {
+    throw new Error(`Option "${flag}" requires a value.`);
+  }
+  return value;
+}
+
+/** Value of an inline flag such as `--pm=pnpm`; everything after the first "=" belongs to the value. */
+function readInlineValue(arg: string): string {
+  const value = arg.slice(arg.indexOf('=') + 1);
+  if (!value) {
+    throw new Error(`Option "${arg.slice(0, arg.indexOf('='))}" requires a value.`);
+  }
+  return value;
+}
+
+function parsePackageManager(value: string): PackageManager {
+  if (!PACKAGE_MANAGERS.includes(value as PackageManager)) {
+    throw new Error(`Invalid package manager "${value}". Supported: ${PACKAGE_MANAGERS.join(', ')}`);
+  }
+  return value as PackageManager;
+}
+
 export function parseCliArgs(argv: string[]): CliArgs {
   const args: CliArgs = {};
   const positional: string[] = [];
@@ -22,19 +49,17 @@ export function parseCliArgs(argv: string[]): CliArgs {
     } else if (arg === '--yes' || arg === '-y') {
       args.yes = true;
     } else if (arg === '--template' || arg === '-t') {
-      if (i + 1 < argv.length) {
-        args.template = argv[++i] as TemplateType;
-      }
+      args.template = readFlagValue(argv, i++, arg) as TemplateType;
     } else if (arg.startsWith('--template=') || arg.startsWith('-t=')) {
-      args.template = arg.split('=')[1] as TemplateType;
+      args.template = readInlineValue(arg) as TemplateType;
     } else if (arg === '--pm') {
-      if (i + 1 < argv.length) {
-        args.packageManager = argv[++i] as PackageManager;
-      }
+      args.packageManager = parsePackageManager(readFlagValue(argv, i++, arg));
     } else if (arg.startsWith('--pm=')) {
-      args.packageManager = arg.split('=')[1] as PackageManager;
+      args.packageManager = parsePackageManager(readInlineValue(arg));
     } else if (!arg.startsWith('-')) {
       positional.push(arg);
+    } else {
+      throw new Error(`Unknown option "${arg}". Run with --help to see the available options.`);
     }
   }
 
@@ -63,13 +88,22 @@ ${style('OPTIONS:', 'yellow')}
 
 ${style('EXAMPLES:', 'yellow')}
   $ npx create-hydraone-game my-hydra-game
-  $ npx create-hydraone-game my-phaser-game --template phaser-3
+  $ npx create-hydraone-game my-next-app --template next-js
   $ npx create-hydraone-game my-nuxt-app --template nuxt --pm pnpm
 `);
 }
 
 export async function runCli(argv = process.argv.slice(2)): Promise<void> {
-  const args = parseCliArgs(argv);
+  let args: CliArgs;
+  try {
+    args = parseCliArgs(argv);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`
+${style('Error:', 'red')} ${message}
+`);
+    process.exit(1);
+  }
 
   if (args.help) {
     printHelp();
@@ -133,11 +167,6 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
               value: 'next-js',
               description: 'Includes @hydraone/sdk/react and HydraOneProvider',
             },
-            {
-              label: 'Phaser 3 (Canvas Game Loop & EventEmitter)',
-              value: 'phaser-3',
-              description: 'Includes a Phaser scene and WalletBridgeClient',
-            },
           ],
         );
       }
@@ -184,7 +213,7 @@ ${style('Scaffold a Cardano Web3 game with the HydraOne SDK', 'dim')}
 
     console.log(`\n${style('Project created successfully.', 'green')}\n`);
     console.log(style('Next, run the following commands to start developing:', 'bold'));
-    console.log(`  ${style(`cd ${projectName}`, 'cyan')}`);
+    console.log(`  ${style(`cd ${targetDirName}`, 'cyan')}`);
     console.log(`  ${style(`${pm} install`, 'cyan')}`);
     console.log(`  ${style(`${pm} run dev`, 'cyan')}\n`);
     console.log(

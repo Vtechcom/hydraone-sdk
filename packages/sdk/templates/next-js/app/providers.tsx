@@ -5,15 +5,14 @@ import { HydraOneProvider } from '@hydraone/sdk/react';
 import { isEmbedded, resolveHostOrigin } from '../lib/hydra';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Embedded (HydraOne web client): talk to the host over postMessage.
-  // Standalone tab: the SDK falls back to a CIP-30 wallet extension.
+  // The wallet lives in the HydraOne web client, so the game talks to it over postMessage.
+  // Opened in a normal tab there is no host: the page loads but connect() fails with ERR_NOT_IN_IFRAME.
   const embedded = isEmbedded();
 
   return (
     <HydraOneProvider
-      appCenterOrigin={embedded ? resolveHostOrigin() : undefined}
+      appCenterOrigin={resolveHostOrigin()}
       autoConnect={embedded}
-      options={{ fallbackToExtension: true }}
     >
       {children}
     </HydraOneProvider>

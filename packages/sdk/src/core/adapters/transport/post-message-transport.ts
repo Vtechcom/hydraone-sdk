@@ -60,19 +60,37 @@ export class PostMessageTransport implements ITransport {
       ...new Set(
         rawOrigins.map((o) => {
           const trimmed = o.trim();
-          return trimmed === '*' ? '*' : trimmed.replace(/\/+$/, '');
+          if (trimmed === '*') {
+            return '*';
+          }
+          // Canonicalise so the value compares equal to event.origin and is valid for postMessage
+          let origin: string;
+          try {
+            origin = new URL(trimmed).origin;
+          } catch {
+            throw new HydraTransportError(`appCenterOrigin "${trimmed}" is not a valid origin`);
+          }
+          if (origin === 'null') {
+            throw new HydraTransportError(`appCenterOrigin "${trimmed}" is not a valid origin`);
+          }
+          return origin;
         }),
       ),
     ];
     const normalizedOrigin = normalizedList.includes('*') ? '*' : normalizedList[0]!;
-    const env =
-      options.env ??
-      (typeof process !== 'undefined' && process.env?.NODE_ENV
-        ? process.env.NODE_ENV
-        : 'development');
+    // Bundlers inline process.env.NODE_ENV; in a raw browser the access throws and env stays unknown
+    let detectedEnv: string | undefined;
+    try {
+      detectedEnv = process.env.NODE_ENV;
+    } catch {
+      detectedEnv = undefined;
+    }
+    const env = options.env ?? detectedEnv ?? 'development';
 
-    // Reject wildcard origins in production
-    if (normalizedOrigin === '*' && env === 'production') {
+    // Reject wildcard origins unless the environment is positively known to be non-production
+    const wildcardAllowed = env === 'development' || env === 'test';
+    const envKnown = options.env !== undefined || detectedEnv !== undefined;
+    if (normalizedOrigin === '*' && (!wildcardAllowed || !envKnown)) {
       throw new HydraSecurityError('Wildcard origin "*" is not allowed in production environment', {
         appCenterOrigin: '*',
       });

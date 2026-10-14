@@ -35,6 +35,7 @@ function getParentOrigin(): string | undefined {
  */
 export function resolveHostOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_HYDRA_HOST_ORIGIN || DEFAULT_HOST_ORIGIN;
+  if (typeof window === 'undefined') return configured;
   if (process.env.NODE_ENV !== 'production') {
     const parent = getParentOrigin();
     if (!parent || parent === window.location.origin) {

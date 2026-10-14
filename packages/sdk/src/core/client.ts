@@ -2,6 +2,7 @@ import type { ITransport } from './ports/transport';
 import type {
   AudioMutedHandler,
   BalanceAsset,
+  Utxo,
   BridgeMessage,
   ConnectionState,
   DataSignature,
@@ -36,12 +37,7 @@ import {
   HydraUserRejectedError,
 } from './errors/errors';
 import { errorCode, errorMessage } from './errors/error-utils';
-import {
-  DirectExtensionTransport,
-  detectCardanoWallets,
-} from './adapters/transport/direct-extension-transport';
 import { PostMessageTransport } from './adapters/transport/post-message-transport';
-import { getWalletExtension, getWindowCardano } from './wallet/cardano-provider';
 import { checkBridgeHealth } from './diagnostics/health-check';
 import type { BridgeHealthReport, CheckHealthOptions } from './diagnostics/types';
 
@@ -83,9 +79,6 @@ export class WalletBridgeClient {
   public readonly pingTimeoutMs: number;
   public readonly queryTimeoutMs: number;
   public readonly signingTimeoutMs: number;
-  public readonly fallbackToExtension: boolean;
-  public readonly preferredWallet?: string;
-  public readonly cardanoProvider?: Record<string, unknown>;
   public readonly isIframeFn?: () => boolean;
   public readonly debug: boolean;
   private readonly logger: Logger;
@@ -96,6 +89,8 @@ export class WalletBridgeClient {
   private _theme?: ThemeMode;
   private _isDestroyed = false;
   private handshakePromise: Promise<void> | null = null;
+  /** Set by disconnect(), cleared by init(); blocks unsolicited HOST_ACK from reconnecting. */
+  private explicitlyDisconnected = false;
   private readonly pendingRequests = new Map<string, PendingRequest<unknown>>();
   private readonly expiredRequestIds = new Set<string>();
   private readonly expiryTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -109,9 +104,9 @@ export class WalletBridgeClient {
         ? new PostMessageTransport({ appCenterOrigin: options.appCenterOrigin })
         : undefined);
 
-    if (!options || (!transport && !options.fallbackToExtension)) {
+    if (!options || !transport) {
       throw new HydraBridgeError(
-        'Transport must be provided to WalletBridgeClient unless fallbackToExtension is enabled',
+        'WalletBridgeClient requires a transport or an appCenterOrigin',
         'ERR_INVALID_OPTIONS',
       );
     }
@@ -121,9 +116,6 @@ export class WalletBridgeClient {
     this.pingTimeoutMs = options.pingTimeoutMs ?? TIERED_TIMEOUTS.PING;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
-    this.fallbackToExtension = options.fallbackToExtension ?? false;
-    this.preferredWallet = options.preferredWallet;
-    this.cardanoProvider = options.cardanoProvider;
     this.isIframeFn = options.isIframeFn;
     this.debug = options.debug ?? false;
     this.logger = options.logger ?? console;
@@ -202,12 +194,9 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Cardano wallet in use when connected through DirectExtensionTransport or the host shell.
+   * Cardano wallet in use on the host shell.
    */
   public get activeWalletName(): string | undefined {
-    if (this.transport instanceof DirectExtensionTransport) {
-      return this.transport.walletName;
-    }
     return this._hostInfo?.walletName;
   }
 
@@ -393,8 +382,8 @@ export class WalletBridgeClient {
       return;
     }
 
-    // 2. Unsolicited HOST_ACK.
-    if (message.type === 'HOST_ACK') {
+    // 2. Unsolicited HOST_ACK. Ignored after an explicit disconnect() so it cannot revive the client.
+    if (message.type === 'HOST_ACK' && !this.explicitlyDisconnected) {
       const ackPayload = message.payload as HostAckPayload | undefined;
       const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
       this._hostInfo = info;
@@ -453,57 +442,23 @@ export class WalletBridgeClient {
       return this.handshakePromise;
     }
 
+    this.explicitlyDisconnected = false;
     this.setConnectionState('connecting');
 
-    this.handshakePromise = (async () => {
+    const attempt: Promise<void> = (async () => {
       try {
-        // Detect standalone mode outside an iframe.
+        // The host shell only exists around an iframe, so a standalone tab cannot connect.
         if (this.isStandaloneBrowser()) {
-          if (!this.fallbackToExtension) {
-            throw new HydraTransportError(
-              'SDK is running outside an iframe without fallbackToExtension enabled',
-              ERROR_CODES.ERR_NOT_IN_IFRAME,
-            );
-          }
-
-          const provider = this.cardanoProvider ?? getWindowCardano();
-
-          const availableWallets = detectCardanoWallets(provider);
-          if (availableWallets.length === 0) {
-            throw new HydraTransportError(
-              'No Cardano wallet extension found and not running in Host iframe',
-              ERROR_CODES.ERR_NOT_IN_IFRAME,
-            );
-          }
-
-          const selectedWallet =
-            this.preferredWallet && availableWallets.includes(this.preferredWallet)
-              ? this.preferredWallet
-              : availableWallets[0];
-
-          const directTransport = new DirectExtensionTransport({
-            walletName: selectedWallet,
-            extension: getWalletExtension(provider, selectedWallet),
-            cardanoProvider: provider,
-            defaultTimeoutMs: this.queryTimeoutMs,
-          });
-
-          if (this.transportUnsubscribe) {
-            this.transportUnsubscribe();
-            this.transportUnsubscribe = undefined;
-          }
-          if (this.transport && typeof this.transport.destroy === 'function') {
-            this.transport.destroy();
-          }
-          this.transport = directTransport;
-          this.setupTransportListener();
-        } else {
-          if (!this.transport) {
-            throw new HydraBridgeError(
-              'Transport must be provided when running inside an iframe',
-              'ERR_INVALID_OPTIONS',
-            );
-          }
+          throw new HydraTransportError(
+            'SDK is running outside an iframe, so there is no Host Shell to connect to',
+            ERROR_CODES.ERR_NOT_IN_IFRAME,
+          );
+        }
+        if (!this.transport) {
+          throw new HydraBridgeError(
+            'Transport must be provided when running inside an iframe',
+            'ERR_INVALID_OPTIONS',
+          );
         }
 
         const id = generateId();
@@ -518,6 +473,10 @@ export class WalletBridgeClient {
         };
 
         const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
+        // The matching HOST_ACK already marks the client connected, so only disconnect() cancels
+        if (this._connectionState === 'disconnected') {
+          throw new HydraBridgeError('Handshake was cancelled', ERROR_CODES.ERR_NOT_CONNECTED);
+        }
         if (this._connectionState !== 'connecting') {
           return;
         }
@@ -543,12 +502,19 @@ export class WalletBridgeClient {
           );
         }
         throw err;
-      } finally {
-        this.handshakePromise = null;
       }
     })();
 
-    return this.handshakePromise;
+    this.handshakePromise = attempt;
+    // Only clear our own attempt: disconnect() + init() may already have started a newer one
+    const release = (): void => {
+      if (this.handshakePromise === attempt) {
+        this.handshakePromise = null;
+      }
+    };
+    attempt.then(release, release);
+
+    return attempt;
   }
 
   /**
@@ -706,13 +672,13 @@ export class WalletBridgeClient {
    * @param amount Optional CBOR hex value used to filter by amount.
    * @param paginate Optional pagination { page, limit }.
    * @param options Query options (timeoutMs).
-   * @returns UTxOs as CBOR hex strings, or null when there are none.
+   * @returns Decoded UTxOs, or null when there are none.
    */
   public async getUtxos(
     amount?: string,
     paginate?: Paginate,
     options?: QueryOptions,
-  ): Promise<string[] | null> {
+  ): Promise<Utxo[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
@@ -723,43 +689,22 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<string[] | null>(message, timeout);
+    const result = await this.executeRpc<Utxo[] | null>(message, timeout);
     return result ?? null;
   }
 
   /**
-   * Gets the wallet total balance (a CBOR Value with lovelace and multi-assets).
+   * Gets the wallet balance, already decoded by the host.
    *
    * @param options Query options (timeoutMs).
-   * @returns Hex-encoded CBOR Value.
+   * @returns Assets: `{ unit: 'lovelace', quantity }` plus one entry per native asset.
    */
-  public async getBalance(options?: QueryOptions): Promise<string> {
+  public async getBalance(options?: QueryOptions): Promise<BalanceAsset[]> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
       id: generateId(),
       type: 'GET_BALANCE',
-      payload: {},
-      timestamp: Date.now(),
-      source: 'hydra-client',
-    };
-
-    return await this.executeRpc<string>(message, timeout);
-  }
-
-  /**
-   * Gets the wallet balance as a list of assets, already decoded by the host.
-   * Hosts that predate this request reject it; use getBalance() as the fallback.
-   *
-   * @param options Query options (timeoutMs).
-   * @returns Assets: `{ unit: 'lovelace', quantity }` plus one entry per native asset.
-   */
-  public async getBalanceAssets(options?: QueryOptions): Promise<BalanceAsset[]> {
-    this.assertConnected();
-    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
-    const message: BridgeMessage = {
-      id: generateId(),
-      type: 'GET_BALANCE_ASSETS',
       payload: {},
       timestamp: Date.now(),
       source: 'hydra-client',
@@ -773,12 +718,12 @@ export class WalletBridgeClient {
    *
    * @param params Collateral request, for example { amount?: string }.
    * @param options Query options (timeoutMs).
-   * @returns Collateral UTxOs as CBOR hex strings, or null.
+   * @returns Decoded collateral UTxOs, or null.
    */
   public async getCollateral(
     params?: { amount?: string },
     options?: QueryOptions,
-  ): Promise<string[] | null> {
+  ): Promise<Utxo[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
@@ -789,7 +734,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<string[] | null>(message, timeout);
+    const result = await this.executeRpc<Utxo[] | null>(message, timeout);
     return result ?? null;
   }
 
@@ -830,26 +775,6 @@ export class WalletBridgeClient {
     };
 
     return await this.executeRpc<string>(message, timeout);
-  }
-
-  /**
-   * Gets the staking reward addresses.
-   *
-   * @param options Query options (timeoutMs).
-   */
-  public async getRewardAddresses(options?: QueryOptions): Promise<string[]> {
-    this.assertConnected();
-    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
-    const message: BridgeMessage = {
-      id: generateId(),
-      type: 'GET_REWARD_ADDRESSES',
-      payload: {},
-      timestamp: Date.now(),
-      source: 'hydra-client',
-    };
-
-    const result = await this.executeRpc<string[]>(message, timeout);
-    return Array.isArray(result) ? result : [];
   }
 
   /**
@@ -1477,6 +1402,7 @@ export class WalletBridgeClient {
    * Disconnects the client and cleans up pending requests.
    */
   public disconnect(): void {
+    this.explicitlyDisconnected = true;
     this.setConnectionState('disconnected');
     this._hostInfo = undefined;
     this._isAudioMuted = undefined;

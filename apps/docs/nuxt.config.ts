@@ -34,6 +34,12 @@ export default defineNuxtConfig({
   // Default dev port for the docs site; `nuxt dev --port <n>` or NUXT_PORT still override it.
   devServer: { port: 3002 },
 
+  // TEMP: landing page disabled; the domain root opens the quick start. Remove to restore the landing page.
+  routeRules: {
+    '/': { redirect: { to: '/getting-started/quick-start', statusCode: 302 } },
+    '/vi': { redirect: { to: '/vi/getting-started/quick-start', statusCode: 302 } }
+  },
+
   experimental: { asyncContext: true },
 
   compatibilityDate: '2026-06-30',

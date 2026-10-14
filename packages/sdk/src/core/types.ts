@@ -11,11 +11,9 @@ export type BridgeMessageType =
   | 'GET_USED_ADDRESSES'
   | 'GET_UNUSED_ADDRESSES'
   | 'GET_CHANGE_ADDRESS'
-  | 'GET_REWARD_ADDRESSES'
   | 'GET_NETWORK_ID'
   | 'GET_UTXOS'
   | 'GET_BALANCE'
-  | 'GET_BALANCE_ASSETS'
   | 'GET_COLLATERAL'
   | 'SIGN_TX'
   | 'SUBMIT_TX'
@@ -43,6 +41,15 @@ export type BridgeMessageType =
 export interface BalanceAsset {
   unit: string;
   quantity: string;
+}
+
+/**
+ * An unspent transaction output as the host reports it (decoded, not CBOR).
+ * Structurally compatible with `UTxO` from `@hydra-sdk/core`.
+ */
+export interface Utxo {
+  input: { txHash: string; outputIndex: number };
+  output: { address: string; amount: BalanceAsset[] };
 }
 
 /**
@@ -208,7 +215,7 @@ export interface HostAckPayload {
  * Options for WalletBridgeClient.
  */
 export interface WalletBridgeClientOptions {
-  /** Transport adapter implementing ITransport (optional when fallbackToExtension is enabled). */
+  /** Transport adapter implementing ITransport. Optional when `appCenterOrigin` is set. */
   transport?: ITransport;
   /**
    * Origin of the Host Shell. When set and no `transport` is given, the client creates a
@@ -226,12 +233,6 @@ export interface WalletBridgeClientOptions {
   signingTimeoutMs?: number;
   /** Run the handshake on construction (default: false). */
   autoConnect?: boolean;
-  /** Fall back to the native wallet extension (window.cardano) when running outside an iframe (default: false). */
-  fallbackToExtension?: boolean;
-  /** Preferred wallet when falling back (for example 'eternl', 'lace', 'nami'). */
-  preferredWallet?: string;
-  /** Custom window.cardano object (for tests or custom injection). */
-  cardanoProvider?: Record<string, unknown>;
   /** Custom iframe detection function (for tests). */
   isIframeFn?: () => boolean;
   /** Enable warning/debug logging (default: false). */
@@ -290,51 +291,6 @@ export interface SignDataPayload {
   address: string;
   payloadHex: string;
   [key: string]: unknown;
-}
-
-/**
- * CIP-30 API object returned by a Cardano wallet extension after enable().
- */
-export interface CIP30Api {
-  getNetworkId(): Promise<number>;
-  getUtxos(amount?: string, paginate?: Paginate): Promise<string[] | null>;
-  getCollateral?(params?: { amount?: string }): Promise<string[] | null>;
-  getUsedAddresses(paginate?: Paginate): Promise<string[]>;
-  getUnusedAddresses(): Promise<string[]>;
-  getChangeAddress(): Promise<string>;
-  getRewardAddresses(): Promise<string[]>;
-  getBalance(): Promise<string>;
-  signTx(tx: string, partialSign?: boolean): Promise<string>;
-  signData(addr: string, payload: string): Promise<DataSignature>;
-  submitTx(tx: string): Promise<string>;
-  [key: string]: unknown;
-}
-
-/**
- * Cardano wallet extension injected at window.cardano[walletName].
- */
-export interface CardanoWalletExtension {
-  name?: string;
-  icon?: string;
-  apiVersion?: string;
-  enable(): Promise<CIP30Api>;
-  isEnabled(): Promise<boolean>;
-}
-
-/**
- * Options for DirectExtensionTransport.
- */
-export interface DirectExtensionTransportOptions {
-  /** Wallet extension name (for example 'eternl', 'lace', 'nami'). */
-  walletName?: string;
-  /** CIP-30 extension object (window.cardano[walletName]). */
-  extension?: CardanoWalletExtension;
-  /** Or pass an already enabled CIP30Api instance directly. */
-  api?: CIP30Api;
-  /** Cardano provider object (defaults to window.cardano when present). */
-  cardanoProvider?: Record<string, unknown>;
-  /** Default timeout in ms for RPC requests (default: 15000). */
-  defaultTimeoutMs?: number;
 }
 
 /**

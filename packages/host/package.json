@@ -1,0 +1,69 @@
+{
+  "name": "@hydraone/host",
+  "version": "0.1.0",
+  "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone/sdk",
+  "keywords": ["cardano", "hydra", "hydraone", "host", "iframe", "cip-30", "wallet-bridge"],
+  "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Vtechcom/hydraone-sdk/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vtechcom/hydraone-sdk.git",
+    "directory": "packages/host"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "CHANGELOG.md", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:package": "publint && attw --pack . --profile node16",
+    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
+    "prepack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.copyFileSync('../../'+n,n)\"",
+    "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
+  },
+  "peerDependencies": {
+    "@hydraone/sdk": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
+    "@hydraone/sdk": "workspace:*",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "publint": "^0.3.25",
+    "tsup": "^8.3.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^3.0.7"
+  }
+}

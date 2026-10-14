@@ -66,7 +66,6 @@ export function HydraOneProvider({
 
       const clientOptions: WalletBridgeClientOptions = {
         transport,
-        fallbackToExtension: options?.fallbackToExtension ?? true,
         ...options,
       };
       clientRef.current = new WalletBridgeClient(clientOptions);

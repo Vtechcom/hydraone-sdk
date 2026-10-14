@@ -631,6 +631,106 @@ describe('AuthManager (Web3 1-Click CIP-8 & JWT Lifecycle)', () => {
     );
   });
 
+  it('signIn treats an uppercase 0X prefix like 0x in "auto" and "hex" modes', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+
+    await authManager.signIn({ challenge: '0XABCD' });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(expect.any(String), 'ABCD', undefined);
+
+    await authManager.signIn({ challenge: '0XABCD', challengeEncoding: 'hex' });
+    expect(mockClient.signData).toHaveBeenLastCalledWith(expect.any(String), 'ABCD', undefined);
+  });
+
+  it('never puts the JWT into the details of an auth error', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+    const expired = createTestJwt({ exp: Math.floor(Date.now() / 1000) - 50 });
+
+    const fromSetSession = await authManager.setSession(expired).catch((e) => e);
+    expect(fromSetSession).toBeInstanceOf(HydraAuthError);
+    expect(JSON.stringify(fromSetSession.toJSON())).not.toContain(expired);
+
+    const fromSignIn = await authManager
+      .signIn({ challenge: 'nonce', exchangeToken: async () => expired })
+      .catch((e) => e);
+    expect(fromSignIn).toBeInstanceOf(HydraAuthError);
+    expect(JSON.stringify(fromSignIn.toJSON())).not.toContain(expired);
+  });
+
+  it('does not leak the expired JWT through AuthState.error when getToken() expires it', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+    const shortLived = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 1 });
+    await authManager.setSession(shortLived);
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(Date.now() + 5000);
+      expect(await authManager.getToken()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(authManager.state.isAuthenticated).toBe(false);
+    expect(authManager.state.error).toBeInstanceOf(HydraAuthError);
+    const stateError = authManager.state.error as HydraAuthError;
+    expect(JSON.stringify(stateError.toJSON())).not.toContain(shortLived);
+  });
+
+  it('signIn does not persist a session when signOut ran while it was waiting for the token', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+    const jwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+
+    let release!: (token: string) => void;
+    const exchangeToken = vi.fn(
+      () => new Promise<string>((resolve) => (release = resolve)),
+    );
+
+    const pending = authManager.signIn({ challenge: 'nonce', exchangeToken });
+    const settled = expect(pending).rejects.toBeInstanceOf(HydraAuthError);
+
+    // Wait until signIn is blocked in exchangeToken, then end the session
+    await vi.waitFor(() => expect(exchangeToken).toHaveBeenCalled());
+    await authManager.signOut();
+    release(jwt);
+    await settled;
+
+    expect(authManager.state.isAuthenticated).toBe(false);
+    expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
+    expect(await storage.getItem('hydra:sdk:auth:address')).toBeNull();
+  });
+
+  it('signIn does not persist a session when the wallet DISCONNECTED while it was signing', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+    const jwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+
+    let release!: (token: string) => void;
+    const exchangeToken = vi.fn(
+      () => new Promise<string>((resolve) => (release = resolve)),
+    );
+
+    const pending = authManager.signIn({ challenge: 'nonce', exchangeToken });
+    const settled = expect(pending).rejects.toBeInstanceOf(HydraAuthError);
+
+    await vi.waitFor(() => expect(exchangeToken).toHaveBeenCalled());
+    hostEventListeners.get('DISCONNECTED')!(undefined);
+    await vi.waitFor(() => expect(authManager.state.isAuthenticated).toBe(false));
+    release(jwt);
+    await settled;
+
+    expect(authManager.state.isAuthenticated).toBe(false);
+    expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
+  });
+
+  it('a signIn started after signOut still succeeds', async () => {
+    const authManager = new AuthManager({ client: mockClient, storage });
+    const jwt = createTestJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+
+    await authManager.signOut();
+    await authManager.signIn({ challenge: 'nonce', exchangeToken: async () => jwt });
+
+    expect(authManager.state.isAuthenticated).toBe(true);
+    expect(await storage.getItem('hydra:sdk:auth:token')).toBe(jwt);
+  });
+
   it('signIn honours challengeEncoding "hex" and "utf8"', async () => {
     const authManager = new GameAuthManager({ client: mockClient, storage });
     const nonce = 'deadbeef'.repeat(4);

@@ -94,6 +94,74 @@ describe('PostMessageTransport', () => {
       expect(testTransport.appCenterOrigin).toBe('*');
     });
 
+    it('rejects a wildcard when the environment is not known to be development or test', () => {
+      const original = process.env.NODE_ENV;
+      try {
+        delete process.env.NODE_ENV;
+        expect(
+          () =>
+            new PostMessageTransport({
+              appCenterOrigin: '*',
+              targetWindow: mockTarget,
+              sourceWindow: mockSource,
+            }),
+        ).toThrowError(HydraSecurityError);
+
+        // An explicit env still opts in
+        expect(
+          () =>
+            new PostMessageTransport({
+              appCenterOrigin: '*',
+              env: 'development',
+              targetWindow: mockTarget,
+              sourceWindow: mockSource,
+            }),
+        ).not.toThrow();
+      } finally {
+        if (original === undefined) {
+          delete process.env.NODE_ENV;
+        } else {
+          process.env.NODE_ENV = original;
+        }
+      }
+    });
+
+    it('rejects a wildcard for any non-development environment such as staging', () => {
+      expect(
+        () =>
+          new PostMessageTransport({
+            appCenterOrigin: '*',
+            env: 'staging',
+            targetWindow: mockTarget,
+            sourceWindow: mockSource,
+          }),
+      ).toThrowError(HydraSecurityError);
+    });
+
+    it.each(['example.com', '/', 'not a url', 'null'])(
+      'throws HydraTransportError for the malformed appCenterOrigin "%s"',
+      (bad) => {
+        expect(
+          () =>
+            new PostMessageTransport({
+              appCenterOrigin: bad,
+              targetWindow: mockTarget,
+              sourceWindow: mockSource,
+            }),
+        ).toThrowError(HydraTransportError);
+      },
+    );
+
+    it('canonicalises appCenterOrigin to a bare origin', () => {
+      const transport = new PostMessageTransport({
+        appCenterOrigin: 'https://Alpha.HydraOne.app:443/some/path/',
+        targetWindow: mockTarget,
+        sourceWindow: mockSource,
+      });
+      expect(transport.appCenterOrigin).toBe('https://alpha.hydraone.app');
+      expect(transport.allowedOrigins).toEqual(['https://alpha.hydraone.app']);
+    });
+
     it('throws HydraSecurityError with ERR_UNTRUSTED_ORIGIN for wildcard "*" in production', () => {
       expect(
         () =>

@@ -27,9 +27,9 @@ describe('HydraOneProvider under server rendering', () => {
     expect(html).toContain('InMemoryStorageAdapter');
   });
 
-  it('renders with fallbackToExtension and no origin', () => {
+  it('renders with an explicit transport and no origin', () => {
     const html = renderToString(
-      <HydraOneProvider options={{ fallbackToExtension: true }}>
+      <HydraOneProvider options={{ transport: { send: async () => {}, onMessage: () => () => {} } }}>
         <Probe />
       </HydraOneProvider>,
     );

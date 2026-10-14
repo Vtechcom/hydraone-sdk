@@ -44,14 +44,12 @@ export function resolveHostOrigin(configuredOrigin: string): string {
 
 /**
  * Creates the shared client used by the SDK composables.
- * Embedded: talks to the host over postMessage. Standalone tab: falls back to a CIP-30 extension.
+ * The wallet lives in the HydraOne web client, so the client always talks to the host over postMessage.
+ * Opened in a normal tab there is no host, and connect() fails with ERR_NOT_IN_IFRAME.
  */
 export function setupHydraClient(configuredOrigin: string): WalletBridgeClient {
   const client = new WalletBridgeClient({
-    transport: isEmbedded()
-      ? new PostMessageTransport({ appCenterOrigin: resolveHostOrigin(configuredOrigin) })
-      : undefined,
-    fallbackToExtension: true,
+    transport: new PostMessageTransport({ appCenterOrigin: resolveHostOrigin(configuredOrigin) }),
   });
   setSharedWalletBridgeClient(client);
   return client;

@@ -15,10 +15,10 @@ export default defineAppConfig({
     siteName: 'HydraOne SDK'
   },
   header: {
-    title: 'HydraOne SDK',
+    title: 'HydraOne',
     to: '/',
     logo: {
-      alt: 'HydraOne SDK',
+      alt: 'HydraOne',
       light: '/logo.png',
       dark: '/logo.png'
     },
@@ -33,7 +33,7 @@ export default defineAppConfig({
       'icon': 'i-simple-icons-discord',
       'to': 'https://discord.com/invite/4eXjD9uESE',
       'target': '_blank',
-      'aria-label': 'HydraOne SDK on Discord'
+      'aria-label': 'HydraOne on Discord'
     }, {
       'icon': 'i-simple-icons-x',
       'to': 'https://x.com/VtechcomLabs',
@@ -42,7 +42,7 @@ export default defineAppConfig({
     }]
   },
   footer: {
-    credits: `© ${new Date().getFullYear()} HydraOne SDK • Built by Vtechcom Labs`,
+    credits: `© ${new Date().getFullYear()} HydraOne • Built by Vtechcom Labs`,
     colorMode: false,
     links: [{
       'icon': 'i-simple-icons-github',
@@ -58,7 +58,7 @@ export default defineAppConfig({
       'icon': 'i-simple-icons-discord',
       'to': 'https://discord.com/invite/4eXjD9uESE',
       'target': '_blank',
-      'aria-label': 'HydraOne SDK on Discord'
+      'aria-label': 'HydraOne on Discord'
     }, {
       'icon': 'i-simple-icons-x',
       'to': 'https://x.com/VtechcomLabs',

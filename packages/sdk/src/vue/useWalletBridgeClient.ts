@@ -37,7 +37,6 @@ export function getSharedWalletBridgeClient(
 ): WalletBridgeClient {
   if (!sharedClientInstance) {
     const clientOptions = {
-      fallbackToExtension: options?.fallbackToExtension ?? true,
       ...options,
     };
     const client = new WalletBridgeClient(clientOptions);
@@ -124,7 +123,7 @@ export function useWalletBridgeClient(
         balanceLovelace.value = null;
         return '0';
       }
-      // The host sends decoded assets; for older hosts and direct extensions the CIP-30 Value is read instead
+      // The host sends decoded assets
       const lovelace = await readLovelaceBalance(client);
       const adaStr = lovelaceToAdaString(lovelace);
       balanceLovelace.value = lovelace;

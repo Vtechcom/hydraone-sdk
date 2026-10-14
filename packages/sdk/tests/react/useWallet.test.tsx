@@ -77,7 +77,7 @@ class MockTransport implements ITransport {
       };
     }
 
-    if (msg.type === 'GET_BALANCE_ASSETS') {
+    if (msg.type === 'GET_BALANCE') {
       return {
         id: msg.id || 'res_3a',
         type: 'RPC_RESPONSE',
@@ -90,21 +90,6 @@ class MockTransport implements ITransport {
               quantity: '5',
             },
           ],
-        } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
-    if (msg.type === 'GET_BALANCE') {
-      return {
-        id: msg.id || 'res_3',
-        type: 'RPC_RESPONSE',
-        payload: {
-          requestId: msg.id,
-          // Value [7500000, {policy: {HYDRA: 5}}] as the host sends it
-          result:
-            '821a007270e0a1581ca0b1c2d3e4f50123456789abcdef0123456789abcdef0123456789aba145485944524105',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -270,7 +255,7 @@ describe('useWallet hook', () => {
     spy.mockRestore();
   });
 
-  it('connects via connect() and computes the BigInt balance from GET_BALANCE_ASSETS', async () => {
+  it('connects via connect() and computes the BigInt balance from GET_BALANCE', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -437,5 +422,34 @@ describe('useWallet hook', () => {
         source: 'hydra-host',
       });
     }).not.toThrow();
+  });
+});
+
+describe('useWallet autoConnect option', () => {
+  const build = () => {
+    const client = new WalletBridgeClient({ transport: new MockTransport() });
+    const init = vi.spyOn(client, 'init').mockResolvedValue(undefined);
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <HydraOneProvider client={client}>{children}</HydraOneProvider>
+    );
+    return { client, init, wrapper };
+  };
+
+  it('calls client.init() when autoConnect is true', () => {
+    const { client, init, wrapper } = build();
+    const { unmount } = renderHook(() => useWallet({ autoConnect: true }), { wrapper });
+
+    expect(init).toHaveBeenCalledTimes(1);
+    unmount();
+    client.destroy();
+  });
+
+  it('does not call client.init() when autoConnect is not set', () => {
+    const { client, init, wrapper } = build();
+    const { unmount } = renderHook(() => useWallet(), { wrapper });
+
+    expect(init).not.toHaveBeenCalled();
+    unmount();
+    client.destroy();
   });
 });

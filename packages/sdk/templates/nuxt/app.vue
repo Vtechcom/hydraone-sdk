@@ -66,7 +66,7 @@ import { useWalletBridgeClient, useGameAuth } from '@hydraone/sdk/vue';
 const projectName = '{{PROJECT_NAME}}';
 const config = useRuntimeConfig();
 
-// Embedded in the HydraOne web client: postMessage to the host. Standalone tab: wallet extension.
+// The wallet lives in the HydraOne web client; the game reaches it over postMessage.
 if (import.meta.client) {
   setupHydraClient(config.public.hydraHostOrigin);
 }

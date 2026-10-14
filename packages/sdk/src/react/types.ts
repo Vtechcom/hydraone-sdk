@@ -132,7 +132,7 @@ export interface UseWalletReturn {
   connectionState: ConnectionState;
 
   /**
-   * true once the client has connected to the host or the wallet extension
+   * true once the client has connected to the host
    */
   isConnected: boolean;
 
@@ -177,7 +177,7 @@ export interface UseWalletReturn {
   theme: ThemeMode;
 
   /**
-   * Starts the handshake and connects the wallet to the Host Shell or wallet extension
+   * Starts the handshake and connects the wallet to the Host Shell
    */
   connect: () => Promise<void>;
 

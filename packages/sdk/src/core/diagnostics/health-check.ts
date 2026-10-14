@@ -296,7 +296,7 @@ export async function checkPostMessageLatency(
           isStandalone: true,
           code: 'ERR_NOT_IN_IFRAME',
         },
-        hint: 'In standalone mode, SDK connects directly to browser wallet extensions without host postMessage bridge.',
+        hint: 'Open the app inside the HydraOne web client (an iframe) so the host postMessage bridge is available.',
       };
     }
 
@@ -360,6 +360,13 @@ export async function checkStorageHealth(
       hint: 'Local storage checks require a browser window environment.',
     });
   } else {
+    // A customKey may name real data, so remember it and put it back afterwards
+    let previousLocal: string | null = null;
+    try {
+      previousLocal = window.localStorage.getItem(testKey);
+    } catch {
+      // surfaced by the setItem below
+    }
     try {
       window.localStorage.setItem(testKey, testValue);
       const readVal = window.localStorage.getItem(testKey);
@@ -413,7 +420,11 @@ export async function checkStorageHealth(
       }
     } finally {
       try {
-        window.localStorage.removeItem(testKey);
+        if (previousLocal !== null) {
+          window.localStorage.setItem(testKey, previousLocal);
+        } else {
+          window.localStorage.removeItem(testKey);
+        }
       } catch {
         // ignore
       }
@@ -447,6 +458,12 @@ export async function checkStorageHealth(
       hint: 'Host Storage Relay is recommended for games running in App Center iframe to circumvent Safari ITP storage loss.',
     });
   } else {
+    let previousRelay: string | null = null;
+    try {
+      previousRelay = await storageAdapter.getItem(testKey);
+    } catch {
+      // surfaced by the setItem below
+    }
     try {
       await storageAdapter.setItem(testKey, testValue);
       const relayReadVal = await storageAdapter.getItem(testKey);
@@ -481,7 +498,11 @@ export async function checkStorageHealth(
       });
     } finally {
       try {
-        await storageAdapter.removeItem(testKey);
+        if (previousRelay !== null) {
+          await storageAdapter.setItem(testKey, previousRelay);
+        } else {
+          await storageAdapter.removeItem(testKey);
+        }
       } catch {
         // ignore
       }

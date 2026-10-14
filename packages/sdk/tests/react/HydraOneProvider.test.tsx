@@ -156,3 +156,51 @@ describe('HydraOneProvider lifecycle', () => {
     client.destroy();
   });
 });
+
+describe('HydraOneProvider autoConnect', () => {
+  it('calls client.init() on mount when autoConnect is set', async () => {
+    const client = new WalletBridgeClient({ transport: new MockTransport() });
+    const init = vi.spyOn(client, 'init').mockResolvedValue(undefined);
+
+    const { unmount } = render(
+      <HydraOneProvider client={client} autoConnect>
+        <ConsumerComponent />
+      </HydraOneProvider>,
+    );
+
+    expect(init).toHaveBeenCalledTimes(1);
+    unmount();
+    client.destroy();
+  });
+
+  it('does not call client.init() without autoConnect', async () => {
+    const client = new WalletBridgeClient({ transport: new MockTransport() });
+    const init = vi.spyOn(client, 'init').mockResolvedValue(undefined);
+
+    const { unmount } = render(
+      <HydraOneProvider client={client}>
+        <ConsumerComponent />
+      </HydraOneProvider>,
+    );
+
+    expect(init).not.toHaveBeenCalled();
+    unmount();
+    client.destroy();
+  });
+
+  it('swallows an autoConnect failure instead of crashing the tree', async () => {
+    const client = new WalletBridgeClient({ transport: new MockTransport() });
+    vi.spyOn(client, 'init').mockRejectedValue(new Error('handshake failed'));
+
+    const { unmount } = render(
+      <HydraOneProvider client={client} autoConnect>
+        <ConsumerComponent />
+      </HydraOneProvider>,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(screen.getByTestId('client-exists').textContent).toBe('yes');
+    unmount();
+    client.destroy();
+  });
+});

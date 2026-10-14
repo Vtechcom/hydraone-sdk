@@ -68,7 +68,7 @@ describe('WalletBridgeClient', () => {
   describe('Constructor & Configuration', () => {
     it('throws when no transport is provided', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
-      expect(() => new WalletBridgeClient({} as any)).toThrow('Transport must be provided');
+      expect(() => new WalletBridgeClient({} as any)).toThrow('requires a transport or an appCenterOrigin');
     });
 
     it('initializes with the default timeout values', () => {
@@ -311,7 +311,7 @@ describe('WalletBridgeClient', () => {
       expect(utxos).toEqual(['82825820...']);
     });
 
-    it('getBalance() succeeds and returns a CBOR hex string', async () => {
+    it('getBalance() succeeds and returns the decoded assets', async () => {
       const promise = client.getBalance();
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_BALANCE');
@@ -321,14 +321,14 @@ describe('WalletBridgeClient', () => {
         type: 'RPC_RESPONSE',
         payload: {
           requestId: queryMsg.id,
-          result: '1a004c4b40', // 5000000 lovelace in CBOR
+          result: [{ unit: 'lovelace', quantity: '5000000' }],
         },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
       const balance = await promise;
-      expect(balance).toBe('1a004c4b40');
+      expect(balance).toEqual([{ unit: 'lovelace', quantity: '5000000' }]);
     });
 
     it('getCollateral() succeeds', async () => {
@@ -351,17 +351,15 @@ describe('WalletBridgeClient', () => {
       expect(collateral).toEqual(['collateral_utxo_hex']);
     });
 
-    it('runs the auxiliary CIP-30 queries (unused, change, reward, networkId)', async () => {
+    it('runs the auxiliary CIP-30 queries (unused, change, networkId)', async () => {
       const p1 = client.getUnusedAddresses();
       const p2 = client.getChangeAddress();
-      const p3 = client.getRewardAddresses();
-      const p4 = client.getNetworkId();
+      const p3 = client.getNetworkId();
 
       const msgs = transport.sentMessages.slice(1);
       expect(msgs.map((m) => m.type)).toEqual([
         'GET_UNUSED_ADDRESSES',
         'GET_CHANGE_ADDRESS',
-        'GET_REWARD_ADDRESSES',
         'GET_NETWORK_ID',
       ]);
 
@@ -382,22 +380,14 @@ describe('WalletBridgeClient', () => {
       transport.simulateIncoming({
         id: 'r3',
         type: 'RPC_RESPONSE',
-        payload: { requestId: msgs[2].id, result: ['stake_addr'] },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      transport.simulateIncoming({
-        id: 'r4',
-        type: 'RPC_RESPONSE',
-        payload: { requestId: msgs[3].id, result: 0 },
+        payload: { requestId: msgs[2].id, result: 0 },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
       expect(await p1).toEqual(['unused_addr']);
       expect(await p2).toBe('change_addr');
-      expect(await p3).toEqual(['stake_addr']);
-      expect(await p4).toBe(0);
+      expect(await p3).toBe(0);
     });
   });
 
@@ -606,6 +596,84 @@ describe('WalletBridgeClient', () => {
       expect(client.connectionState).toBe('disconnected');
 
       await expect(queryPromise).rejects.toThrow('Client has been disconnected');
+    });
+
+    describe('disconnect() during and after a handshake', () => {
+      const ack = (requestId?: string): BridgeMessage => ({
+        id: `ack-${requestId ?? 'unsolicited'}`,
+        type: 'HOST_ACK',
+        payload: requestId ? { requestId } : { hostInfo: { hostVersion: '1.0.0' } },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+
+      it('ignores an unsolicited HOST_ACK after an explicit disconnect()', async () => {
+        const transport = new SimpleMockTransport();
+        const client = new WalletBridgeClient({ transport });
+
+        const pInit = client.init();
+        transport.simulateIncoming(ack(transport.sentMessages[0].id));
+        await pInit;
+        expect(client.isConnected).toBe(true);
+
+        client.disconnect();
+        transport.simulateIncoming(ack());
+
+        expect(client.connectionState).toBe('disconnected');
+        expect(client.isConnected).toBe(false);
+      });
+
+      it('accepts an unsolicited HOST_ACK again once init() is called after disconnect()', async () => {
+        const transport = new SimpleMockTransport();
+        const client = new WalletBridgeClient({ transport });
+
+        const first = client.init();
+        transport.simulateIncoming(ack(transport.sentMessages[0].id));
+        await first;
+        client.disconnect();
+
+        const second = client.init();
+        transport.simulateIncoming(ack(transport.sentMessages[1].id));
+        await second;
+        expect(client.isConnected).toBe(true);
+
+        transport.simulateIncoming(ack());
+        expect(client.connectionState).toBe('connected');
+      });
+
+      it('rejects init() instead of resolving when disconnect() cancels the handshake', async () => {
+        const transport = new SimpleMockTransport();
+        const client = new WalletBridgeClient({ transport });
+
+        const pInit = client.init();
+        const settled = expect(pInit).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_NOT_CONNECTED,
+        });
+        client.disconnect();
+
+        await settled;
+        expect(client.isConnected).toBe(false);
+      });
+
+      it('does not let a cancelled handshake clear the promise of the newer one', async () => {
+        const transport = new SimpleMockTransport();
+        const client = new WalletBridgeClient({ transport });
+
+        const first = client.init();
+        const firstSettled = first.catch(() => undefined);
+        client.disconnect();
+
+        const second = client.init();
+        await firstSettled;
+
+        // The old attempt has settled, so a concurrent init() must reuse the second handshake
+        expect(client.init()).toBe(second);
+        expect(transport.sentMessages.filter((m) => m.type === 'CLIENT_READY')).toHaveLength(2);
+
+        transport.simulateIncoming(ack(transport.sentMessages[1].id));
+        await second;
+        expect(client.isConnected).toBe(true);
+      });
     });
 
     it('destroy() cleans up and destroys the transport', () => {
@@ -1135,108 +1203,12 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Standalone Direct Extension Fallback', () => {
-    let mockApi: any;
-    let mockExtension: any;
-    let mockProvider: Record<string, any>;
-
-    beforeEach(() => {
-      mockApi = {
-        getNetworkId: vi.fn().mockResolvedValue(1),
-        getUtxos: vi.fn().mockResolvedValue(['utxo_1']),
-        getCollateral: vi.fn().mockResolvedValue(['collat_1']),
-        getUsedAddresses: vi.fn().mockResolvedValue(['addr_1']),
-        getBalance: vi.fn().mockResolvedValue('50000000'),
-        signTx: vi.fn().mockResolvedValue('signed_witness'),
-        signData: vi.fn().mockResolvedValue({ signature: 'sig', key: 'key' }),
-        submitTx: vi.fn().mockResolvedValue('tx_hash_standalone'),
-      };
-
-      mockExtension = {
-        name: 'eternl',
-        icon: '',
-        apiVersion: '0.1.0',
-        enable: vi.fn().mockResolvedValue(mockApi),
-        isEnabled: vi.fn().mockResolvedValue(true),
-      };
-
-      mockProvider = {
-        eternl: mockExtension,
-        nami: {
-          name: 'nami',
-          icon: '',
-          apiVersion: '0.1.0',
-          enable: vi.fn().mockResolvedValue(mockApi),
-          isEnabled: vi.fn().mockResolvedValue(true),
-        },
-      };
-    });
-
-    it('detects standalone mode and falls back to DirectExtensionTransport when fallbackToExtension is true outside an iframe', async () => {
-      const client = new WalletBridgeClient({
-        fallbackToExtension: true,
-        isIframeFn: () => false, // Simulate running outside an iframe (standalone)
-        cardanoProvider: mockProvider,
-      });
+  describe('Running outside an iframe', () => {
+    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) on init() because there is no host shell', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport, isIframeFn: () => false });
 
       expect(client.isStandaloneBrowser()).toBe(true);
-      expect(client.isConnected).toBe(false);
-
-      await client.init();
-
-      expect(client.isConnected).toBe(true);
-      expect(client.activeWalletName).toBe('eternl');
-      expect(client.hostInfo).toEqual({
-        hostVersion: 'direct-extension',
-        network: 'mainnet',
-        walletName: 'eternl',
-      });
-
-      // Verify CIP-30 queries through the fallback
-      const addresses = await client.getUsedAddresses();
-      expect(addresses).toEqual(['addr_1']);
-      expect(mockApi.getUsedAddresses).toHaveBeenCalled();
-
-      // Verify transaction signing through the fallback
-      const signed = await client.signTx('tx_cbor');
-      expect(signed).toBe('signed_witness');
-      expect(mockApi.signTx).toHaveBeenCalledWith('tx_cbor', false);
-
-      // Verify transaction submission through the fallback
-      const txHash = await client.submitTx('signed_tx');
-      expect(txHash).toBe('tx_hash_standalone');
-      expect(mockApi.submitTx).toHaveBeenCalledWith('signed_tx');
-
-      // Verify CIP-8 data signing through the fallback
-      const dataSig = await client.signData('addr_1', 'deadbeef');
-      expect(dataSig).toEqual({ signature: 'sig', key: 'key' });
-      expect(mockApi.signData).toHaveBeenCalledWith('addr_1', 'deadbeef');
-    });
-
-    it('prefers preferredWallet when the provider exposes several extensions', async () => {
-      const client = new WalletBridgeClient({
-        fallbackToExtension: true,
-        preferredWallet: 'nami',
-        isIframeFn: () => false,
-        cardanoProvider: mockProvider,
-      });
-
-      await client.init();
-
-      expect(client.isConnected).toBe(true);
-      expect(client.activeWalletName).toBe('nami');
-      expect(client.hostInfo?.walletName).toBe('nami');
-      expect(mockProvider.nami.enable).toHaveBeenCalledTimes(1);
-      expect(mockExtension.enable).not.toHaveBeenCalled();
-    });
-
-    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when fallbackToExtension is true but no extension is found', async () => {
-      const client = new WalletBridgeClient({
-        fallbackToExtension: true,
-        isIframeFn: () => false,
-        cardanoProvider: {}, // Empty
-      });
-
       await expect(client.init()).rejects.toThrow(HydraTransportError);
       await expect(client.init()).rejects.toMatchObject({
         code: ERROR_CODES.ERR_NOT_IN_IFRAME,
@@ -1244,22 +1216,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(false);
     });
 
-    it('throws HydraTransportError (ERR_NOT_IN_IFRAME) when running outside an iframe with fallbackToExtension: false', async () => {
-      const transport = new SimpleMockTransport();
-      const client = new WalletBridgeClient({
-        transport,
-        fallbackToExtension: false,
-        isIframeFn: () => false,
-      });
-
-      await expect(client.init()).rejects.toThrow(HydraTransportError);
-      await expect(client.init()).rejects.toMatchObject({
-        code: ERROR_CODES.ERR_NOT_IN_IFRAME,
-      });
-      expect(client.isConnected).toBe(false);
-    });
-
-    it('throws ERR_INVALID_OPTIONS when no transport is given and fallbackToExtension is off', () => {
+    it('throws ERR_INVALID_OPTIONS when neither a transport nor an appCenterOrigin is given', () => {
       expect(() => {
         new WalletBridgeClient({} as any);
       }).toThrow(HydraBridgeError);
@@ -1269,40 +1226,6 @@ describe('WalletBridgeClient', () => {
       } catch (err: any) {
         expect(err.code).toBe('ERR_INVALID_OPTIONS');
       }
-    });
-
-    it('throws HydraBridgeError when running inside an iframe without a transport', async () => {
-      const client = new WalletBridgeClient({
-        fallbackToExtension: true,
-        isIframeFn: () => true, // Running inside an iframe
-      });
-
-      await expect(client.init()).rejects.toThrow(HydraBridgeError);
-      await expect(client.init()).rejects.toMatchObject({
-        code: 'ERR_INVALID_OPTIONS',
-      });
-    });
-
-    it('calls oldTransport.destroy() when falling back to DirectExtensionTransport', async () => {
-      const mockDestroy = vi.fn();
-      const initialTransport: ITransport = {
-        send: vi.fn().mockResolvedValue(undefined),
-        onMessage: vi.fn().mockReturnValue(() => {}),
-        destroy: mockDestroy,
-      };
-
-      const client = new WalletBridgeClient({
-        transport: initialTransport,
-        fallbackToExtension: true,
-        isIframeFn: () => false,
-        cardanoProvider: mockProvider,
-      });
-
-      await client.init();
-
-      expect(mockDestroy).toHaveBeenCalledTimes(1);
-      expect(client.isConnected).toBe(true);
-      expect(client.activeWalletName).toBe('eternl');
     });
   });
 

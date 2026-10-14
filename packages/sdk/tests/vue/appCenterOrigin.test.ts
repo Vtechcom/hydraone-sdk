@@ -36,11 +36,11 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
     client.destroy();
   });
 
-  it('does not require fallbackToExtension when appCenterOrigin is set', () => {
+  it('only needs appCenterOrigin when no transport is given', () => {
     expect(() => new WalletBridgeClient({ appCenterOrigin: ORIGIN })).not.toThrow();
   });
 
-  it('still throws without a transport, an origin or fallbackToExtension', () => {
+  it('still throws without a transport or an origin', () => {
     expect(() => new WalletBridgeClient({})).toThrow();
   });
 
@@ -55,7 +55,7 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
 
   it('rejects a blank appCenterOrigin through the transport', () => {
     expect(
-      () => new WalletBridgeClient({ appCenterOrigin: '   ', fallbackToExtension: false }),
+      () => new WalletBridgeClient({ appCenterOrigin: '   ' }),
     ).toThrow();
   });
 });
@@ -89,7 +89,7 @@ describe('useGameAuth client resolution', () => {
   });
 
   afterEach(() => {
-    getSharedWalletBridgeClient({ fallbackToExtension: true }).destroy();
+    getSharedWalletBridgeClient({ appCenterOrigin: ORIGIN }).destroy();
     setSharedWalletBridgeClient(null);
     setSharedGameAuthManager(null);
     delete (globalThis as any).window;

@@ -359,6 +359,47 @@ describe('Bridge Health Diagnostics Suite', () => {
       await checkStorageHealth(undefined, { customKey });
       expect(localStorage.getItem(customKey)).toBeNull();
     });
+
+    it('restores existing localStorage data when customKey points at a real key', async () => {
+      const customKey = 'hydra:sdk:auth:token';
+      localStorage.setItem(customKey, 'real-user-token');
+      try {
+        const results = await checkStorageHealth(undefined, { customKey });
+        expect(results.find((r) => r.id === 'storage-local')?.status).toBe('PASS');
+        expect(localStorage.getItem(customKey)).toBe('real-user-token');
+      } finally {
+        localStorage.removeItem(customKey);
+      }
+    });
+
+    it('restores existing data in a custom storage adapter when customKey points at a real key', async () => {
+      const customKey = 'hydra:sdk:auth:token';
+      const store = new Map<string, string>([[customKey, 'real-relay-token']]);
+      const storage = {
+        getItem: async (k: string) => store.get(k) ?? null,
+        setItem: async (k: string, v: string) => void store.set(k, v),
+        removeItem: async (k: string) => void store.delete(k),
+        clear: async () => store.clear(),
+      };
+
+      const results = await checkStorageHealth(undefined, { customKey, storage: storage as any });
+      expect(results.find((r) => r.id === 'storage-relay')?.status).toBe('PASS');
+      expect(store.get(customKey)).toBe('real-relay-token');
+    });
+
+    it('still removes the test key from a custom storage adapter when it did not exist before', async () => {
+      const customKey = 'hydra:sdk:diag:fresh_key';
+      const store = new Map<string, string>();
+      const storage = {
+        getItem: async (k: string) => store.get(k) ?? null,
+        setItem: async (k: string, v: string) => void store.set(k, v),
+        removeItem: async (k: string) => void store.delete(k),
+        clear: async () => store.clear(),
+      };
+
+      await checkStorageHealth(undefined, { customKey, storage: storage as any });
+      expect(store.has(customKey)).toBe(false);
+    });
   });
 
   describe('4. Comprehensive Report (checkBridgeHealth & bridge.checkHealth())', () => {
@@ -477,7 +518,6 @@ describe('Bridge Health Diagnostics Suite', () => {
     it('client.ping() throws ERR_NOT_IN_IFRAME in standalone mode outside an iframe', async () => {
       const standaloneClient = new WalletBridgeClient({
         transport,
-        fallbackToExtension: true,
         isIframeFn: () => false,
       });
 

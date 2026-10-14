@@ -33,7 +33,7 @@ describe('Build Output Verification', () => {
 
     const vueEsmContent = fs.readFileSync(vueEsm, 'utf-8');
     expect(vueEsmContent).toContain('useWalletBridgeClient');
-    expect(vueEsmContent).toContain('lovelaceFromValueHex');
+    expect(vueEsmContent).toContain('lovelaceFromAssets');
     expect(vueEsmContent).toContain('useGameAuth');
     // vue must stay an external peer dependency and not be bundled into dist/vue/index.js
     expect(vueEsmContent).toMatch(/from ["']vue["']/);
@@ -51,7 +51,7 @@ describe('Build Output Verification', () => {
     expect(reactEsmContent).toContain('useWallet');
     expect(reactEsmContent).toContain('useHydraAuth');
     expect(reactEsmContent).toContain('useHostStorage');
-    expect(reactEsmContent).toContain('lovelaceFromValueHex');
+    expect(reactEsmContent).toContain('lovelaceFromAssets');
     // react must stay an external peer dependency and not be bundled into dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);
 

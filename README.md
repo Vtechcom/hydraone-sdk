@@ -15,19 +15,18 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 ## Features
 
 - **Wallet bridge** between a game running in an iframe and the HydraOne App Center host shell, over `postMessage` with strict origin validation and correlation IDs.
-- **Standalone fallback** to browser wallet extensions (`window.cardano`, CIP-30) when the game runs outside the App Center.
 - **CIP-8 one-click login** with JWT lifecycle management (`GameAuthManager`).
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
 - **Framework adapters**: React hooks (`@hydraone/sdk/react`) and Vue/Nuxt composables (`@hydraone/sdk/vue`).
 - **Health diagnostics** for the bridge.
-- **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt, Phaser 3).
+- **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt).
 - Zero runtime dependencies. ESM and CommonJS builds with bundled type declarations.
 
 ## Requirements
 
 - Node.js 20 or later for tooling and server-side rendering.
 - A browser environment for wallet features (`window`, `postMessage`).
-- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.3, `phaser` >= 3.60.
+- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.3.
 
 ## Installation
 
@@ -42,10 +41,10 @@ bun add @hydraone/sdk
 Start a new project from a template:
 
 ```bash
-npx create-hydraone-game my-game --template phaser-3
+npx create-hydraone-game my-game --template next-js
 ```
 
-Templates: `next-js`, `nuxt`, `phaser-3`. Run `npx create-hydraone-game --help` for all options.
+Templates: `next-js`, `nuxt`. Run `npx create-hydraone-game --help` for all options.
 
 ## Quick start
 
@@ -54,14 +53,13 @@ import { WalletBridgeClient, HydraBridgeError } from '@hydraone/sdk';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
-  fallbackToExtension: true,
 });
 
 try {
   await client.init();
   const [address] = await client.getUsedAddresses();
-  const balanceCbor = await client.getBalance();
-  console.log(`Connected as ${address}, balance (CBOR hex): ${balanceCbor}`);
+  const balance = await client.getBalance();
+  console.log(`Connected as ${address}, balance:`, balance);
 } catch (err) {
   if (err instanceof HydraBridgeError) {
     console.error(`[${err.code}] ${err.message}`);
@@ -69,28 +67,25 @@ try {
 }
 ```
 
-Inside the App Center iframe the client talks to the host shell. Outside an iframe, `fallbackToExtension: true` makes it connect to an installed Cardano wallet extension instead.
+Inside the App Center iframe the client talks to the host shell. Outside an iframe there is no host, so `init()` rejects with `ERR_NOT_IN_IFRAME`.
 
-`getBalance()` returns the wallet balance exactly as CIP-30 defines it: a CBOR-encoded hex string. `useWallet().balanceADA` and `useWalletBridgeClient().balanceADA` read its lovelace for you (see [Reading balances](./apps/docs/content/en/3.guides/1.wallet-operations.md#read-addresses-and-balances)).
+`getBalance()` returns the wallet balance as a list of assets (`{ unit, quantity }`, with `unit` set to `lovelace` or `policyId + assetNameHex`). `useWallet().balanceADA` and `useWalletBridgeClient().balanceADA` read its lovelace for you (see [Reading balances](./apps/docs/content/en/3.guides/1.wallet-operations.md#read-addresses-and-balances)).
 
 ## Configuration
 
 `new WalletBridgeClient(options)` accepts:
 
-| Option                | Type                  | Default            | Description                                                                                          |
-| --------------------- | --------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
-| `transport`           | `ITransport`          | none               | Transport adapter. Optional only when `fallbackToExtension` is enabled.                              |
-| `handshakeTimeoutMs`  | `number`              | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                       |
-| `pingTimeoutMs`       | `number`              | `3000`             | Maximum wait for a `ping()` latency probe.                                                           |
-| `queryTimeoutMs`      | `number`              | `15000`            | Default timeout for wallet state queries.                                                            |
-| `signingTimeoutMs`    | `number`              | `120000`           | Default timeout for signing and submitting, which wait for the user.                                 |
-| `autoConnect`         | `boolean`             | `false`            | Run the handshake as soon as the client is constructed.                                              |
-| `fallbackToExtension` | `boolean`             | `false`            | Use `window.cardano` when running outside an iframe.                                                 |
-| `preferredWallet`     | `string`              | first detected     | Wallet to prefer in fallback mode, for example `'eternl'`, `'lace'`, `'nami'`.                       |
-| `cardanoProvider`     | `Record<string, any>` | `window.cardano`   | Custom `window.cardano` object, mainly for tests.                                                    |
-| `isIframeFn`          | `() => boolean`       | built-in detection | Custom iframe detection, mainly for tests.                                                           |
-| `debug`               | `boolean`             | `false`            | Emit warnings through the logger.                                                                    |
-| `logger`              | `Logger`              | `console`          | Destination for debug output. See [Logging](./apps/docs/content/en/3.guides/7.logging-debugging.md). |
+| Option               | Type            | Default            | Description                                                                                          |
+| -------------------- | --------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `transport`          | `ITransport`    | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                           |
+| `handshakeTimeoutMs` | `number`        | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                       |
+| `pingTimeoutMs`      | `number`        | `3000`             | Maximum wait for a `ping()` latency probe.                                                           |
+| `queryTimeoutMs`     | `number`        | `15000`            | Default timeout for wallet state queries.                                                            |
+| `signingTimeoutMs`   | `number`        | `120000`           | Default timeout for signing and submitting, which wait for the user.                                 |
+| `autoConnect`        | `boolean`       | `false`            | Run the handshake as soon as the client is constructed.                                              |
+| `isIframeFn`         | `() => boolean` | built-in detection | Custom iframe detection, mainly for tests.                                                           |
+| `debug`              | `boolean`       | `false`            | Emit warnings through the logger.                                                                    |
+| `logger`             | `Logger`        | `console`          | Destination for debug output. See [Logging](./apps/docs/content/en/3.guides/7.logging-debugging.md). |
 
 `new PostMessageTransport(options)` accepts:
 
@@ -115,7 +110,8 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
     const witnessSet = await client.signTx(unsignedTxCbor, true, { timeoutMs: 60_000 });
-    const txHash = await client.submitTx(witnessSet);
+    const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+    const txHash = await client.submitTx(signedTx);
     return txHash;
   } catch (err) {
     if (err instanceof HydraUserRejectedError) return null;
@@ -125,7 +121,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Other queries: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getRewardAddresses`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
+Other queries: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
 
 ### CIP-8 login
 
@@ -272,7 +268,7 @@ for (const check of report.checks) {
 ```text
 npx create-hydraone-game [project-name] [options]
 
-  -t, --template <name>   next-js, nuxt or phaser-3
+  -t, --template <name>   next-js or nuxt
   --pm <package-manager>  pnpm, npm, yarn or bun
   --force                 Use the target directory even if it is not empty
   -y, --yes               Skip prompts and use defaults
@@ -288,14 +284,14 @@ Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 | ------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
 | `ERR_TIMEOUT`             | `HydraTimeoutError`      | A request or the handshake exceeded its timeout.                                |
 | `ERR_USER_REJECTED`       | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
-| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell or wallet extension found, or the feature needs an iframe.        |
+| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell found, or the page is not inside an iframe.                       |
 | `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
 | `ERR_AUTH_EXPIRED`        | `HydraAuthError`         | The JWT session has expired.                                                    |
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`, `ERR_WALLET_ENABLE_FAILED`. Details are in [Error handling](./apps/docs/content/en/4.reference/4.errors.md).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](./apps/docs/content/en/4.reference/4.errors.md).
 
 ## Logging and debugging
 
@@ -309,7 +305,11 @@ const logger: Logger = {
   error: (message, ...args) => console.error(`[sdk] ${message}`, ...args),
 };
 
-export const client = new WalletBridgeClient({ fallbackToExtension: true, debug: true, logger });
+export const client = new WalletBridgeClient({
+  appCenterOrigin: 'https://alpha.hydraone.app',
+  debug: true,
+  logger,
+});
 ```
 
 The client logs only short messages and error objects, never request payloads.
@@ -336,7 +336,7 @@ The output is written to `packages/sdk/docs/api/`. Guides live in [docs/](./apps
 
 ## FAQ and troubleshooting
 
-- **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab. Set `fallbackToExtension: true` and install a CIP-30 wallet.
+- **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab, where there is no host shell. Open it inside the HydraOne web client.
 - **`ERR_UNTRUSTED_ORIGIN` in the console**: `appCenterOrigin` must match the host shell origin exactly (scheme, host and port, no path). A wildcard is only accepted outside production.
 - **Session lost after reload on iOS Safari**: store the session with `HostStorageRelayAdapter`. See the [Safari ITP guide](./apps/docs/content/en/3.guides/6.safari-itp-storage.md).
 

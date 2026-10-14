@@ -140,7 +140,7 @@ How it works
 From your game to the wallet in four steps
 
 #description
-The same client code runs embedded in the App Center and standalone in a browser tab.
+Your game runs in an iframe and reaches the wallet through the App Center.
 
 #default
   :::landing-flow
@@ -158,7 +158,6 @@ The same client code runs embedded in the App Center and standalone in a browser
     - icon: i-lucide-rocket
       title: Ship
       text: Verify the bridge with the health check and submit your game to the App Center.
-  note: Running outside the App Center? Set fallbackToExtension and the same code talks to a CIP-30 wallet extension.
   ---
   :::
 ::
@@ -183,13 +182,13 @@ Pick your stack. Every example creates the client for you from the App Center or
 
         const client = new WalletBridgeClient({
           appCenterOrigin: 'https://alpha.hydraone.app',
-          fallbackToExtension: true,
         });
 
         await client.init();
         const [address] = await client.getUsedAddresses();
         const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const txHash = await client.submitTx(witnessSet);
+        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
         import { HydraOneProvider, useWallet } from '@hydraone/sdk/react';

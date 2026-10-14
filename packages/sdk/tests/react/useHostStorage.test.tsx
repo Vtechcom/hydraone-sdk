@@ -14,7 +14,7 @@ describe('useHostStorage hook', () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <HydraOneProvider storage={storage}>{children}</HydraOneProvider>
+    <HydraOneProvider storage={storage} appCenterOrigin="https://alpha.hydraone.app">{children}</HydraOneProvider>
   );
 
   it('works inside HydraOneProvider', async () => {

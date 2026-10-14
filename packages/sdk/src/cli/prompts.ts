@@ -22,7 +22,8 @@ export function createReadline(): readline.Interface {
   const rl = readline.createInterface({ input, output });
   rl.on('SIGINT', () => {
     console.log(`\n${style('Cancelled.', 'yellow')}`);
-    process.exit(0);
+    // 130 = 128 + SIGINT, so scripts and CI see the abort as a failure
+    process.exit(130);
   });
   return rl;
 }

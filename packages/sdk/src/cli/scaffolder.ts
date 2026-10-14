@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { ScaffoldOptions, TemplateType } from './types';
 import { CLI_VERSION } from './types';
 
-export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt', 'next-js', 'phaser-3'];
+export const SUPPORTED_TEMPLATES: TemplateType[] = ['nuxt', 'next-js'];
 
 export function validateProjectName(name: string): { valid: boolean; reason?: string } {
   if (!name || name.trim() === '') {
@@ -83,6 +83,22 @@ export function resolveTemplatesDir(): string {
 /** Dependency and build output that must never be copied out of a template checkout. */
 const SKIPPED_TEMPLATE_ENTRIES = new Set(['node_modules', '.next', '.nuxt', '.output', 'dist']);
 
+/**
+ * A file is binary when it holds a NUL byte (text never does) or is not valid UTF-8, so assets
+ * such as fonts, models and videos are copied byte for byte instead of being re-encoded.
+ */
+function isBinaryBuffer(buffer: Buffer): boolean {
+  if (buffer.includes(0)) {
+    return true;
+  }
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export async function copyTemplateDir(
   sourceDir: string,
   targetDir: string,
@@ -113,11 +129,11 @@ export async function copyTemplateDir(
     if (entry.isDirectory()) {
       await copyTemplateDir(srcPath, destPath, replacements);
     } else if (entry.isFile()) {
-      const isBinary = /\.(png|jpe?g|gif|webp|ico|wasm|mp3|wav|ogg|bin|zip)$/i.test(entry.name);
-      if (isBinary) {
-        fs.copyFileSync(srcPath, destPath);
+      const raw = fs.readFileSync(srcPath);
+      if (isBinaryBuffer(raw)) {
+        fs.writeFileSync(destPath, raw);
       } else {
-        let content = fs.readFileSync(srcPath, 'utf-8');
+        let content = raw.toString('utf-8');
         for (const [key, val] of Object.entries(replacements)) {
           content = content.replaceAll(key, () => val);
         }
@@ -178,7 +194,6 @@ export async function scaffoldProject(
     '{{SDK_VERSION}}': `^${CLI_VERSION}`,
     '@hydraone/template-nuxt': actualProjectName,
     '@hydraone/template-next-js': actualProjectName,
-    '@hydraone/template-phaser-3': actualProjectName,
     'workspace:*': `^${CLI_VERSION}`,
   };
 

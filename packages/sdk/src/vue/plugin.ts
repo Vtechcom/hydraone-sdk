@@ -27,7 +27,6 @@ export function createHydraOne(options: CreateHydraOneOptions = {}): Plugin {
       const client =
         providedClient ??
         new WalletBridgeClient({
-          fallbackToExtension: !clientOptions.appCenterOrigin && !clientOptions.transport,
           ...clientOptions,
         });
       const storage =

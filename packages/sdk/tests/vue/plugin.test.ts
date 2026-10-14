@@ -71,9 +71,9 @@ describe('createHydraOne plugin', () => {
 
   it('does not touch the module-level shared client', () => {
     const { app } = mountWith({ appCenterOrigin: ORIGIN });
-    const shared = getSharedWalletBridgeClient({ fallbackToExtension: true });
+    const shared = getSharedWalletBridgeClient({ appCenterOrigin: ORIGIN });
 
-    expect(shared.transport).toBeUndefined();
+    expect(shared.transport).toBeInstanceOf(PostMessageTransport);
     shared.destroy();
     app.unmount();
   });
@@ -97,11 +97,8 @@ describe('createHydraOne plugin', () => {
     client.destroy();
   });
 
-  it('falls back to the extension when no origin or transport is given', () => {
-    const { app, seen } = mountWith({});
-
-    expect(seen.client?.transport).toBeUndefined();
-    app.unmount();
+  it('throws when no origin or transport is given', () => {
+    expect(() => mountWith({})).toThrow('requires a transport or an appCenterOrigin');
   });
 });
 
@@ -124,8 +121,8 @@ describe('shared singletons on the server', () => {
   });
 
   it('returns a fresh client per call instead of caching it', () => {
-    const first = getSharedWalletBridgeClient({ fallbackToExtension: true });
-    const second = getSharedWalletBridgeClient({ fallbackToExtension: true });
+    const first = getSharedWalletBridgeClient({ appCenterOrigin: 'https://alpha.hydraone.app' });
+    const second = getSharedWalletBridgeClient({ appCenterOrigin: 'https://alpha.hydraone.app' });
 
     expect(first).not.toBe(second);
     first.destroy();

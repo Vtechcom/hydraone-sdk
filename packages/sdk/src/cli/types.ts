@@ -5,7 +5,7 @@
 /** Version of the CLI, injected from package.json at build time. */
 export const CLI_VERSION: string = __SDK_VERSION__;
 
-export type TemplateType = 'nuxt' | 'next-js' | 'phaser-3';
+export type TemplateType = 'nuxt' | 'next-js';
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun';
 

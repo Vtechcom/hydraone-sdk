@@ -56,7 +56,7 @@ export interface UseWalletBridgeClientReturn {
   connectionState: Ref<ConnectionState>;
 
   /**
-   * true once the client has connected to the host or the wallet extension
+   * true once the client has connected to the host
    */
   isConnected: Ref<boolean>;
 
@@ -123,7 +123,7 @@ export interface UseWalletBridgeClientReturn {
   disconnect: () => void;
 
   /**
-   * Refreshes the wallet balance (GET_BALANCE_ASSETS, falling back to getBalance())
+   * Refreshes the wallet balance (GET_BALANCE)
    */
   refreshBalance: () => Promise<string>;
 
