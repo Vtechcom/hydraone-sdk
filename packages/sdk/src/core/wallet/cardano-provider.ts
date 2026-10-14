@@ -1,4 +1,4 @@
-import type { CardanoWalletExtension } from './types';
+import type { CardanoWalletExtension } from '../types';
 
 /** CIP-30 providers keyed by wallet name, as exposed on `window.cardano`. */
 export type CardanoProvider = Record<string, unknown>;

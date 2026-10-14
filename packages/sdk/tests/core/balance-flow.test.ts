@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { WalletBridgeClient } from '../../src/core/client';
-import { DirectExtensionTransport } from '../../src/core/adapters/direct-extension-transport';
-import { readLovelaceBalance } from '../../src/core/balance';
+import { DirectExtensionTransport } from '../../src/core/adapters/transport/direct-extension-transport';
+import { readLovelaceBalance } from '../../src/core/wallet/balance';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage, CIP30Api } from '../../src/core/types';
 

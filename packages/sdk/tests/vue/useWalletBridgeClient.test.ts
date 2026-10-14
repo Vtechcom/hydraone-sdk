@@ -5,7 +5,7 @@ import {
   setSharedWalletBridgeClient,
 } from '../../src/vue/useWalletBridgeClient';
 import { WalletBridgeClient } from '../../src/core/client';
-import { HydraBridgeError } from '../../src/core/errors';
+import { HydraBridgeError } from '../../src/core/errors/errors';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
 

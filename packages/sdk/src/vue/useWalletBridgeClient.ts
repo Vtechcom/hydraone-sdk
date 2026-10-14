@@ -21,7 +21,7 @@ import type {
   PlayerProfile,
 } from '../core/types';
 import { WalletBridgeClient } from '../core/client';
-import { readLovelaceBalance, lovelaceToAdaString } from '../core/balance';
+import { readLovelaceBalance, lovelaceToAdaString } from '../core/wallet/balance';
 import type { UseWalletBridgeClientOptions, UseWalletBridgeClientReturn } from './types';
 
 /**

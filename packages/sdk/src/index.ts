@@ -13,7 +13,7 @@ export * from './core/ports/transport';
 export * from './core/ports/storage';
 
 // Error Hierarchy & Codes
-export * from './core/errors';
+export * from './core/errors/errors';
 
 // Transport & Storage Adapters
 export * from './core/adapters';

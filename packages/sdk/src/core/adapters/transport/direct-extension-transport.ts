@@ -1,4 +1,4 @@
-import type { ITransport } from '../ports/transport';
+import type { ITransport } from '../../ports/transport';
 import type {
   BridgeMessage,
   CardanoWalletExtension,
@@ -9,16 +9,16 @@ import type {
   Paginate,
   RpcResponsePayload,
   UnsubscribeFn,
-} from '../types';
+} from '../../types';
 import {
   ERROR_CODES,
   HydraBridgeError,
   HydraTimeoutError,
   HydraTransportError,
   HydraUserRejectedError,
-} from '../errors';
-import { getWindowCardano, getWalletExtension } from '../cardano-provider';
-import { errorCode, errorInfo, errorMessage } from '../error-utils';
+} from '../../errors/errors';
+import { getWindowCardano, getWalletExtension } from '../../wallet/cardano-provider';
+import { errorCode, errorInfo, errorMessage } from '../../errors/error-utils';
 
 /** Well-known Cardano wallet keys, detected first */
 export const KNOWN_CARDANO_WALLETS = [

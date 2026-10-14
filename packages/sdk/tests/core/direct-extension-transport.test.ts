@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   DirectExtensionTransport,
   detectCardanoWallets,
-} from '../../src/core/adapters/direct-extension-transport';
+} from '../../src/core/adapters/transport/direct-extension-transport';
 import {
   ERROR_CODES,
   HydraTimeoutError,
   HydraTransportError,
   HydraUserRejectedError,
-} from '../../src/core/errors';
+} from '../../src/core/errors/errors';
 import type { BridgeMessage, CIP30Api, CardanoWalletExtension } from '../../src/core/types';
 
 describe('DirectExtensionTransport', () => {

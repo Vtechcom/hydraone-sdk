@@ -4,7 +4,7 @@ import { WalletBridgeClient } from '../core/client';
 import { GameAuthManager } from '../core/auth';
 import type { IStorage } from '../core/ports/storage';
 import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapters/storage';
-import { PostMessageTransport } from '../core/adapters/post-message-transport';
+import { PostMessageTransport } from '../core/adapters/transport/post-message-transport';
 import type { WalletBridgeClientOptions } from '../core/types';
 
 /**

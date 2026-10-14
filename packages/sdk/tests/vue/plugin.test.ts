@@ -12,7 +12,7 @@ import {
   setSharedGameAuthManager,
 } from '../../src/vue';
 import { WalletBridgeClient } from '../../src/core/client';
-import { PostMessageTransport } from '../../src/core/adapters/post-message-transport';
+import { PostMessageTransport } from '../../src/core/adapters/transport/post-message-transport';
 
 const ORIGIN = 'https://alpha.hydraone.app';
 

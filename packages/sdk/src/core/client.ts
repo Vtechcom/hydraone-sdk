@@ -34,14 +34,14 @@ import {
   HydraTimeoutError,
   HydraTransportError,
   HydraUserRejectedError,
-} from './errors';
-import { errorCode, errorMessage } from './error-utils';
+} from './errors/errors';
+import { errorCode, errorMessage } from './errors/error-utils';
 import {
   DirectExtensionTransport,
   detectCardanoWallets,
-} from './adapters/direct-extension-transport';
-import { PostMessageTransport } from './adapters/post-message-transport';
-import { getWalletExtension, getWindowCardano } from './cardano-provider';
+} from './adapters/transport/direct-extension-transport';
+import { PostMessageTransport } from './adapters/transport/post-message-transport';
+import { getWalletExtension, getWindowCardano } from './wallet/cardano-provider';
 import { checkBridgeHealth } from './diagnostics/health-check';
 import type { BridgeHealthReport, CheckHealthOptions } from './diagnostics/types';
 

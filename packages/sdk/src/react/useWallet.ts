@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { HydraOneContext } from './context';
 import type { UseWalletOptions, UseWalletReturn } from './types';
-import { readLovelaceBalance, lovelaceToAdaString } from '../core/balance';
+import { readLovelaceBalance, lovelaceToAdaString } from '../core/wallet/balance';
 import type {
   ConnectionState,
   HostInfo,

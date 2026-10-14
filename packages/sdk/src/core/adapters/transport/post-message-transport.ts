@@ -1,4 +1,4 @@
-import type { ITransport } from '../ports/transport';
+import type { ITransport } from '../../ports/transport';
 import type {
   BridgeMessage,
   BridgeMessageEvent,
@@ -9,7 +9,7 @@ import type {
   PostMessageTransportOptions,
   RpcResponsePayload,
   UnsubscribeFn,
-} from '../types';
+} from '../../types';
 import {
   ERROR_CODES,
   HydraBridgeError,
@@ -17,8 +17,8 @@ import {
   HydraTimeoutError,
   HydraTransportError,
   HydraUserRejectedError,
-} from '../errors';
-import { errorMessage } from '../error-utils';
+} from '../../errors/errors';
+import { errorMessage } from '../../errors/error-utils';
 
 /**
  * PostMessageTransport - ITransport implementation for iframe mode.

@@ -4,8 +4,8 @@ import {
   lovelaceFromAssets,
   lovelaceToAdaString,
   readLovelaceBalance,
-} from '../../src/core/balance';
-import { HydraBridgeError } from '../../src/core/errors';
+} from '../../src/core/wallet/balance';
+import { HydraBridgeError } from '../../src/core/errors/errors';
 
 // Vectors produced by cardano-serialization-lib (Value.to_hex()), one per CBOR integer width.
 describe('lovelaceFromValueHex', () => {

@@ -1,5 +1,5 @@
-import { HydraBridgeError } from './errors';
-import type { BalanceAsset, QueryOptions } from './types';
+import { HydraBridgeError } from '../errors/errors';
+import type { BalanceAsset, QueryOptions } from '../types';
 
 const LOVELACE_PER_ADA = 1_000_000n;
 

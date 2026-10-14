@@ -14,7 +14,7 @@ import {
   HydraBridgeError,
   HydraUserRejectedError,
   HydraTimeoutError,
-} from '../../src/core/errors';
+} from '../../src/core/errors/errors';
 import type { IAuthSignerClient } from '../../src/core/types';
 
 function createTestJwt(payload: Record<string, any>): string {

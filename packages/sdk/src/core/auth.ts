@@ -11,7 +11,7 @@ import type {
 } from './types';
 import type { IStorage } from './ports/storage';
 import { STORAGE_AUTH_PREFIX } from './adapters/storage/storage-policy';
-import { ERROR_CODES, HydraAuthError, HydraBridgeError } from './errors';
+import { ERROR_CODES, HydraAuthError, HydraBridgeError } from './errors/errors';
 
 /**
  * Converts a UTF-8 string to a normalized hex string

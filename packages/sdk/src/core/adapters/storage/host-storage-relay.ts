@@ -9,8 +9,8 @@ import type {
   RpcResponsePayload,
   UnsubscribeFn,
 } from '../../types';
-import { HydraStorageError } from '../../errors';
-import { errorMessage } from '../../error-utils';
+import { HydraStorageError } from '../../errors/errors';
+import { errorMessage } from '../../errors/error-utils';
 import { STORAGE_PREFIX } from './storage-policy';
 
 /** Loose shape of the error payloads different hosts return for failed storage RPCs. */

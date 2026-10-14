@@ -15,7 +15,7 @@ import type {
 import { HostStorageRelayAdapter } from '../adapters/storage/host-storage-relay';
 import type { IStorage } from '../ports/storage';
 import type { ITransport } from '../ports/transport';
-import { errorCode, errorMessage, errorName } from '../error-utils';
+import { errorCode, errorMessage, errorName } from '../errors/error-utils';
 
 /** Optional capabilities a client or transport may expose; probed at runtime. */
 interface PingCapable {
