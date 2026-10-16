@@ -215,7 +215,6 @@ describe('create-hydraone-game CLI', () => {
 
       const page = fs.readFileSync(path.join(targetDir, 'app/page.tsx'), 'utf-8');
       expect(page).toContain('useWallet');
-      expect(page).toContain('useHydraAuth');
       expect(page).not.toContain('bootstrapDevShell');
     });
 

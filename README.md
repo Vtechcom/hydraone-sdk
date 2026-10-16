@@ -2,7 +2,7 @@ English | [Tiếng Việt](https://github.com/Vtechcom/hydraone-sdk/blob/main/RE
 
 # @hydraone-sdk/core
 
-Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 login, React and Vue adapters.
+Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 data signing, React and Vue adapters.
 
 [![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
@@ -15,7 +15,6 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 ## Features
 
 - **Wallet bridge** between a game running in an iframe and the HydraOne App Center host shell, over `postMessage` with strict origin validation and correlation IDs.
-- **CIP-8 one-click login** with JWT lifecycle management (`GameAuthManager`).
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
 - **Framework adapters**: React hooks (`@hydraone-sdk/core/react`) and Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Health diagnostics** for the bridge.
@@ -121,45 +120,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Other queries: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
-
-### CIP-8 login
-
-```ts
-import {
-  WalletBridgeClient,
-  PostMessageTransport,
-  HostStorageRelayAdapter,
-  GameAuthManager,
-  parseJwt,
-} from '@hydraone-sdk/core';
-
-const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
-const client = new WalletBridgeClient({ transport });
-const storage = new HostStorageRelayAdapter({ transport });
-
-const auth = new GameAuthManager({
-  client,
-  storage,
-  exchangeToken: async ({ address, signature, key, challenge }) => {
-    const res = await fetch('https://api.example.com/auth/verify', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ address, signature, key, challenge }),
-    });
-    const body = (await res.json()) as { token: string };
-    return body.token;
-  },
-});
-
-export async function login(nonce: string) {
-  await client.init();
-  const session = await auth.signIn({ challenge: nonce });
-  return parseJwt<{ sub?: string }>(session.token ?? '').sub;
-}
-```
-
-`https://api.example.com` stands for your own backend: it issues the challenge and verifies the CIP-8 signature. See [Authentication](https://developers.hydraone.app/guides/authentication).
+Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
 
 ### Storage and Safari ITP
 
@@ -190,22 +151,16 @@ Safari partitions or wipes storage for cross-origin iframes. `HostStorageRelayAd
 
 ```tsx
 import React from 'react';
-import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
+import { HydraOneProvider, useWallet } from '@hydraone-sdk/core/react';
 
 function Game() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
-  const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   return (
     <div>
       <p>{isConnected ? `${address} (${balanceADA} ADA)` : 'Not connected'}</p>
       <button onClick={() => (isConnected ? disconnect() : connect())}>
         {isConnected ? 'Disconnect' : 'Connect'}
-      </button>
-      <button
-        onClick={() => (isAuthenticated ? signOut() : signIn({ challenge: 'server-issued-nonce' }))}
-      >
-        {isAuthenticated ? 'Sign out' : 'Sign in'}
       </button>
     </div>
   );
@@ -225,21 +180,11 @@ Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See th
 ### Vue and Nuxt
 
 ```ts
-import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
+import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
 export function setup() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
-  const { isAuthenticated, signIn, signOut } = useGameAuth();
-  return {
-    isConnected,
-    address,
-    balanceADA,
-    connect,
-    disconnect,
-    isAuthenticated,
-    signIn,
-    signOut,
-  };
+  return { isConnected, address, balanceADA, connect, disconnect };
 }
 ```
 
@@ -286,7 +231,6 @@ Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 | `ERR_USER_REJECTED`       | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
 | `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell found, or the page is not inside an iframe.                       |
 | `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
-| `ERR_AUTH_EXPIRED`        | `HydraAuthError`         | The JWT session has expired.                                                    |
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |

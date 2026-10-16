@@ -21,8 +21,5 @@ export * from './core/adapters';
 // Core Engine Client
 export * from './core/client';
 
-// Web3 Auth & Session Management
-export * from './core/auth';
-
 // Bridge Health Diagnostics Suite
 export * from './core/diagnostics';

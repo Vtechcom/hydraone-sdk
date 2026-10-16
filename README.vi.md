@@ -4,7 +4,7 @@
 
 # @hydraone-sdk/core
 
-SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu nối ví, đăng nhập CIP-8, adapter cho React và Vue, và trình giả lập chạy cục bộ.
+SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu nối ví, ký dữ liệu CIP-8, adapter cho React và Vue, và trình giả lập chạy cục bộ.
 
 [![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
@@ -17,7 +17,6 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 ## Tính năng
 
 - **Cầu nối ví** giữa game chạy trong iframe và host shell của HydraOne App Center, qua `postMessage` với kiểm tra origin nghiêm ngặt và correlation ID.
-- **Đăng nhập CIP-8 một chạm** kèm quản lý vòng đời JWT (`GameAuthManager`).
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
 - **Adapter cho framework**: React hooks (`@hydraone-sdk/core/react`) và Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Chẩn đoán sức khỏe** cho cầu nối.
@@ -123,45 +122,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Các truy vấn khác: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onAudioMutedChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
-
-### Đăng nhập CIP-8
-
-```ts
-import {
-  WalletBridgeClient,
-  PostMessageTransport,
-  HostStorageRelayAdapter,
-  GameAuthManager,
-  parseJwt,
-} from '@hydraone-sdk/core';
-
-const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
-const client = new WalletBridgeClient({ transport });
-const storage = new HostStorageRelayAdapter({ transport });
-
-const auth = new GameAuthManager({
-  client,
-  storage,
-  exchangeToken: async ({ address, signature, key, challenge }) => {
-    const res = await fetch('https://api.example.com/auth/verify', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ address, signature, key, challenge }),
-    });
-    const body = (await res.json()) as { token: string };
-    return body.token;
-  },
-});
-
-export async function login(nonce: string) {
-  await client.init();
-  const session = await auth.signIn({ challenge: nonce });
-  return parseJwt<{ sub?: string }>(session.token ?? '').sub;
-}
-```
-
-`https://api.example.com` đại diện cho backend của riêng bạn: nó phát hành challenge và xác minh chữ ký CIP-8. Xem [Authentication](./apps/docs/content/vi/3.guides/2.authentication.md).
+Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onAudioMutedChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
 
 ### Lưu trữ và Safari ITP
 
@@ -192,22 +153,16 @@ Safari phân vùng hoặc xóa storage của các iframe cross-origin. `HostStor
 
 ```tsx
 import React from 'react';
-import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
+import { HydraOneProvider, useWallet } from '@hydraone-sdk/core/react';
 
 function Game() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
-  const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   return (
     <div>
       <p>{isConnected ? `${address} (${balanceADA} ADA)` : 'Not connected'}</p>
       <button onClick={() => (isConnected ? disconnect() : connect())}>
         {isConnected ? 'Disconnect' : 'Connect'}
-      </button>
-      <button
-        onClick={() => (isAuthenticated ? signOut() : signIn({ challenge: 'server-issued-nonce' }))}
-      >
-        {isAuthenticated ? 'Sign out' : 'Sign in'}
       </button>
     </div>
   );
@@ -227,21 +182,11 @@ Cũng được export: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`
 ### Vue và Nuxt
 
 ```ts
-import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
+import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
 export function setup() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
-  const { isAuthenticated, signIn, signOut } = useGameAuth();
-  return {
-    isConnected,
-    address,
-    balanceADA,
-    connect,
-    disconnect,
-    isAuthenticated,
-    signIn,
-    signOut,
-  };
+  return { isConnected, address, balanceADA, connect, disconnect };
 }
 ```
 
@@ -288,7 +233,6 @@ Mọi lỗi do SDK ném ra đều là `HydraBridgeError` với `code` ổn đị
 | `ERR_USER_REJECTED`       | `HydraUserRejectedError` | Người dùng từ chối một yêu cầu của ví.                                                     |
 | `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | Không tìm thấy host shell, hoặc trang không nằm trong iframe.                              |
 | `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | Một tin nhắn không qua được kiểm tra origin, hoặc dùng origin ký tự đại diện ở production. |
-| `ERR_AUTH_EXPIRED`        | `HydraAuthError`         | Phiên JWT đã hết hạn.                                                                      |
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage bị chặn hoặc không liên lạc được host relay.                                       |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | Client chưa kết nối, đã bị hủy, hoặc không có địa chỉ ví.                                  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |

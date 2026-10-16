@@ -1,5 +1,4 @@
 import type { ITransport } from './ports/transport';
-import type { IStorage } from './ports/storage';
 
 /**
  * Message types supported by the protocol between the game and the host shell.
@@ -24,7 +23,6 @@ export type BridgeMessageType =
   | 'TRIGGER_HAPTIC'
   | 'REQUEST_DEPOSIT_MODAL'
   | 'GET_PLAYER_PROFILE'
-  | 'AUTH_STATE_CHANGED'
   | 'NETWORK_CHANGED'
   | 'ACCOUNT_CHANGED'
   | 'DISCONNECTED'
@@ -321,99 +319,6 @@ export interface HostStorageRemovePayload {
 export interface HostStorageClearPayload {
   prefix?: string;
 }
-
-/**
- * Packaged CIP-8 authentication signature.
- */
-export interface AuthSignaturePayload {
-  address: string;
-  signature: string;
-  key: string;
-  challenge: string;
-  payloadHex: string;
-}
-
-/**
- * Authentication state of the player session.
- */
-export interface AuthState {
-  isAuthenticated: boolean;
-  token: string | null;
-  address: string | null;
-  claims?: Record<string, unknown> | null;
-  error?: Error | null;
-}
-
-/**
- * Result of a successful sign-in.
- */
-export interface AuthSession {
-  address: string;
-  signature: string;
-  key: string;
-  challenge: string;
-  payloadHex: string;
-  token?: string;
-  claims?: Record<string, unknown> | null;
-}
-
-/**
- * Parameters for GameAuthManager.signIn().
- */
-export interface SignInParams {
-  /** Challenge / nonce issued by the auth backend. */
-  challenge: string;
-  /**
-   * How the challenge is turned into the signed bytes (default: 'auto').
-   * 'utf8' signs the string's UTF-8 bytes; 'hex' signs the bytes the (optionally 0x-prefixed) hex string encodes;
-   * 'auto' treats only a `0x` prefix followed by even-length hex as hex and everything else as UTF-8.
-   */
-  challengeEncoding?: 'auto' | 'utf8' | 'hex';
-  /** Address used to sign (optional; resolved from the client when omitted). */
-  address?: string;
-  /** Existing JWT, if one was already issued (optional). */
-  token?: string;
-  /** Callback that sends the signature to the auth backend and returns a JWT (optional). */
-  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
-  /** CIP-8 signing options (for example a timeout override). */
-  signOptions?: SignOptions;
-}
-
-/**
- * Minimal wallet client surface required by the auth manager.
- */
-export interface IAuthSignerClient {
-  signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
-  getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]>;
-  getChangeAddress?(options?: QueryOptions): Promise<string>;
-  onHostEvent?(event: string, handler: (payload: unknown) => void): UnsubscribeFn;
-}
-
-/**
- * Options for the auth manager.
- */
-export interface AuthManagerOptions {
-  /** WalletBridgeClient instance or any object implementing IAuthSignerClient. */
-  client: IAuthSignerClient;
-  /** Storage adapter that persists the token (for example HostStorageRelayAdapter). */
-  storage: IStorage;
-  /** Storage key for the JWT (default: 'hydra:sdk:auth:token'). */
-  tokenStorageKey?: string;
-  /** Storage key for the player address (default: 'hydra:sdk:auth:address'). */
-  addressStorageKey?: string;
-  /** Clock tolerance in seconds applied when checking JWT expiry (default: 0). */
-  clockToleranceSeconds?: number;
-  /** Default callback that exchanges a signature for a JWT when signIn does not receive one (optional). */
-  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
-}
-
-/** Alias of AuthManagerOptions. */
-export type GameAuthManagerOptions = AuthManagerOptions;
-
-/**
- * Listener for authentication state changes.
- */
-export type AuthStateHandler = (state: AuthState) => void;
 
 // ==========================================
 // Game Lifecycle & Host Events Types

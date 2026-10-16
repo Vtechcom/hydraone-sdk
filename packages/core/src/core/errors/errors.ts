@@ -6,7 +6,6 @@ export const ERROR_CODES = {
   ERR_USER_REJECTED: 'ERR_USER_REJECTED',
   ERR_NOT_IN_IFRAME: 'ERR_NOT_IN_IFRAME',
   ERR_UNTRUSTED_ORIGIN: 'ERR_UNTRUSTED_ORIGIN',
-  ERR_AUTH_EXPIRED: 'ERR_AUTH_EXPIRED',
   ERR_STORAGE_UNAVAILABLE: 'ERR_STORAGE_UNAVAILABLE',
   ERR_NOT_CONNECTED: 'ERR_NOT_CONNECTED',
   ERR_INVALID_PARAMS: 'ERR_INVALID_PARAMS',
@@ -115,18 +114,6 @@ export class HydraSecurityError extends HydraBridgeError {
   constructor(message = 'Untrusted message origin or source', details?: unknown) {
     super(message, ERROR_CODES.ERR_UNTRUSTED_ORIGIN, details);
     this.name = 'HydraSecurityError';
-  }
-}
-
-/**
- * Thrown when Web3 authentication fails or the JWT session has expired.
- */
-export class HydraAuthError extends HydraBridgeError {
-  public override readonly name: string = 'HydraAuthError';
-
-  constructor(message = 'User authentication session has expired', details?: unknown) {
-    super(message, ERROR_CODES.ERR_AUTH_EXPIRED, details);
-    this.name = 'HydraAuthError';
   }
 }
 

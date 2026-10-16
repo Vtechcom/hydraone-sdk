@@ -117,12 +117,12 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const getItemPromise = adapter.getItem('hydra:sdk:auth:token');
+      const getItemPromise = adapter.getItem('hydra:sdk:session:token');
 
       expect(transport.sentMessages.length).toBe(1);
       const sent = transport.sentMessages[0];
       expect(sent.type).toBe('HOST_STORAGE_GET');
-      expect(sent.payload).toEqual({ key: 'hydra:sdk:auth:token' });
+      expect(sent.payload).toEqual({ key: 'hydra:sdk:session:token' });
 
       // The Host Shell sends an RPC_RESPONSE
       transport.simulateHostResponse({
@@ -166,7 +166,7 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const getItemPromise = adapter.getItem('hydra:sdk:auth:not_found');
+      const getItemPromise = adapter.getItem('hydra:sdk:session:not_found');
       const sent = transport.sentMessages[0];
 
       transport.simulateHostResponse({
@@ -212,13 +212,13 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const setPromise = adapter.setItem('hydra:sdk:auth:jwt', 'new_jwt_payload');
+      const setPromise = adapter.setItem('hydra:sdk:session:token', 'new_jwt_payload');
 
       expect(transport.sentMessages.length).toBe(1);
       const sent = transport.sentMessages[0];
       expect(sent.type).toBe('HOST_STORAGE_SET');
       expect(sent.payload).toEqual({
-        key: 'hydra:sdk:auth:jwt',
+        key: 'hydra:sdk:session:token',
         value: 'new_jwt_payload',
       });
 
@@ -242,12 +242,12 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const removePromise = adapter.removeItem('hydra:sdk:auth:jwt');
+      const removePromise = adapter.removeItem('hydra:sdk:session:token');
 
       expect(transport.sentMessages.length).toBe(1);
       const sent = transport.sentMessages[0];
       expect(sent.type).toBe('HOST_STORAGE_REMOVE');
-      expect(sent.payload).toEqual({ key: 'hydra:sdk:auth:jwt' });
+      expect(sent.payload).toEqual({ key: 'hydra:sdk:session:token' });
 
       transport.simulateHostResponse({
         id: 'host-resp-remove',
@@ -294,10 +294,10 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 50 });
 
-      await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.getItem('hydra:sdk:session:token')).rejects.toThrow(HydraStorageError);
 
       try {
-        await adapter.getItem('hydra:sdk:auth:token');
+        await adapter.getItem('hydra:sdk:session:token');
       } catch (err: any) {
         expect(err).toBeInstanceOf(HydraStorageError);
         expect(err.code).toBe(ERROR_CODES.ERR_STORAGE_UNAVAILABLE);
@@ -309,12 +309,12 @@ describe('HostStorageRelayAdapter', () => {
       transport.shouldFailSend = true;
       const adapter = new HostStorageRelayAdapter(transport);
 
-      await expect(adapter.setItem('hydra:sdk:auth:token', 'val')).rejects.toThrow(
+      await expect(adapter.setItem('hydra:sdk:session:token', 'val')).rejects.toThrow(
         HydraStorageError,
       );
 
       try {
-        await adapter.setItem('hydra:sdk:auth:token', 'val');
+        await adapter.setItem('hydra:sdk:session:token', 'val');
       } catch (err: any) {
         expect(err).toBeInstanceOf(HydraStorageError);
         expect(err.code).toBe(ERROR_CODES.ERR_STORAGE_UNAVAILABLE);
@@ -325,7 +325,7 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'val');
+      const setPromise = adapter.setItem('hydra:sdk:session:token', 'val');
       const sent = transport.sentMessages[0];
 
       transport.simulateHostResponse({
@@ -359,9 +359,9 @@ describe('HostStorageRelayAdapter', () => {
       adapter.destroy();
       expect(adapter.isDestroyed).toBe(true);
 
-      await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
-      await expect(adapter.setItem('hydra:sdk:auth:token', '1')).rejects.toThrow(HydraStorageError);
-      await expect(adapter.removeItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.getItem('hydra:sdk:session:token')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.setItem('hydra:sdk:session:token', '1')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.removeItem('hydra:sdk:session:token')).rejects.toThrow(HydraStorageError);
       await expect(adapter.clear()).rejects.toThrow(HydraStorageError);
     });
 
@@ -369,7 +369,7 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 5000 });
 
-      const inFlightPromise = adapter.getItem('hydra:sdk:auth:token');
+      const inFlightPromise = adapter.getItem('hydra:sdk:session:token');
 
       adapter.destroy();
 
@@ -400,7 +400,7 @@ describe('HostStorageRelayAdapter', () => {
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
 
       // 1. setItem
-      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'postmessage_jwt');
+      const setPromise = adapter.setItem('hydra:sdk:session:token', 'postmessage_jwt');
       expect(targetWindow.sentMessages.length).toBe(1);
       const setSent = targetWindow.sentMessages[0].message as BridgeMessage;
       expect(setSent.type).toBe('HOST_STORAGE_SET');
@@ -424,7 +424,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(setPromise).resolves.toBeUndefined();
 
       // 2. getItem
-      const getPromise = adapter.getItem('hydra:sdk:auth:token');
+      const getPromise = adapter.getItem('hydra:sdk:session:token');
       expect(targetWindow.sentMessages.length).toBe(2);
       const getSent = targetWindow.sentMessages[1].message as BridgeMessage;
       expect(getSent.type).toBe('HOST_STORAGE_GET');
@@ -463,7 +463,7 @@ describe('HostStorageRelayAdapter', () => {
 
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 50 });
 
-      await expect(adapter.getItem('hydra:sdk:auth:token')).rejects.toThrow(HydraStorageError);
+      await expect(adapter.getItem('hydra:sdk:session:token')).rejects.toThrow(HydraStorageError);
     });
 
     it('completes removeItem and clear over PostMessageTransport', async () => {
@@ -482,11 +482,11 @@ describe('HostStorageRelayAdapter', () => {
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
 
       // 1. removeItem
-      const removePromise = adapter.removeItem('hydra:sdk:auth:token');
+      const removePromise = adapter.removeItem('hydra:sdk:session:token');
       expect(targetWindow.sentMessages.length).toBe(1);
       const removeSent = targetWindow.sentMessages[0].message as BridgeMessage;
       expect(removeSent.type).toBe('HOST_STORAGE_REMOVE');
-      expect(removeSent.payload).toEqual({ key: 'hydra:sdk:auth:token' });
+      expect(removeSent.payload).toEqual({ key: 'hydra:sdk:session:token' });
 
       sourceWindow.dispatch('message', {
         origin: 'https://host.hydraone.app',
@@ -545,7 +545,7 @@ describe('HostStorageRelayAdapter', () => {
 
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 1000 });
 
-      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'jwt');
+      const setPromise = adapter.setItem('hydra:sdk:session:token', 'jwt');
       const sent = targetWindow.sentMessages[0].message as BridgeMessage;
 
       sourceWindow.dispatch('message', {
@@ -581,15 +581,13 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const authKey = buildStorageKey('auth', 'token');
       const sessionKey = buildStorageKey('session', 'checkpoint');
 
-      expect(authKey).toBe('hydra:sdk:auth:token');
       expect(sessionKey).toBe('hydra:sdk:session:checkpoint');
 
-      const setPromise = adapter.setItem(authKey, 'secret_token');
+      const setPromise = adapter.setItem(sessionKey, 'level_3');
       const sent = transport.sentMessages[0];
-      expect(sent.payload).toEqual({ key: authKey, value: 'secret_token' });
+      expect(sent.payload).toEqual({ key: sessionKey, value: 'level_3' });
 
       transport.simulateHostResponse({
         id: 'ack-1',
@@ -619,7 +617,7 @@ describe('HostStorageRelayAdapter', () => {
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
       // Return the number 42
-      const getItemPromise1 = adapter.getItem('hydra:sdk:auth:count');
+      const getItemPromise1 = adapter.getItem('hydra:sdk:session:count');
       const sent1 = transport.sentMessages[0];
       transport.simulateHostResponse({
         id: 'resp-num',
@@ -634,7 +632,7 @@ describe('HostStorageRelayAdapter', () => {
       expect(await getItemPromise1).toBe('42');
 
       // Return boolean true
-      const getItemPromise2 = adapter.getItem('hydra:sdk:auth:verified');
+      const getItemPromise2 = adapter.getItem('hydra:sdk:session:verified');
       const sent2 = transport.sentMessages[1];
       transport.simulateHostResponse({
         id: 'resp-bool',
@@ -664,7 +662,7 @@ describe('HostStorageRelayAdapter', () => {
 
       const adapter = new HostStorageRelayAdapter(pmTransport, { timeoutMs: 15000 });
 
-      const inFlightPromise = adapter.getItem('hydra:sdk:auth:token');
+      const inFlightPromise = adapter.getItem('hydra:sdk:session:token');
       expect(targetWindow.sentMessages.length).toBe(1);
 
       // Call destroy() right away without dispatching any host response
@@ -706,7 +704,7 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const setPromise = adapter.setItem('hydra:sdk:auth:token', 'val');
+      const setPromise = adapter.setItem('hydra:sdk:session:token', 'val');
       const sent = transport.sentMessages[0];
 
       transport.simulateHostResponse({

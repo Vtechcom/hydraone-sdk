@@ -1,4 +1,4 @@
-import type { Ref, ComputedRef } from 'vue';
+import type { Ref } from 'vue';
 import type {
   ConnectionState,
   HostInfo,
@@ -11,12 +11,8 @@ import type {
   DepositModalOptions,
   PlayerProfile,
   WalletBridgeClientOptions,
-  AuthSession,
-  AuthState,
-  SignInParams,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
-import type { GameAuthManager } from '../core/auth';
 
 /**
  * Configuration options for the useWalletBridgeClient composable
@@ -166,99 +162,4 @@ export interface UseWalletBridgeClientReturn {
    * Fetches the player profile from the App Center host
    */
   getPlayerProfile: () => Promise<PlayerProfile>;
-}
-
-/**
- * Configuration options for the useGameAuth composable
- */
-export interface UseGameAuthOptions {
-  /**
-   * Existing GameAuthManager instance.
-   * If omitted, the composable creates a new instance or uses the shared default.
-   */
-  authManager?: GameAuthManager;
-
-  /**
-   * Client used when a new GameAuthManager is created
-   */
-  client?: WalletBridgeClient;
-
-  /**
-   * Origin of the Host Shell, used to build the shared client when none exists yet.
-   * Ignored when `client` or `authManager` is given, or when the shared client already exists.
-   */
-  appCenterOrigin?: string | string[];
-
-  /**
-   * Checks the saved session (checkSession) when the component mounts on the client.
-   * Defaults to true.
-   */
-  autoCheckSession?: boolean;
-}
-
-/**
- * Value returned by the useGameAuth composable
- */
-export interface UseGameAuthReturn {
-  /**
-   * GameAuthManager instance in use
-   */
-  authManager: GameAuthManager;
-
-  /**
-   * Whether the user is authenticated with a valid JWT session
-   */
-  isAuthenticated: Ref<boolean>;
-
-  /**
-   * Current JWT string or null
-   */
-  jwtToken: Ref<string | null>;
-
-  /**
-   * Cardano wallet address bound to the current session
-   */
-  address: Ref<string | null>;
-
-  /**
-   * All claims decoded from the JWT payload
-   */
-  claims: Ref<Record<string, unknown> | null>;
-
-  /**
-   * Computed flag telling whether the current JWT has expired
-   */
-  isExpired: ComputedRef<boolean>;
-
-  /**
-   * Error raised during sign-in or authentication
-   */
-  error: Ref<Error | null>;
-
-  // --- Actions ---
-
-  /**
-   * Performs the one-click CIP-8 Web3 sign-in
-   */
-  signIn: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Alias for signIn()
-   */
-  login: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Signs out and clears the stored JWT session
-   */
-  signOut: () => Promise<void>;
-
-  /**
-   * Alias for signOut()
-   */
-  logout: () => Promise<void>;
-
-  /**
-   * Checks for a session saved in storage
-   */
-  checkSession: () => Promise<AuthState>;
 }

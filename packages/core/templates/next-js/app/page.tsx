@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
+import { useWallet } from '@hydraone-sdk/core/react';
 import type { BridgeHealthReport } from '@hydraone-sdk/core';
 import { isEmbedded } from '../lib/hydra';
 
@@ -20,7 +20,6 @@ export default function Home() {
   const [health, setHealth] = useState<BridgeHealthReport | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const { client, isConnected, address, balanceADA, connect, disconnect } = useWallet();
-  const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   const embedded = isEmbedded();
 
@@ -45,7 +44,6 @@ export default function Home() {
             <Row label="Mode" value={embedded ? 'Embedded in host' : 'Standalone tab'} />
             <Row label="Connection status" value={isConnected ? 'Connected' : 'Disconnected'} />
             <Row label="ADA balance" value={`${balanceADA || '0.000000'} ADA`} />
-            <Row label="CIP-8 session" value={isAuthenticated ? 'Signed in' : 'Signed out'} />
           </div>
 
           {error && (
@@ -62,21 +60,6 @@ export default function Home() {
             ) : (
               <button onClick={() => disconnect()} style={{ ...buttonBase, background: '#475569' }}>
                 Disconnect
-              </button>
-            )}
-
-            {isConnected && !isAuthenticated && (
-              <button
-                onClick={() => signIn({ challenge: 'HydraOne Game Login Challenge' }).then(() => setError(null), setError)}
-                style={{ ...buttonBase, background: '#10b981' }}
-              >
-                1-click CIP-8 sign in
-              </button>
-            )}
-
-            {isAuthenticated && (
-              <button onClick={() => signOut()} style={{ ...buttonBase, background: 'transparent', border: '1px solid #64748b', color: '#e2e8f0' }}>
-                Sign out
               </button>
             )}
 

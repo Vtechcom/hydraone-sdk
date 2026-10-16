@@ -28,10 +28,6 @@
             <span class="label">ADA balance:</span>
             <span class="val">{{ balanceADA || '0.000000' }} ADA</span>
           </div>
-          <div class="status-item">
-            <span class="label">CIP-8 session:</span>
-            <span class="val">{{ isAuthenticated ? 'Signed in' : 'Signed out' }}</span>
-          </div>
         </div>
 
         <div class="actions">
@@ -42,12 +38,6 @@
             Disconnect
           </button>
 
-          <button v-if="isConnected && !isAuthenticated" class="btn accent" @click="handleSignIn">
-            1-click CIP-8 sign in
-          </button>
-          <button v-if="isAuthenticated" class="btn outline" @click="handleSignOut">
-            Sign out
-          </button>
           <button class="btn outline" @click="handleHealthCheck">Check host bridge</button>
         </div>
 
@@ -61,7 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import type { BridgeHealthReport } from '@hydraone-sdk/core';
-import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
+import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
 const projectName = '{{PROJECT_NAME}}';
 const config = useRuntimeConfig();
@@ -75,7 +65,6 @@ const embedded = ref(false);
 const health = ref<BridgeHealthReport | null>(null);
 const { client, isConnected, address, balanceADA, error, connect, disconnect } =
   useWalletBridgeClient({ autoConnect: import.meta.client && isEmbedded() });
-const { isAuthenticated, signIn, signOut } = useGameAuth();
 
 const healthText = computed(() =>
   health.value
@@ -92,14 +81,6 @@ async function handleConnect() {
 
 async function handleDisconnect() {
   await disconnect();
-}
-
-async function handleSignIn() {
-  await signIn({ challenge: 'HydraOne Game Login Challenge' }).catch(() => {});
-}
-
-async function handleSignOut() {
-  await signOut();
 }
 
 async function handleHealthCheck() {
@@ -202,10 +183,6 @@ onMounted(() => {
 }
 .btn.secondary {
   background: #475569;
-  color: white;
-}
-.btn.accent {
-  background: #10b981;
   color: white;
 }
 .btn.outline {

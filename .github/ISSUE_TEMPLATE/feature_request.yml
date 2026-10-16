@@ -27,7 +27,6 @@ body:
       label: Area
       options:
         - Core client or transports
-        - Authentication
         - Storage
         - React adapter
         - Vue adapter

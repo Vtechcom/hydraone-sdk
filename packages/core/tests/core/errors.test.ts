@@ -6,7 +6,6 @@ import {
   HydraUserRejectedError,
   HydraTransportError,
   HydraSecurityError,
-  HydraAuthError,
   HydraStorageError,
 } from '../../src';
 
@@ -83,7 +82,6 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(new HydraUserRejectedError().name).toBe('HydraUserRejectedError');
     expect(new HydraTransportError().name).toBe('HydraTransportError');
     expect(new HydraSecurityError().name).toBe('HydraSecurityError');
-    expect(new HydraAuthError().name).toBe('HydraAuthError');
     expect(new HydraStorageError().name).toBe('HydraStorageError');
   });
 
@@ -94,14 +92,6 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(error).toBeInstanceOf(HydraSecurityError);
     expect(error.code).toBe(ERROR_CODES.ERR_UNTRUSTED_ORIGIN);
     expect(error.details).toEqual({ origin: 'evil.com' });
-  });
-
-  it('should create HydraAuthError with code ERR_AUTH_EXPIRED', () => {
-    const error = new HydraAuthError('JWT session has expired', { expiredAt: 1700000000 });
-
-    expect(error).toBeInstanceOf(HydraBridgeError);
-    expect(error).toBeInstanceOf(HydraAuthError);
-    expect(error.code).toBe(ERROR_CODES.ERR_AUTH_EXPIRED);
   });
 
   it('should create HydraStorageError with code ERR_STORAGE_UNAVAILABLE', () => {

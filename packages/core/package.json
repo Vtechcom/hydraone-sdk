@@ -1,7 +1,7 @@
 {
   "name": "@hydraone-sdk/core",
   "version": "0.1.0",
-  "description": "Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth and React/Vue adapters",
+  "description": "Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 data signing and React/Vue adapters",
   "keywords": [
     "cardano",
     "hydra",

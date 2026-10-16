@@ -128,9 +128,9 @@ describe('Abstract Ports Verification', () => {
 
     it('should set and get values correctly', async () => {
       const storage = new MockStorage();
-      await storage.setItem('hydra:sdk:auth:token', 'jwt.header.payload');
+      await storage.setItem('hydra:sdk:session:token', 'jwt.header.payload');
 
-      const retrieved = await storage.getItem('hydra:sdk:auth:token');
+      const retrieved = await storage.getItem('hydra:sdk:session:token');
       expect(retrieved).toBe('jwt.header.payload');
     });
 

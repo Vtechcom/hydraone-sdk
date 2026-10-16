@@ -6,6 +6,27 @@
 
 Tài liệu này liệt kê các breaking change và cách chuyển sang phiên bản mới. Mỗi mục dành cho việc nâng cấp lên phiên bản được nêu tên.
 
+## Từ 0.1.x lên 0.2.0
+
+### Đã xóa module auth
+
+SDK không còn quản lý đăng nhập hay phiên JWT. Các export sau đã bị xóa:
+
+- `@hydraone-sdk/core`: `GameAuthManager` (alias `AuthManager`), `parseJwt`, `isJwtExpired`, `stringToHex`, `hexToString`, `HydraAuthError`, `ERROR_CODES.ERR_AUTH_EXPIRED`, và các type `AuthState`, `AuthSession`, `AuthSignaturePayload`, `SignInParams`, `AuthManagerOptions`, `GameAuthManagerOptions`, `IAuthSignerClient`, `AuthStateHandler`. `'AUTH_STATE_CHANGED'` không còn là một `BridgeMessageType`. Namespace storage `auth` cũng đã bị xóa: `STORAGE_AUTH_PREFIX`, `isAuthStorageKey` và `buildStorageKey('auth', …)`; hãy dùng `buildStorageKey('session', …)` hoặc key của riêng bạn.
+- `@hydraone-sdk/core/react`: `useHydraAuth`, `UseHydraAuthOptions`, `UseHydraAuthReturn`, prop `authManager` của `HydraOneProvider` và trường `authManager` trong context.
+- `@hydraone-sdk/core/vue`: `useGameAuth`, `getSharedGameAuthManager`, `setSharedGameAuthManager`, `HYDRA_AUTH_KEY`, `UseGameAuthOptions`, `UseGameAuthReturn`, và option `storage` của `createHydraOne`.
+
+`client.signData()` (CIP-8) vẫn hoạt động. Nếu cần luồng đăng nhập, hãy tự ký challenge rồi gửi kết quả lên backend:
+
+```ts
+const [address] = await client.getUsedAddresses();
+const payloadHex = Array.from(new TextEncoder().encode(challenge), (b) =>
+  b.toString(16).padStart(2, '0'),
+).join('');
+const { signature, key } = await client.signData(address, payloadHex);
+// Gửi { address, signature, key, challenge } lên backend, rồi lưu token mà backend trả về.
+```
+
 ## Từ bản pre-release lên 0.1.0
 
 0.1.0 là bản phát hành công khai đầu tiên. Nếu bạn từng dùng bản nội bộ hoặc bản pre-release, hãy áp dụng các thay đổi dưới đây. Tên package vẫn là `@hydraone-sdk/core`.

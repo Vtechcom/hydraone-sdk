@@ -34,11 +34,11 @@ We publish a GitHub security advisory and a patched release when a fix ships, an
 
 ## Scope
 
-In scope: the code published as `@hydraone-sdk/core` and `@hydraone-sdk/host`, including the message validation in `PostMessageTransport`, the storage adapters, the authentication helpers and the CLI templates.
+In scope: the code published as `@hydraone-sdk/core` and `@hydraone-sdk/host`, including the message validation in `PostMessageTransport`, the storage adapters and the CLI templates.
 
 Out of scope: vulnerabilities in wallet extensions, in the HydraOne host application itself, in your own backend, or in third-party dependencies that are not reachable through this package. Report those to their owners.
 
 ## Notes for integrators
 
 - Always set `appCenterOrigin` to the exact host origin. A wildcard is rejected in production.
-- Verify CIP-8 signatures and issue JWTs on your own server. The SDK decodes tokens and checks expiry but does not verify signatures.
+- Verify CIP-8 signatures from `signData` on your own server. The SDK does not verify signatures.

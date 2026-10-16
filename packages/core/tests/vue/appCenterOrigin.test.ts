@@ -2,10 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { effectScope } from 'vue';
 import {
   useWalletBridgeClient,
-  getSharedWalletBridgeClient,
   setSharedWalletBridgeClient,
 } from '../../src/vue/useWalletBridgeClient';
-import { useGameAuth, setSharedGameAuthManager } from '../../src/vue/useGameAuth';
 import { WalletBridgeClient } from '../../src/core/client';
 import { PostMessageTransport } from '../../src/core/adapters/transport/post-message-transport';
 
@@ -78,42 +76,5 @@ describe('useWalletBridgeClient with appCenterOrigin', () => {
     expect(result.client.transport).toBeInstanceOf(PostMessageTransport);
     scope.stop();
     result.client.destroy();
-  });
-});
-
-describe('useGameAuth client resolution', () => {
-  beforeEach(() => {
-    (globalThis as any).window = globalThis;
-    setSharedWalletBridgeClient(null);
-    setSharedGameAuthManager(null);
-  });
-
-  afterEach(() => {
-    getSharedWalletBridgeClient({ appCenterOrigin: ORIGIN }).destroy();
-    setSharedWalletBridgeClient(null);
-    setSharedGameAuthManager(null);
-    delete (globalThis as any).window;
-  });
-
-  it('reuses the client created by useWalletBridgeClient({ appCenterOrigin })', () => {
-    const scope = effectScope();
-    const wallet = scope.run(() => useWalletBridgeClient({ appCenterOrigin: ORIGIN }))!;
-    const auth = scope.run(() => useGameAuth())!;
-
-    expect(auth.authManager).toBeDefined();
-    expect(wallet.client.transport).toBeInstanceOf(PostMessageTransport);
-    // useGameAuth must not replace the transport-backed client with a bare one
-    expect(getSharedWalletBridgeClient().transport).toBe(wallet.client.transport);
-    scope.stop();
-    wallet.client.destroy();
-  });
-
-  it('builds the auth client with appCenterOrigin when it runs first', () => {
-    const scope = effectScope();
-    scope.run(() => useGameAuth({ appCenterOrigin: ORIGIN }));
-
-    expect(getSharedWalletBridgeClient().transport).toBeInstanceOf(PostMessageTransport);
-    scope.stop();
-    getSharedWalletBridgeClient().destroy();
   });
 });
