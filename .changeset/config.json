@@ -10,6 +10,9 @@
   "ignore": [
     "@hydraone-sdk/template-next-js",
     "@hydraone-sdk/template-nuxt",
-    "@hydraone-sdk/docs"
+    "@hydraone-sdk/docs",
+    "@hydraone-sdk/playground",
+    "@hydraone-sdk/playground-host",
+    "@hydraone-sdk/playground-client"
   ]
 }
