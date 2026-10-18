@@ -109,14 +109,14 @@ export function createHost(options: HostOptions): Host {
   function notifyDisconnected() {
     if (disconnectNotified) return;
     disconnectNotified = true;
-    notify('DISCONNECTED');
+    notify('WALLET_DISCONNECTED');
   }
 
   function requireWallet(): string {
     const address = wallet.getAddress();
     if (!wallet.isConnected() || !address) {
       throw new HostRpcError(
-        HOST_ERROR_CODES.ERR_NOT_CONNECTED,
+        HOST_ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
         'Wallet is not connected in the host',
       );
     }
@@ -125,19 +125,20 @@ export function createHost(options: HostOptions): Host {
 
   function hostInfo(): HostInfo {
     const embedded = wallet.isEmbedded();
-    const name = embedded ? (options.embeddedWalletName ?? 'HydraOne Wallet') : 'CIP-30 Wallet';
+    const name = embedded
+      ? (options.embeddedWalletName ?? 'HydraOne Wallet')
+      : (wallet.getExtension()?.name ?? 'CIP-30 Wallet');
     // A function option is always current; otherwise the last setLanguage wins over the static value.
     const language =
       typeof options.language === 'function'
         ? options.language()
         : (currentLanguage ?? options.language);
     return {
-      appName: options.hostName ?? DEFAULT_HOST_NAME,
+      hostName: options.hostName ?? DEFAULT_HOST_NAME,
       hostVersion: options.hostVersion ?? DEFAULT_HOST_VERSION,
       network: resolveValue(options.network ?? 'preprod'),
       theme: resolveValue(options.theme ?? 'dark'),
       ...(language !== undefined ? { language } : {}),
-      walletName: name,
       wallet: { name, icon: embedded ? '' : (wallet.getExtension()?.icon ?? '') },
     };
   }
@@ -395,7 +396,7 @@ export function createHost(options: HostOptions): Host {
         notifyDisconnected();
       }
     },
-    handleConnectionChange(connected) {
+    handleWalletConnectionChange(connected) {
       if (connected) disconnectNotified = false;
       else notifyDisconnected();
     },

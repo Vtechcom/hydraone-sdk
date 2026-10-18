@@ -282,7 +282,7 @@ describe('useWalletBridgeClient', () => {
     await vi.waitFor(() => expect(address.value).toBeNull());
   });
 
-  it('ignores an address query that resolves after a newer one or after DISCONNECTED', async () => {
+  it('ignores an address query that resolves after a newer one or after WALLET_DISCONNECTED', async () => {
     const { address, init, refreshAddress } = useWalletBridgeClient({ client });
 
     await init();
@@ -293,7 +293,7 @@ describe('useWalletBridgeClient', () => {
 
     mockTransport.simulateMessage({
       id: 'evt_5',
-      type: 'DISCONNECTED',
+      type: 'WALLET_DISCONNECTED',
       timestamp: Date.now(),
       source: 'hydra-host',
     });
@@ -303,17 +303,21 @@ describe('useWalletBridgeClient', () => {
     expect(address.value).toBeNull();
   });
 
-  it('marks the wallet connected again when ACCOUNT_CHANGED follows DISCONNECTED', async () => {
-    const { address, isConnected, connectionState, init } = useWalletBridgeClient({ client });
+  it('marks the wallet connected again when ACCOUNT_CHANGED follows WALLET_DISCONNECTED', async () => {
+    const { address, isConnected, isWalletConnected, connectionState, init } =
+      useWalletBridgeClient({ client });
 
     await init();
     mockTransport.simulateMessage({
       id: 'evt_5',
-      type: 'DISCONNECTED',
+      type: 'WALLET_DISCONNECTED',
       timestamp: Date.now(),
       source: 'hydra-host',
     });
-    expect(isConnected.value).toBe(false);
+    // Only the wallet left; the bridge itself stays connected.
+    expect(isConnected.value).toBe(true);
+    expect(connectionState.value).toBe('connected');
+    expect(isWalletConnected.value).toBe(false);
 
     mockTransport.changeAddressHex = addressToHex(NEW_ADDRESS);
     mockTransport.simulateMessage({
@@ -326,6 +330,7 @@ describe('useWalletBridgeClient', () => {
     expect(isConnected.value).toBe(true);
     expect(connectionState.value).toBe('connected');
     await vi.waitFor(() => expect(address.value).toBe(NEW_ADDRESS));
+    expect(isWalletConnected.value).toBe(true);
   });
 
   it('forwards the signTx, submitTx and signData wallet actions through the composable', async () => {
@@ -392,7 +397,7 @@ describe('useWalletBridgeClient', () => {
 
   it('does not report an error when the host wallet is connected after the game', async () => {
     const notConnected = {
-      code: 'ERR_NOT_CONNECTED',
+      code: 'ERR_WALLET_NOT_CONNECTED',
       message: 'Wallet is not connected in the host',
     };
     mockTransport.balanceError = notConnected;
@@ -431,14 +436,14 @@ describe('useWalletBridgeClient', () => {
     expect(error.value).toBeNull();
   });
 
-  it('clears a balance error when the host wallet then reports ERR_NOT_CONNECTED', async () => {
+  it('clears a balance error when the host wallet then reports ERR_WALLET_NOT_CONNECTED', async () => {
     mockTransport.balanceError = { code: 'ERR_RPC_FAILED', message: 'Backend unavailable' };
     const { error, init, refreshBalance } = useWalletBridgeClient({ client });
 
     await init();
     expect(error.value?.message).toBe('Backend unavailable');
 
-    mockTransport.balanceError = { code: 'ERR_NOT_CONNECTED', message: 'No wallet' };
+    mockTransport.balanceError = { code: 'ERR_WALLET_NOT_CONNECTED', message: 'No wallet' };
     await expect(refreshBalance()).rejects.toBeDefined();
     expect(error.value).toBeNull();
   });

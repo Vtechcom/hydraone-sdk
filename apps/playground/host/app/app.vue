@@ -274,7 +274,7 @@ async function connectWallet(key: string) {
     api.value = cip30;
     networkId.value = nextNetwork;
     address.value = nextAddress;
-    host?.handleConnectionChange(true);
+    host?.handleWalletConnectionChange(true);
     await host?.handleAddressChange(nextAddress, previous);
     await refreshBalance(cip30).catch(() => undefined);
     startPolling();
@@ -283,7 +283,7 @@ async function connectWallet(key: string) {
       (err as { info?: string; message?: string }).info ?? (err as Error).message ?? String(err);
     forgetWallet();
     resetWallet();
-    if (previous) host?.handleConnectionChange(false);
+    if (previous) host?.handleWalletConnectionChange(false);
   } finally {
     connecting.value = null;
   }
@@ -292,7 +292,7 @@ async function connectWallet(key: string) {
 function disconnectWallet() {
   forgetWallet();
   resetWallet();
-  host?.handleConnectionChange(false);
+  host?.handleWalletConnectionChange(false);
 }
 
 async function poll(cip30: Cip30Api) {

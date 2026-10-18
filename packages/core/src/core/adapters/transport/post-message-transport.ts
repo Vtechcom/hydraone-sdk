@@ -52,7 +52,10 @@ export class PostMessageTransport implements ITransport {
       rawOrigins.length === 0 ||
       rawOrigins.some((o) => typeof o !== 'string' || o.trim() === '')
     ) {
-      throw new HydraTransportError('appCenterOrigin must be provided');
+      throw new HydraTransportError(
+        'appCenterOrigin must be provided',
+        ERROR_CODES.ERR_INVALID_OPTIONS,
+      );
     }
 
     // A wildcard makes every other entry redundant, so it collapses the list to '*'
@@ -68,10 +71,16 @@ export class PostMessageTransport implements ITransport {
           try {
             origin = new URL(trimmed).origin;
           } catch {
-            throw new HydraTransportError(`appCenterOrigin "${trimmed}" is not a valid origin`);
+            throw new HydraTransportError(
+              `appCenterOrigin "${trimmed}" is not a valid origin`,
+              ERROR_CODES.ERR_INVALID_OPTIONS,
+            );
           }
           if (origin === 'null') {
-            throw new HydraTransportError(`appCenterOrigin "${trimmed}" is not a valid origin`);
+            throw new HydraTransportError(
+              `appCenterOrigin "${trimmed}" is not a valid origin`,
+              ERROR_CODES.ERR_INVALID_OPTIONS,
+            );
           }
           return origin;
         }),
@@ -186,7 +195,7 @@ export class PostMessageTransport implements ITransport {
           entry.state = 'Rejected';
           this.inFlightMap.delete(correlationId);
           const errInfo = rpcPayload?.error;
-          const errCode = errInfo?.code || 'ERR_RPC_FAILED';
+          const errCode = errInfo?.code || ERROR_CODES.ERR_RPC_FAILED;
           const errMsg = errInfo?.message || 'RPC request failed from Host Shell';
 
           let error: HydraBridgeError;
@@ -221,7 +230,10 @@ export class PostMessageTransport implements ITransport {
    */
   public async send(message: BridgeMessage): Promise<void> {
     if (this.isDestroyed) {
-      throw new HydraTransportError('Transport has been destroyed');
+      throw new HydraTransportError(
+        'Transport has been destroyed',
+        ERROR_CODES.ERR_TRANSPORT_UNAVAILABLE,
+      );
     }
 
     const target = this.resolveTargetWindow();
@@ -250,7 +262,7 @@ export class PostMessageTransport implements ITransport {
     } catch (err) {
       throw new HydraTransportError(
         `Failed to send postMessage: ${errorMessage(err, 'Unable to serialize message')}`,
-        'ERR_POSTMESSAGE_FAILED',
+        ERROR_CODES.ERR_POSTMESSAGE_FAILED,
         err,
       );
     }
@@ -265,7 +277,10 @@ export class PostMessageTransport implements ITransport {
     timeoutMs?: number,
   ): Promise<BridgeMessage<T>> {
     if (this.isDestroyed) {
-      throw new HydraTransportError('Transport has been destroyed');
+      throw new HydraTransportError(
+        'Transport has been destroyed',
+        ERROR_CODES.ERR_TRANSPORT_UNAVAILABLE,
+      );
     }
 
     const id = message.id || this.generateId();
@@ -350,7 +365,12 @@ export class PostMessageTransport implements ITransport {
         clearTimeout(entry.timeoutTimer);
       }
       entry.state = 'Cancelled';
-      entry.reject(new HydraTransportError('Transport has been destroyed'));
+      entry.reject(
+        new HydraTransportError(
+          'Transport has been destroyed',
+          ERROR_CODES.ERR_TRANSPORT_UNAVAILABLE,
+        ),
+      );
     }
 
     this.inFlightMap.clear();

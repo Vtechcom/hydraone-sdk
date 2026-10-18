@@ -54,13 +54,13 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(error.code).toBe(ERROR_CODES.ERR_USER_REJECTED);
   });
 
-  it('should create HydraTransportError with code ERR_NOT_IN_IFRAME by default, custom code, or details as 2nd arg', () => {
+  it('should create HydraTransportError with code ERR_TRANSPORT_FAILED by default, custom code, or details as 2nd arg', () => {
     const defaultError = new HydraTransportError();
-    expect(defaultError.code).toBe(ERROR_CODES.ERR_NOT_IN_IFRAME);
+    expect(defaultError.code).toBe(ERROR_CODES.ERR_TRANSPORT_FAILED);
 
     // Pass details as 2nd argument
     const detailsOnlyError = new HydraTransportError('Fallback failed', { attempts: 3 });
-    expect(detailsOnlyError.code).toBe(ERROR_CODES.ERR_NOT_IN_IFRAME);
+    expect(detailsOnlyError.code).toBe(ERROR_CODES.ERR_TRANSPORT_FAILED);
     expect(detailsOnlyError.details).toEqual({ attempts: 3 });
 
     // Pass custom code as 2nd argument
@@ -71,9 +71,9 @@ describe('HydraBridgeError & Error Hierarchy', () => {
     expect(customError.details).toEqual({ port: 8080 });
     expect(customError).toBeInstanceOf(HydraBridgeError);
 
-    // Pass empty string code -> should fallback to ERR_NOT_IN_IFRAME
+    // Pass empty string code -> should fallback to ERR_TRANSPORT_FAILED
     const emptyCodeError = new HydraTransportError('Empty code', '   ');
-    expect(emptyCodeError.code).toBe(ERROR_CODES.ERR_NOT_IN_IFRAME);
+    expect(emptyCodeError.code).toBe(ERROR_CODES.ERR_TRANSPORT_FAILED);
   });
 
   it('should preserve explicit name property across all error subclasses', () => {

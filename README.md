@@ -230,18 +230,20 @@ export function embedGames(wallet: HostWalletAdapter) {
 
 Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 
-| Code                      | Class                    | Meaning                                                                         |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
-| `ERR_TIMEOUT`             | `HydraTimeoutError`      | A request or the handshake exceeded its timeout.                                |
-| `ERR_USER_REJECTED`       | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
-| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell found, or the page is not inside an iframe.                       |
-| `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
-| `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
-| `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
-| `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
-| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
+| Code                       | Class                    | Meaning                                                                         |
+| -------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `ERR_TIMEOUT`              | `HydraTimeoutError`      | A request or the handshake exceeded its timeout.                                |
+| `ERR_USER_REJECTED`        | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
+| `ERR_NOT_IN_IFRAME`        | `HydraTransportError`    | The page is not inside an iframe, so there is no host shell.                    |
+| `ERR_TRANSPORT_FAILED`     | `HydraTransportError`    | Default transport failure when no more specific code applies.                   |
+| `ERR_UNTRUSTED_ORIGIN`     | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
+| `ERR_STORAGE_UNAVAILABLE`  | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
+| `ERR_BRIDGE_NOT_CONNECTED` | `HydraBridgeError`       | `init()` has not completed, or the client was disconnected or destroyed.        |
+| `ERR_WALLET_NOT_CONNECTED` | `HydraBridgeError`       | Sent by the host: no wallet is connected in the host.                           |
+| `ERR_INVALID_PARAMS`       | `HydraBridgeError`       | An argument failed validation.                                                  |
+| `ERR_INVALID_RESPONSE`     | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED` (all in `ERROR_CODES`), and `ERR_UNSUPPORTED_METHOD` (sent by hosts). Details are in [Error handling](https://developers.hydraone.app/reference/errors).
 
 ## Logging and debugging
 

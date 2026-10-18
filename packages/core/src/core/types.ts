@@ -25,7 +25,7 @@ export type BridgeMessageType =
   | 'TRIGGER_HAPTIC'
   | 'NETWORK_CHANGED'
   | 'ACCOUNT_CHANGED'
-  | 'DISCONNECTED'
+  | 'WALLET_DISCONNECTED'
   | 'HOST_STORAGE_GET'
   | 'HOST_STORAGE_SET'
   | 'HOST_STORAGE_REMOVE'
@@ -164,6 +164,8 @@ export const TIERED_TIMEOUTS = {
   PING: 3000,
   /** Default wait for CIP-30 wallet state queries (15,000 ms). */
   QUERY: 15000,
+  /** Default wait for device commands such as orientation lock and haptics (15,000 ms). */
+  COMMAND: 15000,
   /** Wait for operations that need user interaction, such as CIP-30 and CIP-8 signing (120,000 ms). */
   SIGNING: 120000,
 } as const;
@@ -171,7 +173,7 @@ export const TIERED_TIMEOUTS = {
 /**
  * Connection state of WalletBridgeClient.
  */
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
 /**
  * Pagination for CIP-30 queries (UTxOs, addresses).
@@ -200,9 +202,12 @@ export interface AddressQueryOptions extends QueryOptions {
  * Host shell metadata received during the handshake.
  */
 export interface HostInfo {
+  /** Display name of the host shell (for example `'HydraOne Host'`). */
+  hostName?: string;
   hostVersion?: string;
   network?: string;
-  walletName?: string;
+  /** Wallet the host exposes: its display name and icon (data URL or URL, empty when none). */
+  wallet?: { name: string; icon: string };
   theme?: ThemeMode;
   /** UI language of the host as a BCP-47 tag (for example `'en'`, `'vi'`, `'pt-BR'`). */
   language?: string;
@@ -236,6 +241,8 @@ export interface WalletBridgeClientOptions {
   pingTimeoutMs?: number;
   /** Default timeout for state queries in ms (default: 15000). */
   queryTimeoutMs?: number;
+  /** Maximum wait in ms for device commands (setOrientation, unlockOrientation, triggerHaptic); defaults to 15,000. */
+  commandTimeoutMs?: number;
   /** Default timeout for signing and submitting transactions in ms (default: 120000). */
   signingTimeoutMs?: number;
   /** Run the handshake on construction (default: false). */

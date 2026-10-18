@@ -5,6 +5,8 @@ export type HostRequestPayload = Record<string, unknown>;
 
 /** Subset of a CIP-30 wallet API the host forwards to when an extension wallet is active. */
 export interface HostExtensionWallet {
+  /** Display name of the wallet (for example 'Eternl'); shown to embedded apps as the wallet name. */
+  name?: string;
   icon?: string;
   getUsedAddresses(): Promise<string[]>;
   getUnusedAddresses(): Promise<string[]>;
@@ -84,12 +86,12 @@ export interface Host {
   unregisterIframe(target: Window): void;
   /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, `LANGUAGE_CHANGED`, ...) to every embedded app. */
   notify(type: string, payload?: unknown): void;
-  /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/DISCONNECTED events. */
+  /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/WALLET_DISCONNECTED events. */
   handleAddressChange(
     newAddress: string | null | undefined,
     oldAddress: string | null | undefined,
   ): Promise<void>;
-  handleConnectionChange(connected: boolean): void;
+  handleWalletConnectionChange(connected: boolean): void;
   /** Notifies every embedded app that the UI language changed (BCP-47 tag such as `'en'` or `'vi'`). */
   setLanguage(language: string): void;
   /** Registers or overrides a request handler at runtime; `null` removes it. */

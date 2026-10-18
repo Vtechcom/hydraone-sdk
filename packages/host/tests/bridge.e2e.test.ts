@@ -205,13 +205,13 @@ describe('game <-> host bridge over postMessage', () => {
     });
   });
 
-  it('surfaces ERR_NOT_CONNECTED when the host wallet disconnects, then recovers on a new account', async () => {
+  it('surfaces ERR_WALLET_NOT_CONNECTED when the host wallet disconnects, then recovers on a new account', async () => {
     const { client, setAddress } = connect();
     await client.init();
     await setAddress(null);
     await tick();
     await expect(client.getChangeAddress()).rejects.toMatchObject({
-      code: ERROR_CODES.ERR_NOT_CONNECTED,
+      code: ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
     });
 
     const accounts: unknown[] = [];

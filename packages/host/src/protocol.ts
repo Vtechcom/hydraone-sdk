@@ -3,7 +3,7 @@ import type { BridgeMessage, Utxo } from '@hydraone-sdk/core';
 /** Error codes a host answers with in `RPC_ERROR`. */
 export const HOST_ERROR_CODES = {
   ERR_USER_REJECTED: 'ERR_USER_REJECTED',
-  ERR_NOT_CONNECTED: 'ERR_NOT_CONNECTED',
+  ERR_WALLET_NOT_CONNECTED: 'ERR_WALLET_NOT_CONNECTED',
   ERR_INVALID_PARAMS: 'ERR_INVALID_PARAMS',
   ERR_STORAGE_UNAVAILABLE: 'ERR_STORAGE_UNAVAILABLE',
   /** The host does not implement this request type; the SDK may fall back to an older request. */

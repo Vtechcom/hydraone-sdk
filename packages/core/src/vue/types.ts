@@ -1,4 +1,4 @@
-import type { Ref } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
 import type {
   ConnectionState,
   HostInfo,
@@ -46,14 +46,19 @@ export interface UseWalletBridgeClientReturn {
   client: WalletBridgeClient;
 
   /**
-   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected')
    */
   connectionState: Ref<ConnectionState>;
 
   /**
-   * true once the client has connected to the host
+   * true once the bridge handshake with the host has completed
    */
   isConnected: Ref<boolean>;
+
+  /**
+   * true while the host reports a connected wallet (a change address is known)
+   */
+  isWalletConnected: ComputedRef<boolean>;
 
   /**
    * Change address of the wallet (bech32), or null when not connected

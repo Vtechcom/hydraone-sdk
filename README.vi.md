@@ -232,18 +232,20 @@ export function embedGames(wallet: HostWalletAdapter) {
 
 Mọi lỗi do SDK ném ra đều là `HydraBridgeError` với `code` ổn định:
 
-| Code                      | Class                    | Ý nghĩa                                                                                    |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
-| `ERR_TIMEOUT`             | `HydraTimeoutError`      | Một request hoặc handshake vượt quá timeout.                                               |
-| `ERR_USER_REJECTED`       | `HydraUserRejectedError` | Người dùng từ chối một yêu cầu của ví.                                                     |
-| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | Không tìm thấy host shell, hoặc trang không nằm trong iframe.                              |
-| `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | Một tin nhắn không qua được kiểm tra origin, hoặc dùng origin ký tự đại diện ở production. |
-| `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage bị chặn hoặc không liên lạc được host relay.                                       |
-| `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | Client chưa kết nối, đã bị hủy, hoặc không có địa chỉ ví.                                  |
-| `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |
-| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | Host trả về giá trị sai cấu trúc.                                                          |
+| Code                       | Class                    | Ý nghĩa                                                                                    |
+| -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| `ERR_TIMEOUT`              | `HydraTimeoutError`      | Một request hoặc handshake vượt quá timeout.                                               |
+| `ERR_USER_REJECTED`        | `HydraUserRejectedError` | Người dùng từ chối một yêu cầu của ví.                                                     |
+| `ERR_NOT_IN_IFRAME`        | `HydraTransportError`    | Trang không nằm trong iframe, nên không có host shell.                                     |
+| `ERR_TRANSPORT_FAILED`     | `HydraTransportError`    | Lỗi transport mặc định khi không có mã cụ thể hơn.                                         |
+| `ERR_UNTRUSTED_ORIGIN`     | `HydraSecurityError`     | Một tin nhắn không qua được kiểm tra origin, hoặc dùng origin ký tự đại diện ở production. |
+| `ERR_STORAGE_UNAVAILABLE`  | `HydraStorageError`      | Storage bị chặn hoặc không liên lạc được host relay.                                       |
+| `ERR_BRIDGE_NOT_CONNECTED` | `HydraBridgeError`       | `init()` chưa hoàn tất, hoặc client đã bị ngắt kết nối hay hủy.                            |
+| `ERR_WALLET_NOT_CONNECTED` | `HydraBridgeError`       | Do host gửi: chưa có ví nào được kết nối trong host.                                       |
+| `ERR_INVALID_PARAMS`       | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |
+| `ERR_INVALID_RESPONSE`     | `HydraBridgeError`       | Host trả về giá trị sai cấu trúc.                                                          |
 
-Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
+Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED` (đều nằm trong `ERROR_CODES`), và `ERR_UNSUPPORTED_METHOD` (do host gửi). Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
 
 ## Logging và debug
 

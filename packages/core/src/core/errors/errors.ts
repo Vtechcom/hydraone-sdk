@@ -7,9 +7,15 @@ export const ERROR_CODES = {
   ERR_NOT_IN_IFRAME: 'ERR_NOT_IN_IFRAME',
   ERR_UNTRUSTED_ORIGIN: 'ERR_UNTRUSTED_ORIGIN',
   ERR_STORAGE_UNAVAILABLE: 'ERR_STORAGE_UNAVAILABLE',
-  ERR_NOT_CONNECTED: 'ERR_NOT_CONNECTED',
+  ERR_BRIDGE_NOT_CONNECTED: 'ERR_BRIDGE_NOT_CONNECTED',
+  ERR_WALLET_NOT_CONNECTED: 'ERR_WALLET_NOT_CONNECTED',
   ERR_INVALID_PARAMS: 'ERR_INVALID_PARAMS',
   ERR_INVALID_RESPONSE: 'ERR_INVALID_RESPONSE',
+  ERR_INVALID_OPTIONS: 'ERR_INVALID_OPTIONS',
+  ERR_TRANSPORT_FAILED: 'ERR_TRANSPORT_FAILED',
+  ERR_TRANSPORT_UNAVAILABLE: 'ERR_TRANSPORT_UNAVAILABLE',
+  ERR_POSTMESSAGE_FAILED: 'ERR_POSTMESSAGE_FAILED',
+  ERR_RPC_FAILED: 'ERR_RPC_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES] | (string & {});
@@ -84,11 +90,11 @@ export class HydraTransportError extends HydraBridgeError {
   public override readonly name: string = 'HydraTransportError';
 
   constructor(
-    message = 'No matching Host Shell or Extension environment found',
+    message = 'Transport error: no usable Host Shell or Extension channel',
     codeOrDetails?: string | unknown,
     details?: unknown,
   ) {
-    let resolvedCode: string = ERROR_CODES.ERR_NOT_IN_IFRAME;
+    let resolvedCode: string = ERROR_CODES.ERR_TRANSPORT_FAILED;
     let resolvedDetails: unknown = details;
 
     if (typeof codeOrDetails === 'string' && codeOrDetails.trim().length > 0) {

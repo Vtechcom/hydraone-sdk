@@ -80,6 +80,7 @@ export class WalletBridgeClient {
   public readonly handshakeTimeoutMs: number;
   public readonly pingTimeoutMs: number;
   public readonly queryTimeoutMs: number;
+  public readonly commandTimeoutMs: number;
   public readonly signingTimeoutMs: number;
   public readonly isIframeFn?: () => boolean;
   public readonly debug: boolean;
@@ -109,7 +110,7 @@ export class WalletBridgeClient {
     if (!options || !transport) {
       throw new HydraBridgeError(
         'WalletBridgeClient requires a transport or an appCenterOrigin',
-        'ERR_INVALID_OPTIONS',
+        ERROR_CODES.ERR_INVALID_OPTIONS,
       );
     }
 
@@ -117,6 +118,7 @@ export class WalletBridgeClient {
     this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? TIERED_TIMEOUTS.HANDSHAKE;
     this.pingTimeoutMs = options.pingTimeoutMs ?? TIERED_TIMEOUTS.PING;
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
+    this.commandTimeoutMs = options.commandTimeoutMs ?? TIERED_TIMEOUTS.COMMAND;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
     this.isIframeFn = options.isIframeFn;
     this.debug = options.debug ?? false;
@@ -196,10 +198,17 @@ export class WalletBridgeClient {
   }
 
   /**
+   * Display name of the host shell, as reported in the handshake.
+   */
+  public get hostName(): string | undefined {
+    return this._hostInfo?.hostName;
+  }
+
+  /**
    * Cardano wallet in use on the host shell.
    */
   public get activeWalletName(): string | undefined {
-    return this._hostInfo?.walletName;
+    return this._hostInfo?.wallet?.name;
   }
 
   /**
@@ -359,7 +368,7 @@ export class WalletBridgeClient {
       // Surface errors reported by the host.
       if (message.type === 'RPC_ERROR' || (rpcPayload && rpcPayload.error)) {
         const errInfo = rpcPayload?.error;
-        const errCode = errInfo?.code || 'ERR_RPC_FAILED';
+        const errCode = errInfo?.code || ERROR_CODES.ERR_RPC_FAILED;
         const errMsg = errInfo?.message || 'RPC request failed from Host Shell';
 
         let mappedError: HydraBridgeError;
@@ -429,7 +438,7 @@ export class WalletBridgeClient {
       return Promise.reject(
         new HydraBridgeError(
           'WalletBridgeClient has been destroyed',
-          ERROR_CODES.ERR_NOT_CONNECTED,
+          ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         ),
       );
     }
@@ -457,7 +466,7 @@ export class WalletBridgeClient {
         if (!this.transport) {
           throw new HydraBridgeError(
             'Transport must be provided when running inside an iframe',
-            'ERR_INVALID_OPTIONS',
+            ERROR_CODES.ERR_INVALID_OPTIONS,
           );
         }
 
@@ -475,7 +484,10 @@ export class WalletBridgeClient {
         const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
         // The matching HOST_ACK already marks the client connected, so only disconnect() cancels
         if (this._connectionState === 'disconnected') {
-          throw new HydraBridgeError('Handshake was cancelled', ERROR_CODES.ERR_NOT_CONNECTED);
+          throw new HydraBridgeError(
+            'Handshake was cancelled',
+            ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
+          );
         }
         if (this._connectionState !== 'connecting') {
           return;
@@ -520,7 +532,10 @@ export class WalletBridgeClient {
    */
   private async executeRpc<T = unknown>(message: BridgeMessage, timeoutMs: number): Promise<T> {
     if (!this.transport) {
-      throw new HydraBridgeError('Transport is not initialized', 'ERR_TRANSPORT_UNAVAILABLE');
+      throw new HydraBridgeError(
+        'Transport is not initialized',
+        ERROR_CODES.ERR_TRANSPORT_UNAVAILABLE,
+      );
     }
     // Prefer the transport own request() when it has one (e.g. PostMessageTransport).
     if (typeof this.transport.request === 'function') {
@@ -620,13 +635,13 @@ export class WalletBridgeClient {
     if (this._isDestroyed) {
       throw new HydraBridgeError(
         'WalletBridgeClient has been destroyed',
-        ERROR_CODES.ERR_NOT_CONNECTED,
+        ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
       );
     }
     if (!this.isConnected) {
       throw new HydraBridgeError(
         'Client is not connected to Host Shell. Please call await client.init() first.',
-        ERROR_CODES.ERR_NOT_CONNECTED,
+        ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
       );
     }
   }
@@ -1179,7 +1194,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.executeRpc(message, this.queryTimeoutMs);
+        await this.executeRpc(message, this.commandTimeoutMs);
       }
       return;
     }
@@ -1194,7 +1209,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, this.queryTimeoutMs);
+    await this.executeRpc(message, this.commandTimeoutMs);
   }
 
   /**
@@ -1242,7 +1257,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.executeRpc(message, this.queryTimeoutMs);
+        await this.executeRpc(message, this.commandTimeoutMs);
       }
       return;
     }
@@ -1261,7 +1276,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, this.queryTimeoutMs);
+    await this.executeRpc(message, this.commandTimeoutMs);
   }
 
   // ==========================================
@@ -1334,7 +1349,7 @@ export class WalletBridgeClient {
       pending.isExpired = true;
       this.markRequestExpired(pending.id);
       pending.reject(
-        new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_NOT_CONNECTED),
+        new HydraBridgeError('Client has been disconnected', ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED),
       );
     }
     this.pendingRequests.clear();

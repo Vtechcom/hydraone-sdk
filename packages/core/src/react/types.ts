@@ -111,14 +111,19 @@ export interface UseWalletReturn {
   client: WalletBridgeClient;
 
   /**
-   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected')
    */
   connectionState: ConnectionState;
 
   /**
-   * true once the client has connected to the host
+   * true once the bridge handshake with the host has completed
    */
   isConnected: boolean;
+
+  /**
+   * true while the host reports a connected wallet (a change address is known)
+   */
+  isWalletConnected: boolean;
 
   /**
    * Change address of the wallet (bech32), or null when not connected

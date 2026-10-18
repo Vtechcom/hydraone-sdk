@@ -1,5 +1,6 @@
 import {
   ref,
+  computed,
   inject,
   hasInjectionContext,
   onScopeDispose,
@@ -81,6 +82,7 @@ export function useWalletBridgeClient(
   const connectionState = ref<ConnectionState>(client.connectionState);
   const isConnected = ref<boolean>(client.isConnected);
   const address = ref<string | null>(null);
+  const isWalletConnected = computed(() => address.value !== null);
   const balanceADA = ref<string | null>(null);
   const balanceLovelace = ref<bigint | null>(null);
   const networkId = ref<number | null>(null);
@@ -144,7 +146,7 @@ export function useWalletBridgeClient(
       balanceADA.value = null;
       balanceLovelace.value = null;
       // The game can connect before the player connects a wallet in the host: that is a state, not an error.
-      if (errorCode(err) === ERROR_CODES.ERR_NOT_CONNECTED) {
+      if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_CONNECTED) {
         clearBalanceError();
       } else {
         error.value = balanceError = err instanceof Error ? err : new Error(String(err));
@@ -167,7 +169,7 @@ export function useWalletBridgeClient(
         if (options?.autoRefreshBalance !== false) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === 'disconnected' || state === 'error') {
+      } else if (state === 'disconnected') {
         clearAddress();
         balanceADA.value = null;
         balanceLovelace.value = null;
@@ -176,7 +178,7 @@ export function useWalletBridgeClient(
 
     const onAccountChanged = (addrs: string[]) => {
       if (Array.isArray(addrs)) {
-        // DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
+        // WALLET_DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
         if (client.isConnected) {
           connectionState.value = 'connected';
           isConnected.value = true;
@@ -193,9 +195,8 @@ export function useWalletBridgeClient(
       networkId.value = netId;
     };
 
-    const onDisconnected = () => {
-      connectionState.value = 'disconnected';
-      isConnected.value = false;
+    // Only the wallet left the host; the bridge stays connected.
+    const onWalletDisconnected = () => {
       clearAddress();
       balanceADA.value = null;
       balanceLovelace.value = null;
@@ -232,7 +233,7 @@ export function useWalletBridgeClient(
         theme.value = newTheme;
       }),
     );
-    cleanups.push(client.on('DISCONNECTED', onDisconnected));
+    cleanups.push(client.on('WALLET_DISCONNECTED', onWalletDisconnected));
 
     // Sync current state if the client was already connected
     if (client.isConnected) {
@@ -361,6 +362,7 @@ export function useWalletBridgeClient(
     client,
     connectionState,
     isConnected,
+    isWalletConnected,
     address,
     balanceADA,
     balanceLovelace,

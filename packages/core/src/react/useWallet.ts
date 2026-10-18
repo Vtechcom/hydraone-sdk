@@ -245,7 +245,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === 'disconnected' || state === 'error') {
+      } else if (state === 'disconnected') {
         clearAddress();
         setBalanceADA(null);
         setBalanceLovelace(null);
@@ -256,7 +256,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     const onAccountChanged = (addrs: string[]) => {
       if (!isMountedRef.current) return;
       if (Array.isArray(addrs)) {
-        // DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
+        // WALLET_DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
         if (client.isConnected) {
           setConnectionState('connected');
           setIsConnected(true);
@@ -274,10 +274,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       setNetworkId(netId);
     };
 
-    const onDisconnected = () => {
+    // Only the wallet left the host; the bridge stays connected.
+    const onWalletDisconnected = () => {
       if (!isMountedRef.current) return;
-      setConnectionState('disconnected');
-      setIsConnected(false);
       clearAddress();
       setBalanceADA(null);
       setBalanceLovelace(null);
@@ -316,7 +315,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (isMountedRef.current) setTheme(newTheme);
       }),
     );
-    cleanups.push(client.on('DISCONNECTED', onDisconnected));
+    cleanups.push(client.on('WALLET_DISCONNECTED', onWalletDisconnected));
 
     // Sync current state if the client was already connected
     if (client.isConnected) {
@@ -355,6 +354,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     client,
     connectionState,
     isConnected,
+    isWalletConnected: address !== null,
     address,
     balanceADA,
     balanceLovelace,

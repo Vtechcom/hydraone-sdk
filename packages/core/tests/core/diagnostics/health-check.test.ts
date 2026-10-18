@@ -64,7 +64,7 @@ class FakeHost implements ITransport {
     const payload = message.payload as { key?: string; value?: string } | undefined;
     if (type === 'CLIENT_READY') {
       return this.respond(id, 'HOST_ACK', {
-        hostInfo: { appName: 'HydraOne Test Host', version: '1.0.0', theme: 'dark' },
+        hostInfo: { hostName: 'HydraOne Test Host', hostVersion: '1.0.0', theme: 'dark' },
       });
     }
     if (type === 'PING') {
@@ -529,7 +529,7 @@ describe('Bridge Health Diagnostics Suite', () => {
       expect(latencyResult.message).toContain('running in standalone browser');
     });
 
-    it('checkPostMessageLatency reports a clear error when the client is not connected (ERR_NOT_CONNECTED)', async () => {
+    it('checkPostMessageLatency reports a clear error when the client is not connected (ERR_BRIDGE_NOT_CONNECTED)', async () => {
       const uninitClient = new WalletBridgeClient({
         transport,
         isIframeFn: () => true,

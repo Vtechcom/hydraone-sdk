@@ -300,7 +300,7 @@ export async function checkPostMessageLatency(
       };
     }
 
-    if (errorCode(err) === 'ERR_NOT_CONNECTED') {
+    if (errorCode(err) === 'ERR_BRIDGE_NOT_CONNECTED') {
       return {
         id: 'postmessage-latency',
         name: 'PostMessage Roundtrip Latency',
@@ -308,7 +308,7 @@ export async function checkPostMessageLatency(
         latencyMs: duration,
         message: 'PostMessage latency test failed: Client is not connected to Host Shell',
         details: {
-          code: 'ERR_NOT_CONNECTED',
+          code: 'ERR_BRIDGE_NOT_CONNECTED',
         },
         hint: 'Call client.init() or client.connect() to complete handshake before running diagnostics.',
       };
