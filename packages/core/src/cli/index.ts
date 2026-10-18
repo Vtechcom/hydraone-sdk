@@ -28,7 +28,9 @@ function readInlineValue(arg: string): string {
 
 function parsePackageManager(value: string): PackageManager {
   if (!PACKAGE_MANAGERS.includes(value as PackageManager)) {
-    throw new Error(`Invalid package manager "${value}". Supported: ${PACKAGE_MANAGERS.join(', ')}`);
+    throw new Error(
+      `Invalid package manager "${value}". Supported: ${PACKAGE_MANAGERS.join(', ')}`,
+    );
   }
   return value as PackageManager;
 }

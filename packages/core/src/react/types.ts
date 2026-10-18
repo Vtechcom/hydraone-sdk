@@ -4,12 +4,11 @@ import type {
   HostInfo,
   ThemeMode,
   SignOptions,
+  SignTxOptions,
   QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
-  DepositModalOptions,
-  PlayerProfile,
   WalletBridgeClientOptions,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
@@ -122,14 +121,9 @@ export interface UseWalletReturn {
   isConnected: boolean;
 
   /**
-   * Active Cardano wallet address (first entry of usedAddresses) or null
+   * Change address of the wallet (bech32), or null when not connected
    */
   address: string | null;
-
-  /**
-   * All used addresses of the wallet
-   */
-  usedAddresses: string[];
 
   /**
    * ADA balance as an exact decimal string (never in exponent notation)
@@ -152,9 +146,9 @@ export interface UseWalletReturn {
   hostInfo: HostInfo | null;
 
   /**
-   * Audio mute state synced from the Host Shell
+   * UI language synced from the Host Shell (BCP-47 tag such as 'en' or 'vi'), or null
    */
-  isAudioMuted: boolean;
+  language: string | null;
 
   /**
    * Current dark/light theme synced from the Host Shell
@@ -179,7 +173,11 @@ export interface UseWalletReturn {
   /**
    * Asks the player to sign a Cardano transaction through the wallet
    */
-  signTx: (txCbor: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
+  signTx: (
+    txCbor: string,
+    partialSignOrOptions?: boolean | SignTxOptions,
+    options?: SignTxOptions,
+  ) => Promise<string>;
 
   /**
    * Submits a signed transaction to the Cardano network through the wallet
@@ -200,16 +198,6 @@ export interface UseWalletReturn {
    * Triggers haptic feedback on a mobile device
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
-
-  /**
-   * Asks the Host Shell to show the deposit / token swap popup
-   */
-  requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
-
-  /**
-   * Fetches the player profile from the Host Shell
-   */
-  getPlayerProfile: () => Promise<PlayerProfile>;
 }
 
 /**

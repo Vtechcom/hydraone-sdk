@@ -63,13 +63,12 @@
     "prepack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.copyFileSync('../../'+n,n)\"",
     "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
   },
-  "peerDependencies": {
-    "@hydraone-sdk/core": ">=0.1.0"
+  "dependencies": {
+    "@hydraone-sdk/core": "workspace:^"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
-    "@hydraone-sdk/core": "workspace:*",
     "@types/node": "^26.6.4",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",

@@ -4,12 +4,11 @@ import type {
   HostInfo,
   ThemeMode,
   SignOptions,
+  SignTxOptions,
   QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
-  DepositModalOptions,
-  PlayerProfile,
   WalletBridgeClientOptions,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
@@ -57,14 +56,9 @@ export interface UseWalletBridgeClientReturn {
   isConnected: Ref<boolean>;
 
   /**
-   * Active Cardano wallet address (first entry of usedAddresses) or null
+   * Change address of the wallet (bech32), or null when not connected
    */
   address: Ref<string | null>;
-
-  /**
-   * All used addresses of the wallet
-   */
-  usedAddresses: Ref<string[]>;
 
   /**
    * ADA balance as an exact decimal string (never in exponent notation)
@@ -87,9 +81,9 @@ export interface UseWalletBridgeClientReturn {
   hostInfo: Ref<HostInfo | null>;
 
   /**
-   * Audio mute state synced from the Host Shell
+   * UI language synced from the Host Shell (BCP-47 tag such as 'en' or 'vi'), or null
    */
-  isAudioMuted: Ref<boolean>;
+  language: Ref<string | null>;
 
   /**
    * Theme (dark / light) synced from the Host Shell
@@ -124,14 +118,18 @@ export interface UseWalletBridgeClientReturn {
   refreshBalance: () => Promise<string>;
 
   /**
-   * Refreshes the list of used wallet addresses
+   * Refreshes the wallet address (getAddress)
    */
   refreshAddress: () => Promise<string | null>;
 
   /**
    * Asks the wallet to sign a transaction (signTx)
    */
-  signTx: (tx: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
+  signTx: (
+    tx: string,
+    partialSignOrOptions?: boolean | SignTxOptions,
+    options?: SignTxOptions,
+  ) => Promise<string>;
 
   /**
    * Asks the host or wallet to submit a transaction to the Cardano network
@@ -152,14 +150,4 @@ export interface UseWalletBridgeClientReturn {
    * Triggers haptic feedback through the Host Shell
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
-
-  /**
-   * Asks the host to show the deposit / ADA swap modal
-   */
-  requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
-
-  /**
-   * Fetches the player profile from the App Center host
-   */
-  getPlayerProfile: () => Promise<PlayerProfile>;
 }

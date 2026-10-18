@@ -1,9 +1,10 @@
 import type { ITransport } from './ports/transport';
 import type {
-  AudioMutedHandler,
+  AddressQueryOptions,
   BalanceAsset,
   Utxo,
   BridgeMessage,
+  BridgeMessageType,
   ConnectionState,
   DataSignature,
   HostAckPayload,
@@ -13,8 +14,10 @@ import type {
   RpcResponsePayload,
   SignDataPayload,
   SignOptions,
+  SignTxOptions,
   SignTxPayload,
   SubmitTxPayload,
+  LanguageChangedHandler,
   ThemeChangedHandler,
   ThemeMode,
   UnsubscribeFn,
@@ -23,9 +26,6 @@ import type {
   OrientationLockType,
   SetOrientationPayload,
   TriggerHapticPayload,
-  DepositModalOptions,
-  DepositModalPayload,
-  PlayerProfile,
   Logger,
 } from './types';
 import { TIERED_TIMEOUTS, HAPTIC_PATTERNS } from './types';
@@ -39,6 +39,8 @@ import {
 import { errorCode, errorMessage } from './errors/error-utils';
 import { PostMessageTransport } from './adapters/transport/post-message-transport';
 import { checkBridgeHealth } from './diagnostics/health-check';
+import { formatAddress, isValidAddress, resolveAddressFormat } from './wallet/address';
+import { applyWitnessSet, assertTransaction } from './wallet/transaction';
 import type { BridgeHealthReport, CheckHealthOptions } from './diagnostics/types';
 
 /**
@@ -85,8 +87,8 @@ export class WalletBridgeClient {
 
   private _connectionState: ConnectionState = 'disconnected';
   private _hostInfo?: HostInfo;
-  private _isAudioMuted?: boolean;
   private _theme?: ThemeMode;
+  private _language?: string;
   private _isDestroyed = false;
   private handshakePromise: Promise<void> | null = null;
   /** Set by disconnect(), cleared by init(); blocks unsolicited HOST_ACK from reconnecting. */
@@ -222,10 +224,10 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Current audio mute state, synced from the host shell.
+   * Current UI language of the host shell as a BCP-47 tag (for example 'en', 'vi'), synced from the host.
    */
-  public get isAudioMuted(): boolean | undefined {
-    return this._isAudioMuted;
+  public get language(): string | undefined {
+    return this._language;
   }
 
   /**
@@ -252,22 +254,38 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Extracts and normalizes the mute flag from a payload.
+   * Extracts the language tag from a payload ('vi' or { language: 'vi' }).
    */
-  private extractAudioMuted(payload: unknown): boolean | undefined {
-    if (typeof payload === 'boolean') {
-      return payload;
+  private extractLanguage(payload: unknown): string | undefined {
+    const raw =
+      typeof payload === 'string'
+        ? payload
+        : payload && typeof payload === 'object'
+          ? (payload as { language?: unknown }).language
+          : undefined;
+    if (typeof raw !== 'string') {
+      return undefined;
     }
-    if (payload && typeof payload === 'object') {
-      const anyObj = payload as Record<string, unknown>;
-      if (typeof anyObj.muted === 'boolean') {
-        return anyObj.muted;
-      }
-      if (typeof anyObj.audioMuted === 'boolean') {
-        return anyObj.audioMuted;
-      }
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  /**
+   * Stores the host metadata from a handshake and syncs the theme and language it carries.
+   */
+  private applyHostInfo(info: HostInfo | undefined): void {
+    this._hostInfo = info;
+    if (!info || typeof info !== 'object') {
+      return;
     }
-    return undefined;
+    const theme = this.extractTheme(info.theme);
+    if (theme) {
+      this._theme = theme;
+    }
+    const language = this.extractLanguage(info.language);
+    if (language) {
+      this._language = language;
+    }
   }
 
   /**
@@ -361,16 +379,7 @@ export class WalletBridgeClient {
       if (message.type === 'HOST_ACK') {
         const ackPayload = message.payload as HostAckPayload | undefined;
         const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
-        this._hostInfo = info;
-        if (info && typeof info === 'object') {
-          const theme = this.extractTheme(info.theme);
-          if (theme) {
-            this._theme = theme;
-          }
-          if (typeof info.audioMuted === 'boolean') {
-            this._isAudioMuted = info.audioMuted;
-          }
-        }
+        this.applyHostInfo(info);
         this.setConnectionState('connected');
         this.emitHostEvent('HOST_ACK', message.payload);
         pending.resolve(info || {});
@@ -386,32 +395,23 @@ export class WalletBridgeClient {
     if (message.type === 'HOST_ACK' && !this.explicitlyDisconnected) {
       const ackPayload = message.payload as HostAckPayload | undefined;
       const info = (ackPayload?.hostInfo || ackPayload) as HostInfo | undefined;
-      this._hostInfo = info;
-      if (info && typeof info === 'object') {
-        const theme = this.extractTheme(info.theme);
-        if (theme) {
-          this._theme = theme;
-        }
-        if (typeof info.audioMuted === 'boolean') {
-          this._isAudioMuted = info.audioMuted;
-        }
-      }
+      this.applyHostInfo(info);
       this.setConnectionState('connected');
     }
 
-    // 3. AUDIO_MUTED_CHANGED sync event.
-    if (message.type === 'AUDIO_MUTED_CHANGED') {
-      const muted = this.extractAudioMuted(message.payload);
-      if (muted !== undefined) {
-        this._isAudioMuted = muted;
-      }
-    }
-
-    // 4. THEME_CHANGED sync event.
+    // 3. THEME_CHANGED sync event.
     if (message.type === 'THEME_CHANGED') {
       const theme = this.extractTheme(message.payload);
       if (theme !== undefined) {
         this._theme = theme;
+      }
+    }
+
+    // 4. LANGUAGE_CHANGED sync event.
+    if (message.type === 'LANGUAGE_CHANGED') {
+      const language = this.extractLanguage(message.payload);
+      if (language !== undefined) {
+        this._language = language;
       }
     }
 
@@ -480,16 +480,7 @@ export class WalletBridgeClient {
         if (this._connectionState !== 'connecting') {
           return;
         }
-        this._hostInfo = result;
-        if (result && typeof result === 'object') {
-          const theme = this.extractTheme(result.theme);
-          if (theme) {
-            this._theme = theme;
-          }
-          if (typeof result.audioMuted === 'boolean') {
-            this._isAudioMuted = result.audioMuted;
-          }
-        }
+        this.applyHostInfo(result);
         this.setConnectionState('connected');
       } catch (err) {
         if (this._connectionState === 'connecting') {
@@ -645,25 +636,69 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Gets the wallet used addresses.
+   * Gets the wallet used addresses (CIP-30 `getUsedAddresses`).
    *
    * @param paginate Optional pagination { page, limit }.
-   * @param options Query options (timeoutMs).
-   * @returns Addresses as CBOR hex strings.
+   * @param options Query options: `format` ('bech32' by default, or 'hex') and `timeoutMs`.
+   * @returns Addresses in the requested format, or an empty array.
    */
-  public async getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]> {
+  public async getUsedAddresses(
+    paginate?: Paginate,
+    options?: AddressQueryOptions,
+  ): Promise<string[]> {
+    return this.queryAddresses('GET_USED_ADDRESSES', { paginate }, options);
+  }
+
+  /**
+   * Gets the wallet unused addresses (CIP-30 `getUnusedAddresses`).
+   *
+   * @param options Query options: `format` ('bech32' by default, or 'hex') and `timeoutMs`.
+   * @returns Addresses in the requested format, or an empty array.
+   */
+  public async getUnusedAddresses(options?: AddressQueryOptions): Promise<string[]> {
+    return this.queryAddresses('GET_UNUSED_ADDRESSES', {}, options);
+  }
+
+  /**
+   * Gets the wallet reward (stake) addresses (CIP-30 `getRewardAddresses`).
+   *
+   * @param options Query options: `format` ('bech32' by default, or 'hex') and `timeoutMs`.
+   * @returns Reward addresses (`stake1…` / `stake_test1…` in bech32), or an empty array.
+   */
+  public async getRewardAddresses(options?: AddressQueryOptions): Promise<string[]> {
+    return this.queryAddresses('GET_REWARD_ADDRESSES', {}, options);
+  }
+
+  /** Runs an address-list query and converts every entry to the requested format. */
+  private async queryAddresses(
+    type: BridgeMessageType,
+    payload: Record<string, unknown>,
+    options?: AddressQueryOptions,
+  ): Promise<string[]> {
     this.assertConnected();
+    const format = resolveAddressFormat(options?.format);
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
       id: generateId(),
-      type: 'GET_USED_ADDRESSES',
-      payload: { paginate },
+      type,
+      payload,
       timestamp: Date.now(),
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<string[]>(message, timeout);
-    return Array.isArray(result) ? result : [];
+    const result = await this.executeRpc<unknown>(message, timeout);
+    if (!Array.isArray(result)) {
+      return [];
+    }
+    // One unreadable entry (a Byron address, a host bug) must not hide the valid ones.
+    const valid = result.filter(isValidAddress) as string[];
+    if (valid.length < result.length) {
+      this.logger.warn(
+        `[WalletBridgeClient] ${type}: skipped invalid addresses from the host`,
+        result,
+      );
+    }
+    return valid.map((address) => formatAddress(address, format));
   }
 
   /**
@@ -739,32 +774,13 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Gets the wallet unused addresses.
-   *
-   * @param options Query options (timeoutMs).
-   */
-  public async getUnusedAddresses(options?: QueryOptions): Promise<string[]> {
-    this.assertConnected();
-    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
-    const message: BridgeMessage = {
-      id: generateId(),
-      type: 'GET_UNUSED_ADDRESSES',
-      payload: {},
-      timestamp: Date.now(),
-      source: 'hydra-client',
-    };
-
-    const result = await this.executeRpc<string[]>(message, timeout);
-    return Array.isArray(result) ? result : [];
-  }
-
-  /**
    * Gets the change address.
    *
-   * @param options Query options (timeoutMs).
+   * @param options Query options: `format` ('bech32' by default, or 'hex') and `timeoutMs`.
    */
-  public async getChangeAddress(options?: QueryOptions): Promise<string> {
+  public async getChangeAddress(options?: AddressQueryOptions): Promise<string> {
     this.assertConnected();
+    const format = resolveAddressFormat(options?.format);
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
       id: generateId(),
@@ -774,7 +790,15 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<string>(message, timeout);
+    const result = await this.executeRpc<unknown>(message, timeout);
+    if (!isValidAddress(result)) {
+      throw new HydraBridgeError(
+        'Host returned an invalid change address',
+        ERROR_CODES.ERR_INVALID_RESPONSE,
+        { value: result },
+      );
+    }
+    return formatAddress(result as string, format);
   }
 
   /**
@@ -801,35 +825,46 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Asks the user to sign a Cardano transaction (witness set).
+   * Asks the user to sign a Cardano transaction.
+   *
+   * By default returns the CIP-30 witness set. With `addVkey: true` the wallet's vkey witnesses are added
+   * to the transaction and the full signed transaction CBOR is returned, ready for {@link submitTx}.
+   * The transaction body is never re-serialized, so its hash does not change.
    *
    * @param cbor Hex-encoded CBOR of the transaction to sign.
-   * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignOptions} object (default: `false`).
-   * @param options Signing options (timeoutMs, default 120,000 ms) when `partialSignOrOptions` is a boolean.
-   * @returns Hex-encoded CBOR of the TransactionWitnessSet.
+   * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignTxOptions} object.
+   * @param options Signing options when `partialSignOrOptions` is a boolean.
+   * @returns Hex CBOR of the TransactionWitnessSet, or of the signed transaction when `addVkey` is set.
    * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
+   * @throws {HydraBridgeError} With `addVkey`: ERR_INVALID_PARAMS before signing when `cbor` is not a
+   * transaction, or ERR_INVALID_RESPONSE when the wallet's witness set cannot be merged; the witness set is
+   * then in `details.witnessSet`.
    */
   public async signTx(
     cbor: string,
-    partialSignOrOptions?: boolean | SignOptions,
-    options?: SignOptions,
+    partialSignOrOptions?: boolean | SignTxOptions,
+    options?: SignTxOptions,
   ): Promise<string> {
     this.assertConnected();
     if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
-    let partialSign = false;
-    let resolvedOptions = options;
-
+    let resolvedOptions: SignTxOptions = options ?? {};
     if (typeof partialSignOrOptions === 'boolean') {
-      partialSign = partialSignOrOptions;
+      resolvedOptions = { ...resolvedOptions, partialSign: partialSignOrOptions };
     } else if (typeof partialSignOrOptions === 'object' && partialSignOrOptions !== null) {
       resolvedOptions = partialSignOrOptions;
     }
+    const partialSign = resolvedOptions.partialSign === true;
+    const addVkey = resolvedOptions.addVkey === true;
+    if (addVkey) {
+      // Fail on a transaction we cannot merge into before the user signs it.
+      assertTransaction(cbor);
+    }
 
-    const timeout = resolvedOptions?.timeoutMs ?? this.signingTimeoutMs;
+    const timeout = resolvedOptions.timeoutMs ?? this.signingTimeoutMs;
     const message: BridgeMessage<SignTxPayload> = {
       id: generateId(),
       type: 'SIGN_TX',
@@ -841,7 +876,20 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<string>(message, timeout);
+    const witnessSet = await this.executeRpc<string>(message, timeout);
+    if (!addVkey) {
+      return witnessSet;
+    }
+    try {
+      return applyWitnessSet(cbor, witnessSet);
+    } catch (err) {
+      // The user already signed: keep the witness set so the caller can still merge it themselves.
+      throw new HydraBridgeError(
+        'Could not add the wallet witnesses to the transaction',
+        ERROR_CODES.ERR_INVALID_RESPONSE,
+        { witnessSet, cause: err },
+      );
+    }
   }
 
   /**
@@ -888,9 +936,8 @@ export class WalletBridgeClient {
     options?: SignOptions,
   ): Promise<DataSignature> {
     this.assertConnected();
-    if (!address || typeof address !== 'string' || address.trim().length === 0) {
-      throw new HydraBridgeError('Invalid wallet address', 'ERR_INVALID_PARAMS');
-    }
+    // Accepts bech32 or hex; the host receives hex, the form CIP-30 signData expects.
+    const addressHex = formatAddress(address, 'hex');
     if (payloadHex === undefined || payloadHex === null || typeof payloadHex !== 'string') {
       throw new HydraBridgeError('Invalid payload hex', 'ERR_INVALID_PARAMS');
     }
@@ -900,7 +947,7 @@ export class WalletBridgeClient {
       id: generateId(),
       type: 'SIGN_DATA',
       payload: {
-        address,
+        address: addressHex,
         payloadHex,
       },
       timestamp: Date.now(),
@@ -915,7 +962,7 @@ export class WalletBridgeClient {
   // ==========================================
 
   /**
-   * Subscribes to events from the host shell (such as AUDIO_MUTED_CHANGED or THEME_CHANGED).
+   * Subscribes to events from the host shell (such as THEME_CHANGED or LANGUAGE_CHANGED).
    *
    * @param type Event message type.
    * @param handler Callback invoked when the event arrives.
@@ -953,27 +1000,6 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Subscribes to audio mute changes coming from the host shell.
-   *
-   * @param handler Callback receiving a boolean (true when muted).
-   * @returns A function that removes the subscription.
-   */
-  public onAudioMutedChanged(handler: AudioMutedHandler): UnsubscribeFn {
-    if (typeof handler !== 'function') {
-      return () => {};
-    }
-
-    const wrapper = (payload: unknown) => {
-      const muted = this.extractAudioMuted(payload);
-      if (muted !== undefined) {
-        handler(muted);
-      }
-    };
-
-    return this.onHostEvent('AUDIO_MUTED_CHANGED', wrapper);
-  }
-
-  /**
    * Subscribes to theme (dark/light) changes coming from the host shell.
    *
    * @param handler Callback receiving 'dark' | 'light'.
@@ -992,6 +1018,27 @@ export class WalletBridgeClient {
     };
 
     return this.onHostEvent('THEME_CHANGED', wrapper);
+  }
+
+  /**
+   * Subscribes to UI language changes coming from the host shell.
+   *
+   * @param handler Callback receiving a BCP-47 language tag (for example 'en', 'vi').
+   * @returns A function that removes the subscription.
+   */
+  public onLanguageChanged(handler: LanguageChangedHandler): UnsubscribeFn {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+
+    const wrapper = (payload: unknown) => {
+      const language = this.extractLanguage(payload);
+      if (language !== undefined) {
+        handler(language);
+      }
+    };
+
+    return this.onHostEvent('LANGUAGE_CHANGED', wrapper);
   }
 
   // ==========================================
@@ -1217,137 +1264,6 @@ export class WalletBridgeClient {
   }
 
   // ==========================================
-  // In-Game Host Modal Overlay & Player Profile Relay
-  // ==========================================
-
-  /**
-   * Validates and normalizes deposit modal options.
-   */
-  private validateDepositModalOptions(options?: DepositModalOptions): DepositModalOptions {
-    if (options === undefined) {
-      return {};
-    }
-
-    if (typeof options !== 'object' || options === null || Array.isArray(options)) {
-      throw new HydraBridgeError(
-        'Invalid deposit modal options. Expected an options object.',
-        ERROR_CODES.ERR_INVALID_PARAMS,
-      );
-    }
-
-    const validated: DepositModalOptions = { ...options };
-
-    if (options.token !== undefined) {
-      if (typeof options.token !== 'string' || options.token.trim().length === 0) {
-        throw new HydraBridgeError(
-          'Invalid token: must be a non-empty string.',
-          ERROR_CODES.ERR_INVALID_PARAMS,
-        );
-      }
-      validated.token = options.token.trim();
-    }
-
-    if (options.minAmount !== undefined) {
-      if (typeof options.minAmount === 'number') {
-        if (!Number.isFinite(options.minAmount) || options.minAmount <= 0) {
-          throw new HydraBridgeError(
-            `Invalid minAmount: ${options.minAmount}. Must be a positive finite number.`,
-            ERROR_CODES.ERR_INVALID_PARAMS,
-          );
-        }
-      } else if (typeof options.minAmount === 'bigint') {
-        if (options.minAmount <= 0n) {
-          throw new HydraBridgeError(
-            `Invalid minAmount: ${options.minAmount.toString()}. Must be a positive bigint.`,
-            ERROR_CODES.ERR_INVALID_PARAMS,
-          );
-        }
-      } else if (typeof options.minAmount === 'string') {
-        const trimmed = options.minAmount.trim();
-        const parsed = Number(trimmed);
-        if (trimmed.length === 0 || !Number.isFinite(parsed) || parsed <= 0) {
-          throw new HydraBridgeError(
-            `Invalid minAmount: "${options.minAmount}". Must be a valid positive numeric string.`,
-            ERROR_CODES.ERR_INVALID_PARAMS,
-          );
-        }
-        validated.minAmount = trimmed;
-      } else {
-        throw new HydraBridgeError(
-          'Invalid minAmount type. Expected number, bigint, or string.',
-          ERROR_CODES.ERR_INVALID_PARAMS,
-        );
-      }
-    }
-
-    return validated;
-  }
-
-  /**
-   * Asks the host shell to show a deposit or token swap modal on top of the game iframe.
-   *
-   * Sends REQUEST_DEPOSIT_MODAL to the host shell over the ITransport.
-   *
-   * @param options Deposit options { token, minAmount, ... }.
-   */
-  public async requestDepositModal(options?: DepositModalOptions): Promise<void> {
-    const validatedOptions = this.validateDepositModalOptions(options);
-
-    if (this.isStandaloneBrowser()) {
-      throw new HydraBridgeError(
-        'Host deposit modal overlay is not available outside App Center iframe',
-        ERROR_CODES.ERR_NOT_IN_IFRAME,
-      );
-    }
-
-    this.assertConnected();
-
-    const message: BridgeMessage<DepositModalPayload> = {
-      id: generateId(),
-      type: 'REQUEST_DEPOSIT_MODAL',
-      payload: validatedOptions,
-      timestamp: Date.now(),
-      source: 'hydra-client',
-    };
-
-    await this.executeRpc(message, this.queryTimeoutMs);
-  }
-
-  /**
-   * Fetches the player profile from the host shell (nickname, avatar, VIP level, ADA handle).
-   *
-   * Runs the GET_PLAYER_PROFILE RPC with the query timeout (default 15 s).
-   *
-   * @param options Query options { timeoutMs }.
-   * @returns The PlayerProfile.
-   */
-  public async getPlayerProfile(options?: QueryOptions): Promise<PlayerProfile> {
-    if (this.isStandaloneBrowser()) {
-      throw new HydraBridgeError(
-        'Player profile relay is not available outside App Center iframe',
-        ERROR_CODES.ERR_NOT_IN_IFRAME,
-      );
-    }
-
-    this.assertConnected();
-
-    const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
-    const message: BridgeMessage = {
-      id: generateId(),
-      type: 'GET_PLAYER_PROFILE',
-      payload: {},
-      timestamp: Date.now(),
-      source: 'hydra-client',
-    };
-
-    const result = await this.executeRpc<PlayerProfile>(message, timeout);
-    if (result && typeof result === 'object' && !Array.isArray(result)) {
-      return result;
-    }
-    return {} as PlayerProfile;
-  }
-
-  // ==========================================
   // Bridge Health Diagnostics Suite
   // ==========================================
 
@@ -1405,8 +1321,8 @@ export class WalletBridgeClient {
     this.explicitlyDisconnected = true;
     this.setConnectionState('disconnected');
     this._hostInfo = undefined;
-    this._isAudioMuted = undefined;
     this._theme = undefined;
+    this._language = undefined;
     this.handshakePromise = null;
 
     // Reject and clear all pending requests.

@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createApp, defineComponent, h, nextTick } from 'vue';
-import { useWalletBridgeClient, setSharedWalletBridgeClient } from '../../src/vue/useWalletBridgeClient';
+import {
+  useWalletBridgeClient,
+  setSharedWalletBridgeClient,
+} from '../../src/vue/useWalletBridgeClient';
 import type { WalletBridgeClient } from '../../src/core/client';
 
 /** Mounts a component whose setup runs `setup`, so lifecycle hooks such as onMounted really fire. */
@@ -28,11 +31,11 @@ describe('useWalletBridgeClient autoConnect', () => {
       isConnected: false,
       connectionState: 'disconnected',
       hostInfo: undefined,
-      isAudioMuted: undefined,
+      language: undefined,
       theme: undefined,
       on: vi.fn(() => () => {}),
       onHostEvent: vi.fn(() => () => {}),
-      onAudioMutedChanged: vi.fn(() => () => {}),
+      onLanguageChanged: vi.fn(() => () => {}),
       onThemeChanged: vi.fn(() => () => {}),
     };
     return client as unknown as WalletBridgeClient & { init: ReturnType<typeof vi.fn> };

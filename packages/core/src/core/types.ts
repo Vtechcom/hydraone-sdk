@@ -1,4 +1,5 @@
 import type { ITransport } from './ports/transport';
+import type { AddressFormat } from './wallet/address';
 
 /**
  * Message types supported by the protocol between the game and the host shell.
@@ -9,6 +10,7 @@ export type BridgeMessageType =
   | 'PING'
   | 'GET_USED_ADDRESSES'
   | 'GET_UNUSED_ADDRESSES'
+  | 'GET_REWARD_ADDRESSES'
   | 'GET_CHANGE_ADDRESS'
   | 'GET_NETWORK_ID'
   | 'GET_UTXOS'
@@ -17,12 +19,10 @@ export type BridgeMessageType =
   | 'SIGN_TX'
   | 'SUBMIT_TX'
   | 'SIGN_DATA'
-  | 'AUDIO_MUTED_CHANGED'
   | 'THEME_CHANGED'
+  | 'LANGUAGE_CHANGED'
   | 'SET_ORIENTATION'
   | 'TRIGGER_HAPTIC'
-  | 'REQUEST_DEPOSIT_MODAL'
-  | 'GET_PLAYER_PROFILE'
   | 'NETWORK_CHANGED'
   | 'ACCOUNT_CHANGED'
   | 'DISCONNECTED'
@@ -189,6 +189,14 @@ export interface QueryOptions {
 }
 
 /**
+ * Options for address queries.
+ */
+export interface AddressQueryOptions extends QueryOptions {
+  /** Encoding of the returned addresses (default: `'bech32'`). */
+  format?: AddressFormat;
+}
+
+/**
  * Host shell metadata received during the handshake.
  */
 export interface HostInfo {
@@ -196,7 +204,8 @@ export interface HostInfo {
   network?: string;
   walletName?: string;
   theme?: ThemeMode;
-  audioMuted?: boolean;
+  /** UI language of the host as a BCP-47 tag (for example `'en'`, `'vi'`, `'pt-BR'`). */
+  language?: string;
   [key: string]: unknown;
 }
 
@@ -266,6 +275,19 @@ export interface SignOptions {
 }
 
 /**
+ * Options for `signTx`.
+ */
+export interface SignTxOptions extends SignOptions {
+  /** Sign only the inputs the wallet owns (CIP-30 `partialSign`, default: `false`). */
+  partialSign?: boolean;
+  /**
+   * Add the wallet's vkey witnesses to the transaction and return the full signed transaction CBOR,
+   * ready for `submitTx`. When `false` (default) the CIP-30 witness set is returned unchanged.
+   */
+  addVkey?: boolean;
+}
+
+/**
  * Payload of the SIGN_TX request.
  */
 export interface SignTxPayload {
@@ -330,14 +352,6 @@ export interface HostStorageClearPayload {
 export type ThemeMode = 'dark' | 'light';
 
 /**
- * Payload of the AUDIO_MUTED_CHANGED event.
- */
-export interface AudioMutedPayload {
-  muted: boolean;
-  [key: string]: unknown;
-}
-
-/**
  * Payload of the THEME_CHANGED event.
  */
 export interface ThemeChangedPayload {
@@ -346,14 +360,23 @@ export interface ThemeChangedPayload {
 }
 
 /**
- * Listener for audio mute changes.
- */
-export type AudioMutedHandler = (muted: boolean) => void;
-
-/**
  * Listener for theme changes.
  */
 export type ThemeChangedHandler = (theme: ThemeMode) => void;
+
+/**
+ * Payload of the LANGUAGE_CHANGED event.
+ */
+export interface LanguageChangedPayload {
+  /** BCP-47 language tag (for example `'en'`, `'vi'`, `'pt-BR'`). */
+  language: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Listener for language changes.
+ */
+export type LanguageChangedHandler = (language: string) => void;
 
 /**
  * Screen orientation lock types.
@@ -401,40 +424,5 @@ export const HAPTIC_PATTERNS: Record<HapticFeedbackType, readonly number[]> = {
 export interface TriggerHapticPayload {
   type?: HapticFeedbackType;
   pattern: number | number[];
-  [key: string]: unknown;
-}
-
-// ==========================================
-// Host Modal Overlay & Player Profile Relay Types
-// ==========================================
-
-/**
- * Options for asking the host shell to show a deposit / token swap modal.
- */
-export interface DepositModalOptions {
-  /** Token to deposit (for example 'ADA', 'DJED', 'iUSD'). */
-  token?: string;
-  /** Minimum amount requested. */
-  minAmount?: number | bigint | string;
-  [key: string]: unknown;
-}
-
-/**
- * Payload of the REQUEST_DEPOSIT_MODAL request.
- */
-export type DepositModalPayload = DepositModalOptions;
-
-/**
- * Player profile returned by the host shell.
- */
-export interface PlayerProfile {
-  /** Player nickname. */
-  nickname?: string;
-  /** Avatar image URL. */
-  avatarUrl?: string;
-  /** VIP tier in the App Center. */
-  vipLevel?: number;
-  /** Cardano ADA Handle (for example '$player1'). */
-  adaHandle?: string;
   [key: string]: unknown;
 }

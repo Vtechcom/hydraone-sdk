@@ -21,5 +21,9 @@ export * from './core/adapters';
 // Core Engine Client
 export * from './core/client';
 
+// Address & Transaction Helpers
+export * from './core/wallet/address';
+export { applyWitnessSet } from './core/wallet/transaction';
+
 // Bridge Health Diagnostics Suite
 export * from './core/diagnostics';

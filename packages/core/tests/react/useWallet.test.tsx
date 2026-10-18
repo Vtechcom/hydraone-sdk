@@ -7,10 +7,18 @@ import { useWallet } from '../../src/react/useWallet';
 import { WalletBridgeClient } from '../../src/core/client';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
+import { addressToBech32 } from '../../src/core/wallet/address';
+
+// CIP-19 mainnet base address; the host answers in hex, the hook exposes bech32.
+const WALLET_ADDRESS =
+  'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
+const NEW_ADDRESS = addressToBech32('01' + '55'.repeat(28) + '66'.repeat(28));
 
 class MockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
-  public returnEmptyUsedAddresses: boolean = false;
+  public noAddress: boolean = false;
+  /** What the host answers to GET_CHANGE_ADDRESS. */
+  public changeAddress: string = WALLET_ADDRESS;
   private messageHandlers: Array<(msg: BridgeMessage) => void> = [];
 
   public async send(message: BridgeMessage): Promise<void> {
@@ -39,24 +47,7 @@ class MockTransport implements ITransport {
           appCenterVersion: '1.0.0',
           walletSupported: true,
           theme: 'dark',
-          audioMuted: false,
-        } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
-    if (msg.type === 'GET_USED_ADDRESSES') {
-      return {
-        id: msg.id || 'res_2',
-        type: 'RPC_RESPONSE',
-        payload: {
-          requestId: msg.id,
-          result: this.returnEmptyUsedAddresses
-            ? []
-            : [
-                'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-              ],
+          language: 'en',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -69,8 +60,7 @@ class MockTransport implements ITransport {
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result:
-            'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
+          result: this.noAddress ? null : this.changeAddress,
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -171,34 +161,6 @@ class MockTransport implements ITransport {
       };
     }
 
-    if (msg.type === 'REQUEST_DEPOSIT_MODAL') {
-      return {
-        id: msg.id || 'res_modal',
-        type: 'RPC_RESPONSE',
-        payload: { requestId: msg.id, result: { success: true } } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
-    if (msg.type === 'GET_PLAYER_PROFILE') {
-      return {
-        id: msg.id || 'res_profile',
-        type: 'RPC_RESPONSE',
-        payload: {
-          requestId: msg.id,
-          result: {
-            nickname: 'CardanoGamer',
-            avatarUrl: 'https://example.com/avatar.png',
-            vipLevel: 3,
-            adaHandle: '$cardanogamer',
-          },
-        } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
     return {
       id: msg.id || 'res_def',
       type: 'RPC_RESPONSE',
@@ -231,7 +193,7 @@ describe('useWallet hook', () => {
     expect(result.current.isConnected).toBe(false);
     expect(result.current.connectionState).toBe('disconnected');
     expect(result.current.address).toBeNull();
-    expect(result.current.usedAddresses).toEqual([]);
+    expect(result.current.language).toBeNull();
     expect(result.current.balanceADA).toBeNull();
     expect(result.current.balanceLovelace).toBeNull();
   });
@@ -264,16 +226,14 @@ describe('useWallet hook', () => {
 
     expect(result.current.isConnected).toBe(true);
     expect(result.current.connectionState).toBe('connected');
-    expect(result.current.address).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-    );
+    expect(result.current.address).toBe(WALLET_ADDRESS);
     expect(result.current.balanceLovelace).toBe(7500000n);
     expect(result.current.balanceADA).toBe('7.5');
     expect(result.current.networkId).toBe(1);
   });
 
-  it('falls back to getChangeAddress when usedAddresses is empty', async () => {
-    transport.returnEmptyUsedAddresses = true;
+  it('leaves address null when the host has no change address', async () => {
+    transport.noAddress = true;
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -281,12 +241,7 @@ describe('useWallet hook', () => {
     });
 
     expect(result.current.isConnected).toBe(true);
-    expect(result.current.address).toBe(
-      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
-    );
-    expect(result.current.usedAddresses).toEqual([
-      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
-    ]);
+    expect(result.current.address).toBeNull();
   });
 
   it('resets state on disconnect()', async () => {
@@ -324,45 +279,114 @@ describe('useWallet hook', () => {
     });
 
     expect(result.current.isConnected).toBe(true);
-    expect(result.current.address).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-    );
+    expect(result.current.address).toBe(WALLET_ADDRESS);
     // The balance must not load automatically when autoRefreshBalance = false
     expect(result.current.balanceADA).toBeNull();
     expect(result.current.balanceLovelace).toBeNull();
   });
 
-  it('syncs the ACCOUNT_CHANGED event from a host message', async () => {
+  it('reads the change address again on ACCOUNT_CHANGED instead of trusting the payload', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
       await result.current.connect();
     });
 
-    const newAddr =
-      'addr1qnewaccount88888888888888888888888888888888888888888888888888888888888888';
+    transport.changeAddress = NEW_ADDRESS;
     await act(async () => {
       transport.simulateMessage({
         id: 'evt_acc',
         type: 'ACCOUNT_CHANGED',
-        payload: [newAddr],
+        payload: [WALLET_ADDRESS],
         timestamp: Date.now(),
         source: 'hydra-host',
       });
     });
 
-    expect(result.current.address).toBe(newAddr);
-    expect(result.current.usedAddresses).toEqual([newAddr]);
+    expect(result.current.address).toBe(NEW_ADDRESS);
   });
 
-  it('syncs the AUDIO_MUTED_CHANGED and THEME_CHANGED events', async () => {
+  it('falls back to the ACCOUNT_CHANGED payload when the change address query fails', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    transport.noAddress = true;
+    await act(async () => {
+      transport.simulateMessage({
+        id: 'evt_acc',
+        type: 'ACCOUNT_CHANGED',
+        payload: ['not-an-address', NEW_ADDRESS],
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+    });
+    expect(result.current.address).toBe(NEW_ADDRESS);
+
+    await act(async () => {
+      transport.simulateMessage({
+        id: 'evt_acc_2',
+        type: 'ACCOUNT_CHANGED',
+        payload: ['not-an-address'],
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+    });
+    expect(result.current.address).toBeNull();
+  });
+
+  it('marks the wallet connected again when ACCOUNT_CHANGED follows DISCONNECTED', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+    await act(async () => {
+      transport.simulateMessage({
+        id: 'evt_disc',
+        type: 'DISCONNECTED',
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+    });
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.address).toBeNull();
+
+    transport.changeAddress = NEW_ADDRESS;
+    await act(async () => {
+      transport.simulateMessage({
+        id: 'evt_acc_3',
+        type: 'ACCOUNT_CHANGED',
+        payload: [NEW_ADDRESS],
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+    });
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.connectionState).toBe('connected');
+    expect(result.current.address).toBe(NEW_ADDRESS);
+  });
+
+  it('reads the language from the handshake', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.language).toBe('en');
+  });
+
+  it('syncs the LANGUAGE_CHANGED and THEME_CHANGED events', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
       transport.simulateMessage({
-        id: 'evt_audio',
-        type: 'AUDIO_MUTED_CHANGED',
-        payload: { muted: true },
+        id: 'evt_language',
+        type: 'LANGUAGE_CHANGED',
+        payload: { language: 'vi' },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
@@ -375,11 +399,11 @@ describe('useWallet hook', () => {
       });
     });
 
-    expect(result.current.isAudioMuted).toBe(true);
+    expect(result.current.language).toBe('vi');
     expect(result.current.theme).toBe('light');
   });
 
-  it('runs the RPC proxy methods (signTx, submitTx, signData, device controls, profile)', async () => {
+  it('runs the RPC proxy methods (signTx, submitTx, signData, device controls)', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -389,19 +413,22 @@ describe('useWallet hook', () => {
     const signedTx = await result.current.signTx('raw_cbor');
     expect(signedTx).toBe('signed_tx_cbor_mock');
 
+    const signSpy = vi.spyOn(client, 'signTx');
+    await result.current.signTx('raw_cbor', { partialSign: true, timeoutMs: 5000 });
+    expect(signSpy).toHaveBeenCalledWith(
+      'raw_cbor',
+      { partialSign: true, timeoutMs: 5000 },
+      undefined,
+    );
+
     const txHash = await result.current.submitTx('signed_cbor');
     expect(txHash).toBe('tx_hash_submitted_mock');
 
-    const signature = await result.current.signData('addr1...', 'hex_payload');
+    const signature = await result.current.signData(WALLET_ADDRESS, 'abcd');
     expect(signature.signature).toBe('cose_sign1_hex');
 
     await expect(result.current.setOrientation('landscape')).resolves.toBeUndefined();
     await expect(result.current.triggerHaptic('medium')).resolves.toBeUndefined();
-    await expect(result.current.requestDepositModal()).resolves.toBeUndefined();
-
-    const profile = await result.current.getPlayerProfile();
-    expect(profile.nickname).toBe('CardanoGamer');
-    expect(profile.adaHandle).toBe('$cardanogamer');
   });
 
   it('removes all event listeners on unmount', () => {

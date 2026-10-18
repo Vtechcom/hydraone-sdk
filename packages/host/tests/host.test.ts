@@ -1,10 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createHost, matchOriginPattern, normalizeHostError, type HostWalletAdapter } from '../src';
+import {
+  createHost,
+  matchOriginPattern,
+  normalizeHostError,
+  type HostOptions,
+  type HostWalletAdapter,
+} from '../src';
+import { addressToBech32 } from '@hydraone-sdk/core';
+
+// Base addresses (header 0x00, testnet) in hex, as CIP-30 extensions return them.
+const base = (fill: string) => '00' + fill.repeat(56);
+const BASE_1 = base('11');
+const BASE_2 = base('22');
+const BASE_3 = base('33');
+const REWARD = 'e0' + '55'.repeat(28);
+const WALLET_ADDRESS = addressToBech32(BASE_1);
 
 function makeWallet(overrides: Partial<HostWalletAdapter> = {}): HostWalletAdapter {
   return {
     isConnected: () => true,
-    getAddress: () => 'addr_test1qabcdefghijklmnop',
+    getAddress: () => WALLET_ADDRESS,
     getExtension: () => null,
     isEmbedded: () => true,
     getNetworkId: async () => 0,
@@ -31,7 +46,7 @@ function memoryStorage(): Storage {
   } as Storage;
 }
 
-function setup(wallet = makeWallet(), storage?: Storage) {
+function setup(wallet = makeWallet(), storage?: Storage, extra: Partial<HostOptions> = {}) {
   const listeners: Array<(e: MessageEvent) => void> = [];
   const win = {
     location: { origin: 'http://host' },
@@ -39,12 +54,14 @@ function setup(wallet = makeWallet(), storage?: Storage) {
     removeEventListener: vi.fn(),
   } as unknown as Window;
   const app = { parent: win, postMessage: vi.fn() } as unknown as Window;
+  const logger = { warn: vi.fn(), error: vi.fn() };
   const host = createHost({
     wallet,
     allowedOrigins: ['https://*.hydraone.app'],
     window: win,
-    logger: { warn: vi.fn(), error: vi.fn() },
+    logger,
     storage,
+    ...extra,
   });
   host.start();
   const send = async (type: string, payload?: unknown, origin = 'https://g.hydraone.app') => {
@@ -71,6 +88,7 @@ function setup(wallet = makeWallet(), storage?: Storage) {
   return {
     host,
     win,
+    logger,
     app: app as unknown as { postMessage: ReturnType<typeof vi.fn> },
     send,
     sendFrom,
@@ -108,7 +126,7 @@ describe('createHost', () => {
 
   it('returns ERR_NOT_CONNECTED when disconnected', async () => {
     const { send, app } = setup(makeWallet({ isConnected: () => false }));
-    await send('GET_USED_ADDRESSES');
+    await send('GET_CHANGE_ADDRESS');
     expect(app.postMessage.mock.calls[0]![0].payload.error.code).toBe('ERR_NOT_CONNECTED');
   });
 
@@ -232,7 +250,6 @@ describe('createHost extension wallet and submit', () => {
     const extension = {
       icon: '',
       getUsedAddresses: vi.fn(async () => ['addr_ext']),
-      getUnusedAddresses: vi.fn(async () => []),
       getChangeAddress: vi.fn(async () => 'addr_change'),
       signTx: vi.fn(async () => 'ext-witness'),
       submitTx: vi.fn(async () => 'ext-hash'),
@@ -309,6 +326,123 @@ describe('createHost events', () => {
     host.registerIframe(app as unknown as Window, 'https://g.hydraone.app');
     await host.handleAddressChange('addr_new', null);
     expect(app.postMessage.mock.calls.map((c) => c[0].type)).toContain('ACCOUNT_CHANGED');
+  });
+});
+
+describe('createHost address', () => {
+  it.each(['GET_ADDRESS', 'GET_ADDRESSES'])(
+    'answers the removed %s with ERR_UNSUPPORTED_METHOD',
+    async (type) => {
+      const { send, app } = setup();
+      await send(type);
+      expect(app.postMessage.mock.calls[0]![0].type).toBe('RPC_ERROR');
+      expect(app.postMessage.mock.calls[0]![0].payload.error.code).toBe('ERR_UNSUPPORTED_METHOD');
+    },
+  );
+});
+
+describe('createHost CIP-30 address lists', () => {
+  const extension = () => ({
+    icon: '',
+    getUsedAddresses: vi.fn(async () => [BASE_1, BASE_2, BASE_3]),
+    getUnusedAddresses: vi.fn(async () => [BASE_3]),
+    getRewardAddresses: vi.fn(async () => [REWARD]),
+    getChangeAddress: vi.fn(async () => BASE_1),
+  });
+
+  it('forwards GET_USED_ADDRESSES to the extension with pagination', async () => {
+    const { send, app } = setup(makeWallet({ getExtension: () => extension() as never }));
+    await send('GET_USED_ADDRESSES', { paginate: { page: 1, limit: 2 } });
+    expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);
+  });
+
+  it('forwards GET_UNUSED_ADDRESSES and GET_REWARD_ADDRESSES to the extension', async () => {
+    const { send, app } = setup(makeWallet({ getExtension: () => extension() as never }));
+    await send('GET_UNUSED_ADDRESSES');
+    await send('GET_REWARD_ADDRESSES');
+    expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);
+    expect(app.postMessage.mock.calls[1]![0].payload.result).toEqual([REWARD]);
+  });
+
+  it('answers the embedded wallet with its address, no unused addresses and its stake address', async () => {
+    const { send, app } = setup();
+    await send('GET_USED_ADDRESSES');
+    await send('GET_UNUSED_ADDRESSES');
+    await send('GET_REWARD_ADDRESSES');
+    expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([WALLET_ADDRESS]);
+    expect(app.postMessage.mock.calls[1]![0].payload.result).toEqual([]);
+    expect(app.postMessage.mock.calls[2]![0].payload.result).toEqual([
+      addressToBech32('e0' + '11'.repeat(28)),
+    ]);
+  });
+});
+
+describe('createHost removed requests', () => {
+  it.each(['GET_PLAYER_PROFILE', 'REQUEST_DEPOSIT_MODAL'])(
+    'answers %s with ERR_UNSUPPORTED_METHOD',
+    async (type) => {
+      const { send, app } = setup();
+      await send(type, {});
+      expect(app.postMessage.mock.calls[0]![0].payload.error.code).toBe('ERR_UNSUPPORTED_METHOD');
+    },
+  );
+});
+
+describe('createHost language', () => {
+  it('omits language from hostInfo when the option is not provided', async () => {
+    const { send, app } = setup();
+    await send('CLIENT_READY');
+    expect(app.postMessage.mock.calls[0]![0].payload.hostInfo).not.toHaveProperty('language');
+  });
+
+  it('includes a static language in hostInfo', async () => {
+    const { send, app } = setup(makeWallet(), undefined, { language: 'vi' });
+    await send('CLIENT_READY');
+    expect(app.postMessage.mock.calls[0]![0].payload.hostInfo.language).toBe('vi');
+  });
+
+  it('re-reads a language function on every handshake', async () => {
+    let lang = 'en';
+    const { send, app } = setup(makeWallet(), undefined, { language: () => lang });
+    await send('CLIENT_READY');
+    lang = 'vi';
+    await send('CLIENT_READY');
+    expect(app.postMessage.mock.calls[0]![0].payload.hostInfo.language).toBe('en');
+    expect(app.postMessage.mock.calls[1]![0].payload.hostInfo.language).toBe('vi');
+  });
+
+  it('notifies registered iframes with LANGUAGE_CHANGED and a trimmed tag', () => {
+    const { host, app } = setup();
+    host.registerIframe(app as unknown as Window, 'https://g.hydraone.app');
+    host.setLanguage('  vi  ');
+    expect(app.postMessage).toHaveBeenCalledTimes(1);
+    const message = app.postMessage.mock.calls[0]![0];
+    expect(message.type).toBe('LANGUAGE_CHANGED');
+    expect(message.payload).toEqual({ language: 'vi' });
+  });
+
+  it('sends the language from setLanguage in later handshakes', async () => {
+    const { host, send, app } = setup(makeWallet(), undefined, { language: 'en' });
+    host.setLanguage('vi');
+    await send('CLIENT_READY');
+    expect(app.postMessage.mock.calls.at(-1)![0].payload.hostInfo.language).toBe('vi');
+  });
+
+  it('keeps reading a language function after setLanguage', async () => {
+    let lang = 'en';
+    const { host, send, app } = setup(makeWallet(), undefined, { language: () => lang });
+    host.setLanguage('vi');
+    lang = 'pt-BR';
+    await send('CLIENT_READY');
+    expect(app.postMessage.mock.calls.at(-1)![0].payload.hostInfo.language).toBe('pt-BR');
+  });
+
+  it.each(['', '   '])('ignores an empty language tag %j with a warning', (tag) => {
+    const { host, app, logger } = setup();
+    host.registerIframe(app as unknown as Window, 'https://g.hydraone.app');
+    host.setLanguage(tag);
+    expect(app.postMessage).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalled();
   });
 });
 

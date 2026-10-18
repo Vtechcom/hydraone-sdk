@@ -17,7 +17,8 @@ import type {
   HostRequestPayload,
   RegisteredIframe,
 } from './types';
-import type { BridgeMessage, HostInfo, PlayerProfile } from '@hydraone-sdk/core';
+import { rewardAddressFromBase } from '@hydraone-sdk/core';
+import type { BridgeMessage, HostInfo } from '@hydraone-sdk/core';
 
 const DEFAULT_HOST_NAME = 'HydraOne Host';
 const DEFAULT_HOST_VERSION = '1.0.0';
@@ -65,6 +66,8 @@ export function createHost(options: HostOptions): Host {
   let listening = false;
   // The app may report one disconnect through both the address and the connection state.
   let disconnectNotified = false;
+  // Last tag pushed with setLanguage, so later handshakes match it when options.language is static.
+  let currentLanguage: string | undefined;
 
   function isOriginAllowed(origin: string): boolean {
     if (!origin) return false;
@@ -123,11 +126,17 @@ export function createHost(options: HostOptions): Host {
   function hostInfo(): HostInfo {
     const embedded = wallet.isEmbedded();
     const name = embedded ? (options.embeddedWalletName ?? 'HydraOne Wallet') : 'CIP-30 Wallet';
+    // A function option is always current; otherwise the last setLanguage wins over the static value.
+    const language =
+      typeof options.language === 'function'
+        ? options.language()
+        : (currentLanguage ?? options.language);
     return {
       appName: options.hostName ?? DEFAULT_HOST_NAME,
       hostVersion: options.hostVersion ?? DEFAULT_HOST_VERSION,
       network: resolveValue(options.network ?? 'preprod'),
       theme: resolveValue(options.theme ?? 'dark'),
+      ...(language !== undefined ? { language } : {}),
       walletName: name,
       wallet: { name, icon: embedded ? '' : (wallet.getExtension()?.icon ?? '') },
     };
@@ -200,6 +209,14 @@ export function createHost(options: HostOptions): Host {
         requireWallet();
         return extension ? extension.getUnusedAddresses() : [];
 
+      case 'GET_REWARD_ADDRESSES': {
+        const address = requireWallet();
+        if (extension) return extension.getRewardAddresses();
+        // Embedded wallets expose only their base address; its stake credential is the reward address.
+        const reward = rewardAddressFromBase(address);
+        return reward ? [reward] : [];
+      }
+
       case 'GET_CHANGE_ADDRESS': {
         const address = requireWallet();
         return extension ? extension.getChangeAddress() : address;
@@ -251,18 +268,6 @@ export function createHost(options: HostOptions): Host {
           ? extension.signData(address, payloadHex)
           : wallet.signData(address, payloadHex);
       }
-      case 'GET_PLAYER_PROFILE': {
-        const address = wallet.getAddress();
-        if (options.getPlayerProfile) return options.getPlayerProfile(address);
-        const profile: PlayerProfile = address
-          ? { nickname: `${address.slice(0, 10)}…${address.slice(-4)}`, vipLevel: 0 }
-          : {};
-        return profile;
-      }
-      case 'REQUEST_DEPOSIT_MODAL':
-        options.onRequestDeposit?.();
-        return { acknowledged: true };
-
       case 'SET_ORIENTATION': {
         const orientation = payload.orientation as string | undefined;
         const api = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
@@ -393,6 +398,14 @@ export function createHost(options: HostOptions): Host {
     handleConnectionChange(connected) {
       if (connected) disconnectNotified = false;
       else notifyDisconnected();
+    },
+    setLanguage(language) {
+      if (typeof language !== 'string' || language.trim().length === 0) {
+        logger.warn('[Host] Ignored an empty language tag');
+        return;
+      }
+      currentLanguage = language.trim();
+      notify('LANGUAGE_CHANGED', { language: currentLanguage });
     },
     setHandler(type, handler) {
       if (handler) customHandlers.set(type, handler);

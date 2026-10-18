@@ -52,9 +52,7 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
   });
 
   it('rejects a blank appCenterOrigin through the transport', () => {
-    expect(
-      () => new WalletBridgeClient({ appCenterOrigin: '   ' }),
-    ).toThrow();
+    expect(() => new WalletBridgeClient({ appCenterOrigin: '   ' })).toThrow();
   });
 });
 

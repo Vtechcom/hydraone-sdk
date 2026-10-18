@@ -11,6 +11,11 @@ import {
   HAPTIC_PATTERNS,
 } from '../../src';
 import type { ITransport, BridgeMessage, MessageHandler, UnsubscribeFn } from '../../src';
+import { addressToBech32 } from '../../src/core/wallet/address';
+
+/** Real testnet base address (header 0x00) in hex and bech32 form. */
+const TEST_ADDRESS_HEX = '00' + '11'.repeat(28) + '22'.repeat(28);
+const TEST_ADDRESS_BECH32 = addressToBech32(TEST_ADDRESS_HEX);
 
 /**
  * Minimal ITransport implementation that records outgoing messages.
@@ -21,7 +26,7 @@ class SimpleMockTransport implements ITransport {
   public destroyed = false;
 
   /** Host commands that the real App Center always acknowledges with an RPC_RESPONSE. */
-  public autoAckTypes = new Set(['SET_ORIENTATION', 'TRIGGER_HAPTIC', 'REQUEST_DEPOSIT_MODAL']);
+  public autoAckTypes = new Set(['SET_ORIENTATION', 'TRIGGER_HAPTIC']);
 
   async send(message: BridgeMessage): Promise<void> {
     this.sentMessages.push(message);
@@ -68,7 +73,9 @@ describe('WalletBridgeClient', () => {
   describe('Constructor & Configuration', () => {
     it('throws when no transport is provided', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
-      expect(() => new WalletBridgeClient({} as any)).toThrow('requires a transport or an appCenterOrigin');
+      expect(() => new WalletBridgeClient({} as any)).toThrow(
+        'requires a transport or an appCenterOrigin',
+      );
     });
 
     it('initializes with the default timeout values', () => {
@@ -256,10 +263,10 @@ describe('WalletBridgeClient', () => {
     it('rejects queries made before connecting with ERR_NOT_CONNECTED', async () => {
       const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
-      await expect(disconnectedClient.getUsedAddresses()).rejects.toThrow(
+      await expect(disconnectedClient.getChangeAddress()).rejects.toThrow(
         'Client is not connected',
       );
-      await expect(disconnectedClient.getUsedAddresses()).rejects.toMatchObject({
+      await expect(disconnectedClient.getChangeAddress()).rejects.toMatchObject({
         code: ERROR_CODES.ERR_NOT_CONNECTED,
       });
       await expect(disconnectedClient.getBalance()).rejects.toMatchObject({
@@ -267,7 +274,7 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    it('getUsedAddresses() succeeds', async () => {
+    it('getUsedAddresses() sends GET_USED_ADDRESSES with pagination and returns bech32 by default', async () => {
       const promise = client.getUsedAddresses({ page: 0, limit: 10 });
       expect(transport.sentMessages.length).toBe(2);
 
@@ -278,16 +285,29 @@ describe('WalletBridgeClient', () => {
       transport.simulateIncoming({
         id: 'res-1',
         type: 'RPC_RESPONSE',
-        payload: {
-          requestId: queryMsg.id,
-          result: ['addr_test1qqqq...'],
-        },
+        payload: { requestId: queryMsg.id, result: [TEST_ADDRESS_HEX] },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
-      const addresses = await promise;
-      expect(addresses).toEqual(['addr_test1qqqq...']);
+      expect(await promise).toEqual([TEST_ADDRESS_BECH32]);
+    });
+
+    it('address list queries return an empty array when the host answers null', async () => {
+      const promise = client.getRewardAddresses();
+      const queryMsg = transport.sentMessages[transport.sentMessages.length - 1];
+      transport.simulateIncoming({
+        id: 'res-null',
+        type: 'RPC_RESPONSE',
+        payload: { requestId: queryMsg.id, result: null },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      expect(await promise).toEqual([]);
+    });
+
+    it('no longer exposes getAddress', () => {
+      expect((client as unknown as Record<string, unknown>).getAddress).toBeUndefined();
     });
 
     it('getUtxos() succeeds and returns a list of hex UTxOs', async () => {
@@ -351,43 +371,120 @@ describe('WalletBridgeClient', () => {
       expect(collateral).toEqual(['collateral_utxo_hex']);
     });
 
-    it('runs the auxiliary CIP-30 queries (unused, change, networkId)', async () => {
-      const p1 = client.getUnusedAddresses();
-      const p2 = client.getChangeAddress();
-      const p3 = client.getNetworkId();
+    it('runs the auxiliary CIP-30 queries (change, networkId)', async () => {
+      const p1 = client.getChangeAddress();
+      const p2 = client.getNetworkId();
 
       const msgs = transport.sentMessages.slice(1);
-      expect(msgs.map((m) => m.type)).toEqual([
-        'GET_UNUSED_ADDRESSES',
-        'GET_CHANGE_ADDRESS',
-        'GET_NETWORK_ID',
-      ]);
+      expect(msgs.map((m) => m.type)).toEqual(['GET_CHANGE_ADDRESS', 'GET_NETWORK_ID']);
 
       transport.simulateIncoming({
         id: 'r1',
         type: 'RPC_RESPONSE',
-        payload: { requestId: msgs[0].id, result: ['unused_addr'] },
+        payload: { requestId: msgs[0].id, result: TEST_ADDRESS_HEX },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
       transport.simulateIncoming({
         id: 'r2',
         type: 'RPC_RESPONSE',
-        payload: { requestId: msgs[1].id, result: 'change_addr' },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      transport.simulateIncoming({
-        id: 'r3',
-        type: 'RPC_RESPONSE',
-        payload: { requestId: msgs[2].id, result: 0 },
+        payload: { requestId: msgs[1].id, result: 0 },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
-      expect(await p1).toEqual(['unused_addr']);
-      expect(await p2).toBe('change_addr');
-      expect(await p3).toBe(0);
+      expect(await p1).toBe(TEST_ADDRESS_BECH32);
+      expect(await p2).toBe(0);
+    });
+
+    describe('address format option', () => {
+      type AddressQuery = {
+        name: string;
+        type: string;
+        call: (c: WalletBridgeClient, options?: { format?: any }) => Promise<string | string[]>;
+        wrap: (address: string) => unknown;
+      };
+      const queries: AddressQuery[] = [
+        {
+          name: 'getChangeAddress',
+          type: 'GET_CHANGE_ADDRESS',
+          call: (c, o) => c.getChangeAddress(o),
+          wrap: (a) => a,
+        },
+        {
+          name: 'getUsedAddresses',
+          type: 'GET_USED_ADDRESSES',
+          call: (c, o) => c.getUsedAddresses(undefined, o),
+          wrap: (a) => [a],
+        },
+        {
+          name: 'getUnusedAddresses',
+          type: 'GET_UNUSED_ADDRESSES',
+          call: (c, o) => c.getUnusedAddresses(o),
+          wrap: (a) => [a],
+        },
+        {
+          name: 'getRewardAddresses',
+          type: 'GET_REWARD_ADDRESSES',
+          call: (c, o) => c.getRewardAddresses(o),
+          wrap: (a) => [a],
+        },
+      ];
+
+      const respond = (result: unknown) => {
+        const msg = transport.sentMessages[transport.sentMessages.length - 1];
+        transport.simulateIncoming({
+          id: `res-${msg.id}`,
+          type: 'RPC_RESPONSE',
+          payload: { requestId: msg.id, result },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+      };
+
+      for (const q of queries) {
+        it(`${q.name}() returns bech32 by default when the host answers hex`, async () => {
+          const promise = q.call(client);
+          expect(transport.sentMessages[transport.sentMessages.length - 1].type).toBe(q.type);
+          respond(q.wrap(TEST_ADDRESS_HEX));
+          expect(await promise).toEqual(q.wrap(TEST_ADDRESS_BECH32));
+        });
+
+        it(`${q.name}() returns hex with format: 'hex' when the host answers bech32`, async () => {
+          const promise = q.call(client, { format: 'hex' });
+          respond(q.wrap(TEST_ADDRESS_BECH32));
+          expect(await promise).toEqual(q.wrap(TEST_ADDRESS_HEX));
+        });
+
+        it(`${q.name}() rejects an invalid format with ERR_INVALID_PARAMS without sending a request`, async () => {
+          const sentBefore = transport.sentMessages.length;
+          await expect(q.call(client, { format: 'base58' })).rejects.toMatchObject({
+            code: ERROR_CODES.ERR_INVALID_PARAMS,
+          });
+          expect(transport.sentMessages.length).toBe(sentBefore);
+        });
+      }
+
+      it('getChangeAddress() rejects a malformed host address with ERR_INVALID_RESPONSE', async () => {
+        const promise = client.getChangeAddress();
+        respond('addr_test1qp...');
+        await expect(promise).rejects.toBeInstanceOf(HydraBridgeError);
+        await expect(promise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_RESPONSE,
+          details: { value: 'addr_test1qp...' },
+        });
+      });
+
+      for (const q of queries.slice(1)) {
+        it(`${q.name}() skips malformed host addresses and keeps the valid ones`, async () => {
+          const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+          const promise = q.call(client);
+          respond(['addr_test1qp...', TEST_ADDRESS_HEX, null]);
+          expect(await promise).toEqual([TEST_ADDRESS_BECH32]);
+          expect(warn).toHaveBeenCalledOnce();
+          warn.mockRestore();
+        });
+      }
     });
   });
 
@@ -536,29 +633,29 @@ describe('WalletBridgeClient', () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
-      const audioCallback = vi.fn();
-      const unsubscribe = client.onHostEvent('AUDIO_MUTED_CHANGED', audioCallback);
+      const eventCallback = vi.fn();
+      const unsubscribe = client.onHostEvent('LANGUAGE_CHANGED', eventCallback);
 
       transport.simulateIncoming({
         id: 'ev-1',
-        type: 'AUDIO_MUTED_CHANGED',
-        payload: { muted: true },
+        type: 'LANGUAGE_CHANGED',
+        payload: { language: 'vi' },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
-      expect(audioCallback).toHaveBeenCalledWith({ muted: true });
+      expect(eventCallback).toHaveBeenCalledWith({ language: 'vi' });
 
       // Unsubscribe
       unsubscribe();
       transport.simulateIncoming({
         id: 'ev-2',
-        type: 'AUDIO_MUTED_CHANGED',
-        payload: { muted: false },
+        type: 'LANGUAGE_CHANGED',
+        payload: { language: 'en' },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
-      expect(audioCallback).toHaveBeenCalledTimes(1);
+      expect(eventCallback).toHaveBeenCalledTimes(1);
     });
 
     it('handles invalid onHostEvent arguments safely', () => {
@@ -730,10 +827,10 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(true);
       expect(client.hostInfo).toEqual({ walletName: 'Lace' });
 
-      // Call getUsedAddresses through PostMessageTransport
-      const addrPromise = client.getUsedAddresses();
+      // Call getChangeAddress through PostMessageTransport
+      const addrPromise = client.getChangeAddress();
       const addrEnvelope = targetWindow.postMessage.mock.calls[1][0];
-      expect(addrEnvelope.type).toBe('GET_USED_ADDRESSES');
+      expect(addrEnvelope.type).toBe('GET_CHANGE_ADDRESS');
 
       pmTransport.handleMessageEvent({
         origin: 'https://alpha.hydraone.app',
@@ -742,15 +839,14 @@ describe('WalletBridgeClient', () => {
           type: 'RPC_RESPONSE',
           payload: {
             requestId: addrEnvelope.id,
-            result: ['addr_test1xyz'],
+            result: TEST_ADDRESS_HEX,
           },
           timestamp: Date.now(),
           source: 'hydra-host',
         },
       });
 
-      const addrs = await addrPromise;
-      expect(addrs).toEqual(['addr_test1xyz']);
+      expect(await addrPromise).toBe(TEST_ADDRESS_BECH32);
     });
   });
 
@@ -859,6 +955,90 @@ describe('WalletBridgeClient', () => {
 
         const res = await signPromise;
         expect(res).toBe('witness_partial');
+      });
+
+      it('sends partialSign: true when given a SignTxOptions object { partialSign: true }', async () => {
+        const txCbor = '84a300818258200101...';
+        const signPromise = client.signTx(txCbor, { partialSign: true });
+
+        const signMsg = transport.sentMessages[1];
+        expect(signMsg.payload).toEqual({ cbor: txCbor, partialSign: true });
+
+        transport.simulateIncoming({
+          id: 'host-res-partial-obj',
+          type: 'RPC_RESPONSE',
+          payload: { requestId: signMsg.id, result: 'witness_partial_obj' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(await signPromise).toBe('witness_partial_obj');
+      });
+
+      it('returns the full signed transaction when addVkey: true', async () => {
+        const vkey = 'ab'.repeat(32);
+        const sig = 'cd'.repeat(64);
+        // [ body: {}, witnesses: {}, isValid: true, auxData: null ]
+        const unsignedTx = '84a0a0f5f6';
+        // { 0: [ [vkey, sig] ] }
+        const witnessSet = `a10081825820${vkey}5840${sig}`;
+        const expectedTx = `84a0a10081825820${vkey}5840${sig}f5f6`;
+
+        const signPromise = client.signTx(unsignedTx, { addVkey: true });
+        const signMsg = transport.sentMessages[1];
+        expect(signMsg.payload).toEqual({ cbor: unsignedTx, partialSign: false });
+
+        transport.simulateIncoming({
+          id: 'host-res-addvkey',
+          type: 'RPC_RESPONSE',
+          payload: { requestId: signMsg.id, result: witnessSet },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect((await signPromise).toLowerCase()).toBe(expectedTx);
+      });
+
+      it('rejects a non-transaction CBOR with addVkey before asking the wallet', async () => {
+        const sentBefore = transport.sentMessages.length;
+        await expect(client.signTx('a0', { addVkey: true })).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_PARAMS,
+        });
+        expect(transport.sentMessages.length).toBe(sentBefore);
+      });
+
+      it('keeps the witness set in the error when it cannot be merged', async () => {
+        const signPromise = client.signTx('84a0a0f5f6', { addVkey: true });
+        const signMsg = transport.sentMessages[1];
+
+        transport.simulateIncoming({
+          id: 'host-res-bad-witness',
+          type: 'RPC_RESPONSE',
+          payload: { requestId: signMsg.id, result: 'ff' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        await expect(signPromise).rejects.toMatchObject({
+          code: ERROR_CODES.ERR_INVALID_RESPONSE,
+          details: { witnessSet: 'ff' },
+        });
+      });
+
+      it('returns the witness set unchanged when addVkey is not set', async () => {
+        const witnessSet = `a10081825820${'ab'.repeat(32)}5840${'cd'.repeat(64)}`;
+        const signPromise = client.signTx('84a0a0f5f6', { partialSign: false });
+        const signMsg = transport.sentMessages[1];
+
+        transport.simulateIncoming({
+          id: 'host-res-no-addvkey',
+          type: 'RPC_RESPONSE',
+          payload: { requestId: signMsg.id, result: witnessSet },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(await signPromise).toBe(witnessSet);
       });
 
       it('throws HydraUserRejectedError when the user rejects signing in the wallet', async () => {
@@ -1052,7 +1232,7 @@ describe('WalletBridgeClient', () => {
 
     describe('signData', () => {
       it('sends SIGN_DATA and returns a DataSignature ({ signature, key })', async () => {
-        const address = 'addr_test1qp...';
+        const address = TEST_ADDRESS_HEX;
         const payloadHex = '68656c6c6f20776f726c64'; // 'hello world' hex
         const signDataPromise = client.signData(address, payloadHex);
 
@@ -1083,8 +1263,27 @@ describe('WalletBridgeClient', () => {
         expect(result).toEqual(expectedSig);
       });
 
+      it('converts a bech32 address to hex in the SIGN_DATA payload', async () => {
+        const payloadHex = '68656c6c6f';
+        const signDataPromise = client.signData(TEST_ADDRESS_BECH32, payloadHex);
+
+        const signDataMsg = transport.sentMessages[1];
+        expect(signDataMsg.type).toBe('SIGN_DATA');
+        expect(signDataMsg.payload).toEqual({ address: TEST_ADDRESS_HEX, payloadHex });
+
+        transport.simulateIncoming({
+          id: 'host-res-signdata-bech32',
+          type: 'RPC_RESPONSE',
+          payload: { requestId: signDataMsg.id, result: { signature: 'sig', key: 'key' } },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(await signDataPromise).toEqual({ signature: 'sig', key: 'key' });
+      });
+
       it('throws HydraUserRejectedError when the user rejects signData', async () => {
-        const address = 'addr_test1qp...';
+        const address = TEST_ADDRESS_BECH32;
         const payloadHex = '68656c6c6f20776f726c64';
         const signDataPromise = client.signData(address, payloadHex);
 
@@ -1113,7 +1312,14 @@ describe('WalletBridgeClient', () => {
         await expect(client.signData('', '1234')).rejects.toMatchObject({
           code: 'ERR_INVALID_PARAMS',
         });
-        await expect(client.signData('addr', null as any)).rejects.toMatchObject({
+        for (const bad of ['addr', 'addr_test1qp...', 'zz12', null, 123]) {
+          await expect(client.signData(bad as any, '1234')).rejects.toMatchObject({
+            code: 'ERR_INVALID_PARAMS',
+          });
+        }
+        // Nothing reaches the host for invalid addresses.
+        expect(transport.sentMessages.map((m) => m.type)).not.toContain('SIGN_DATA');
+        await expect(client.signData(TEST_ADDRESS_HEX, null as any)).rejects.toMatchObject({
           code: 'ERR_INVALID_PARAMS',
         });
       });
@@ -1229,7 +1435,7 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('Host Event Bus Sync (Audio & Theme)', () => {
+  describe('Host Event Bus Sync (Theme & Language)', () => {
     let mockTransport: ITransport;
     let messageCallback: ((msg: any) => void) | undefined;
     let client: WalletBridgeClient;
@@ -1259,152 +1465,112 @@ describe('WalletBridgeClient', () => {
       client.destroy();
     });
 
-    describe('AUDIO_MUTED_CHANGED', () => {
-      it('fires onAudioMutedChanged when the host shell broadcasts { muted: true }', () => {
-        const audioSpy = vi.fn();
-        const unsub = client.onAudioMutedChanged(audioSpy);
-
-        expect(client.isAudioMuted).toBeUndefined();
-
+    describe('LANGUAGE_CHANGED', () => {
+      const emitLanguage = (payload: unknown, id = `evt-lang-${Math.random()}`) =>
         messageCallback?.({
-          id: 'evt-audio-1',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
+          id,
+          type: 'LANGUAGE_CHANGED',
+          payload,
           timestamp: Date.now(),
           source: 'hydra-host',
         });
 
-        expect(audioSpy).toHaveBeenCalledTimes(1);
-        expect(audioSpy).toHaveBeenCalledWith(true);
-        expect(client.isAudioMuted).toBe(true);
+      it('fires onLanguageChanged when the host shell broadcasts { language: "vi" }', () => {
+        const languageSpy = vi.fn();
+        const unsub = client.onLanguageChanged(languageSpy);
+
+        expect(client.language).toBeUndefined();
+
+        emitLanguage({ language: 'vi' });
+
+        expect(languageSpy).toHaveBeenCalledTimes(1);
+        expect(languageSpy).toHaveBeenCalledWith('vi');
+        expect(client.language).toBe('vi');
 
         unsub();
       });
 
-      it('fires onAudioMutedChanged when the host shell broadcasts { muted: false }', () => {
-        const audioSpy = vi.fn();
-        client.onAudioMutedChanged(audioSpy);
+      it('handles a bare string sent directly as the payload and trims it', () => {
+        const languageSpy = vi.fn();
+        client.onLanguageChanged(languageSpy);
 
-        messageCallback?.({
-          id: 'evt-audio-2',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: false },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        emitLanguage('en');
+        expect(languageSpy).toHaveBeenLastCalledWith('en');
+        expect(client.language).toBe('en');
 
-        expect(audioSpy).toHaveBeenCalledWith(false);
-        expect(client.isAudioMuted).toBe(false);
+        emitLanguage({ language: '  vi  ' });
+        expect(languageSpy).toHaveBeenLastCalledWith('vi');
+        expect(client.language).toBe('vi');
       });
 
-      it('handles a boolean sent directly as the payload', () => {
-        const audioSpy = vi.fn();
-        client.onAudioMutedChanged(audioSpy);
+      it('ignores empty, whitespace-only and non-string language values', () => {
+        const languageSpy = vi.fn();
+        client.onLanguageChanged(languageSpy);
+        emitLanguage({ language: 'vi' });
+        languageSpy.mockClear();
 
-        messageCallback?.({
-          id: 'evt-audio-3',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: true,
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        for (const payload of [
+          '',
+          '   ',
+          { language: '' },
+          { language: '  ' },
+          { language: 42 },
+          7,
+          true,
+          null,
+          undefined,
+          {},
+        ]) {
+          expect(() => emitLanguage(payload)).not.toThrow();
+        }
 
-        expect(audioSpy).toHaveBeenCalledWith(true);
-        expect(client.isAudioMuted).toBe(true);
-
-        messageCallback?.({
-          id: 'evt-audio-4',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: false,
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
-
-        expect(audioSpy).toHaveBeenCalledWith(false);
-        expect(client.isAudioMuted).toBe(false);
+        expect(languageSpy).not.toHaveBeenCalled();
+        expect(client.language).toBe('vi');
       });
 
       it('supports multiple listeners and removes them correctly through unsubscribe', () => {
         const listenerA = vi.fn();
         const listenerB = vi.fn();
 
-        const unsubA = client.onAudioMutedChanged(listenerA);
-        const unsubB = client.onAudioMutedChanged(listenerB);
+        const unsubA = client.onLanguageChanged(listenerA);
+        const unsubB = client.onLanguageChanged(listenerB);
 
-        messageCallback?.({
-          id: 'evt-audio-5',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        emitLanguage({ language: 'vi' });
 
         expect(listenerA).toHaveBeenCalledTimes(1);
         expect(listenerB).toHaveBeenCalledTimes(1);
 
-        // Unsubscribe listenerA
         unsubA();
 
-        messageCallback?.({
-          id: 'evt-audio-6',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: false },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        emitLanguage({ language: 'en' });
 
         expect(listenerA).toHaveBeenCalledTimes(1); // receives nothing more
         expect(listenerB).toHaveBeenCalledTimes(2); // keeps receiving
-        expect(listenerB).toHaveBeenLastCalledWith(false);
+        expect(listenerB).toHaveBeenLastCalledWith('en');
 
         unsubB();
       });
 
       it('catches listener exceptions without crashing the other listeners', () => {
         const faultyListener = vi.fn().mockImplementation(() => {
-          throw new Error('Game sound manager exploded');
+          throw new Error('Game i18n loader exploded');
         });
         const healthyListener = vi.fn();
 
-        client.onAudioMutedChanged(faultyListener);
-        client.onAudioMutedChanged(healthyListener);
+        client.onLanguageChanged(faultyListener);
+        client.onLanguageChanged(healthyListener);
 
-        expect(() => {
-          messageCallback?.({
-            id: 'evt-audio-7',
-            type: 'AUDIO_MUTED_CHANGED',
-            payload: { muted: true },
-            timestamp: Date.now(),
-            source: 'hydra-host',
-          });
-        }).not.toThrow();
+        expect(() => emitLanguage({ language: 'vi' })).not.toThrow();
 
         expect(faultyListener).toHaveBeenCalledTimes(1);
         expect(healthyListener).toHaveBeenCalledTimes(1);
-        expect(healthyListener).toHaveBeenCalledWith(true);
+        expect(healthyListener).toHaveBeenCalledWith('vi');
       });
 
       it('returns a no-op function when the handler is not a function', () => {
-        const unsub = client.onAudioMutedChanged(null as any);
+        const unsub = client.onLanguageChanged(null as any);
         expect(typeof unsub).toBe('function');
         expect(() => unsub()).not.toThrow();
-      });
-
-      it('does not throw on an empty or null payload', () => {
-        const audioSpy = vi.fn();
-        client.onAudioMutedChanged(audioSpy);
-
-        expect(() => {
-          messageCallback?.({
-            id: 'evt-audio-8',
-            type: 'AUDIO_MUTED_CHANGED',
-            payload: null,
-            timestamp: Date.now(),
-            source: 'hydra-host',
-          });
-        }).not.toThrow();
-
-        expect(audioSpy).not.toHaveBeenCalled();
       });
 
       it('does not call a listener that was unsubscribed or destroyed while an earlier listener was running', () => {
@@ -1414,16 +1580,10 @@ describe('WalletBridgeClient', () => {
         });
         const listenerB = vi.fn();
 
-        client.onAudioMutedChanged(listenerA);
-        const unsubB: UnsubscribeFn = client.onAudioMutedChanged(listenerB);
+        client.onLanguageChanged(listenerA);
+        const unsubB: UnsubscribeFn = client.onLanguageChanged(listenerB);
 
-        messageCallback?.({
-          id: 'evt-reentrant-audio',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        emitLanguage({ language: 'vi' }, 'evt-reentrant-lang');
 
         expect(listenerA).toHaveBeenCalledTimes(1);
         expect(listenerB).not.toHaveBeenCalled();
@@ -1435,16 +1595,10 @@ describe('WalletBridgeClient', () => {
         });
         const listenerB = vi.fn();
 
-        client.onAudioMutedChanged(listenerA);
-        client.onAudioMutedChanged(listenerB);
+        client.onLanguageChanged(listenerA);
+        client.onLanguageChanged(listenerB);
 
-        messageCallback?.({
-          id: 'evt-destroy-in-callback',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
+        emitLanguage({ language: 'vi' }, 'evt-destroy-in-callback');
 
         expect(listenerA).toHaveBeenCalledTimes(1);
         expect(listenerB).not.toHaveBeenCalled();
@@ -1615,7 +1769,7 @@ describe('WalletBridgeClient', () => {
     });
 
     describe('State sync from the handshake and lifecycle cleanup', () => {
-      it('initializes isAudioMuted and theme from the HOST_ACK handshake metadata', async () => {
+      it('initializes language and theme from the HOST_ACK handshake metadata', async () => {
         const transport = new SimpleMockTransport();
         const testClient = new WalletBridgeClient({ transport });
 
@@ -1631,7 +1785,7 @@ describe('WalletBridgeClient', () => {
             hostInfo: {
               hostVersion: '1.2.0',
               theme: 'dark',
-              audioMuted: true,
+              language: 'vi',
             },
           },
           timestamp: Date.now(),
@@ -1642,7 +1796,8 @@ describe('WalletBridgeClient', () => {
 
         expect(testClient.isConnected).toBe(true);
         expect(testClient.theme).toBe('dark');
-        expect(testClient.isAudioMuted).toBe(true);
+        expect(testClient.language).toBe('vi');
+        expect(testClient.hostInfo?.language).toBe('vi');
         testClient.destroy();
       });
 
@@ -1661,7 +1816,7 @@ describe('WalletBridgeClient', () => {
             hostInfo: {
               hostVersion: '1.2.0',
               theme: '  DARK  ',
-              audioMuted: true,
+              language: '  en  ',
             },
           },
           timestamp: Date.now(),
@@ -1672,7 +1827,7 @@ describe('WalletBridgeClient', () => {
 
         expect(testClient.isConnected).toBe(true);
         expect(testClient.theme).toBe('dark');
-        expect(testClient.isAudioMuted).toBe(true);
+        expect(testClient.language).toBe('en');
         testClient.destroy();
       });
 
@@ -1683,7 +1838,6 @@ describe('WalletBridgeClient', () => {
           payload: {
             hostInfo: {
               theme: ' LIGHT ',
-              audioMuted: false,
             },
           },
           timestamp: Date.now(),
@@ -1692,17 +1846,16 @@ describe('WalletBridgeClient', () => {
 
         expect(client.isConnected).toBe(true);
         expect(client.theme).toBe('light');
-        expect(client.isAudioMuted).toBe(false);
       });
 
-      it('updates isAudioMuted and theme on an unsolicited HOST_ACK', () => {
+      it('updates language and theme on an unsolicited HOST_ACK', () => {
         messageCallback?.({
           id: 'unsolicited-ack',
           type: 'HOST_ACK',
           payload: {
             hostInfo: {
               theme: 'light',
-              audioMuted: false,
+              language: 'vi',
             },
           },
           timestamp: Date.now(),
@@ -1711,14 +1864,27 @@ describe('WalletBridgeClient', () => {
 
         expect(client.isConnected).toBe(true);
         expect(client.theme).toBe('light');
-        expect(client.isAudioMuted).toBe(false);
+        expect(client.language).toBe('vi');
       });
 
-      it('resets isAudioMuted and theme on disconnect', () => {
+      it('ignores an empty or whitespace-only language in the handshake metadata', () => {
         messageCallback?.({
-          id: 'evt-audio',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
+          id: 'unsolicited-ack-blank-lang',
+          type: 'HOST_ACK',
+          payload: { hostInfo: { language: '   ' } },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+
+        expect(client.isConnected).toBe(true);
+        expect(client.language).toBeUndefined();
+      });
+
+      it('resets language and theme on disconnect', () => {
+        messageCallback?.({
+          id: 'evt-lang',
+          type: 'LANGUAGE_CHANGED',
+          payload: { language: 'vi' },
           timestamp: Date.now(),
           source: 'hydra-host',
         });
@@ -1730,34 +1896,41 @@ describe('WalletBridgeClient', () => {
           source: 'hydra-host',
         });
 
-        expect(client.isAudioMuted).toBe(true);
+        expect(client.language).toBe('vi');
         expect(client.theme).toBe('dark');
 
         client.disconnect();
 
-        expect(client.isAudioMuted).toBeUndefined();
+        expect(client.language).toBeUndefined();
         expect(client.theme).toBeUndefined();
       });
 
       it('destroy removes all listeners and releases resources', () => {
-        const audioSpy = vi.fn();
+        const languageSpy = vi.fn();
         const themeSpy = vi.fn();
 
-        client.onAudioMutedChanged(audioSpy);
+        client.onLanguageChanged(languageSpy);
         client.onThemeChanged(themeSpy);
 
         client.destroy();
 
-        // Simulate a message arriving after destroy
+        // Simulate messages arriving after destroy
         messageCallback?.({
-          id: 'evt-audio-late',
-          type: 'AUDIO_MUTED_CHANGED',
-          payload: { muted: true },
+          id: 'evt-lang-late',
+          type: 'LANGUAGE_CHANGED',
+          payload: { language: 'vi' },
+          timestamp: Date.now(),
+          source: 'hydra-host',
+        });
+        messageCallback?.({
+          id: 'evt-theme-late',
+          type: 'THEME_CHANGED',
+          payload: { theme: 'dark' },
           timestamp: Date.now(),
           source: 'hydra-host',
         });
 
-        expect(audioSpy).not.toHaveBeenCalled();
+        expect(languageSpy).not.toHaveBeenCalled();
         expect(themeSpy).not.toHaveBeenCalled();
       });
     });
@@ -2387,294 +2560,6 @@ describe('WalletBridgeClient', () => {
     });
   });
 
-  describe('In-Game Host Modal Overlay & Player Profile Relay', () => {
-    let transport: SimpleMockTransport;
-    let client: WalletBridgeClient;
-
-    beforeEach(async () => {
-      transport = new SimpleMockTransport();
-      client = new WalletBridgeClient({ transport });
-
-      // Complete the handshake so the API is ready
-      const p = client.init();
-      transport.simulateIncoming({
-        id: 'ack-init-s33',
-        type: 'HOST_ACK',
-        payload: { requestId: transport.sentMessages[0].id },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      await p;
-    });
-
-    afterEach(() => {
-      client.destroy();
-    });
-
-    describe('requestDepositModal', () => {
-      it('sends REQUEST_DEPOSIT_MODAL with an empty payload when called without arguments', async () => {
-        await client.requestDepositModal();
-
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-        expect(lastMessage.type).toBe('REQUEST_DEPOSIT_MODAL');
-        expect(lastMessage.source).toBe('hydra-client');
-        expect(lastMessage.payload).toEqual({});
-      });
-
-      it('sends REQUEST_DEPOSIT_MODAL with options { token: "ADA", minAmount: 10 }', async () => {
-        await client.requestDepositModal({ token: 'ADA', minAmount: 10 });
-
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-        expect(lastMessage.type).toBe('REQUEST_DEPOSIT_MODAL');
-        expect(lastMessage.source).toBe('hydra-client');
-        expect(lastMessage.payload).toEqual({ token: 'ADA', minAmount: 10 });
-      });
-
-      it('supports minAmount as a bigint and as a positive numeric string (whitespace is trimmed)', async () => {
-        await client.requestDepositModal({ token: 'DJED', minAmount: 5000000n });
-        let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-        expect(lastMessage.payload).toEqual({ token: 'DJED', minAmount: 5000000n });
-
-        await client.requestDepositModal({ token: 'iUSD', minAmount: '  25.5  ' });
-        lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-        expect(lastMessage.payload).toEqual({ token: 'iUSD', minAmount: '25.5' });
-      });
-
-      it('throws ERR_NOT_CONNECTED when requestDepositModal is called before the client is connected', async () => {
-        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
-
-        await expect(disconnectedClient.requestDepositModal()).rejects.toThrow(HydraBridgeError);
-        await expect(disconnectedClient.requestDepositModal()).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
-        });
-
-        disconnectedClient.destroy();
-      });
-
-      it('throws ERR_INVALID_PARAMS when options is not an object', async () => {
-        await expect(client.requestDepositModal('invalid' as any)).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal(123 as any)).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal([] as any)).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-      });
-
-      it('throws ERR_INVALID_PARAMS when token is empty or not a string', async () => {
-        await expect(client.requestDepositModal({ token: '' })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ token: '   ' })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ token: 123 as any })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-      });
-
-      it('throws ERR_INVALID_PARAMS when minAmount is negative, 0, NaN or otherwise invalid', async () => {
-        await expect(client.requestDepositModal({ minAmount: -5 })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ minAmount: 0 })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ minAmount: NaN })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ minAmount: -10n })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ minAmount: 'abc' })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-        await expect(client.requestDepositModal({ minAmount: '-10' })).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_INVALID_PARAMS,
-        });
-      });
-
-      it('throws ERR_NOT_IN_IFRAME when requestDepositModal is called in standalone mode outside an iframe', async () => {
-        const standaloneClient = new WalletBridgeClient({
-          transport: new SimpleMockTransport(),
-          isIframeFn: () => false,
-        });
-
-        await expect(standaloneClient.requestDepositModal()).rejects.toThrow(HydraBridgeError);
-        await expect(standaloneClient.requestDepositModal()).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_IN_IFRAME,
-        });
-
-        standaloneClient.destroy();
-      });
-    });
-
-    describe('getPlayerProfile', () => {
-      it('sends the GET_PLAYER_PROFILE RPC and returns the PlayerProfile from the host shell', async () => {
-        const expectedProfile = {
-          nickname: 'CardanoGamer',
-          avatarUrl: 'https://hydraone.app/avatars/gamer1.png',
-          vipLevel: 5,
-          adaHandle: '$cardanogamer',
-        };
-
-        const profilePromise = client.getPlayerProfile();
-
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-        expect(lastMessage.type).toBe('GET_PLAYER_PROFILE');
-        expect(lastMessage.source).toBe('hydra-client');
-
-        // Host replies with the RPC result
-        transport.simulateIncoming({
-          id: 'rpc-res-profile',
-          type: 'RPC_RESPONSE',
-          payload: {
-            requestId: lastMessage.id,
-            result: expectedProfile,
-          },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
-
-        const profile = await profilePromise;
-        expect(profile).toEqual(expectedProfile);
-      });
-
-      it('returns an empty object when the host returns an empty, non-object or array payload', async () => {
-        const profilePromise = client.getPlayerProfile();
-        let lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-
-        transport.simulateIncoming({
-          id: 'rpc-res-profile-empty',
-          type: 'RPC_RESPONSE',
-          payload: {
-            requestId: lastMessage.id,
-            result: null,
-          },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
-
-        const profile = await profilePromise;
-        expect(profile).toEqual({});
-
-        // Host returns an array instead of an object
-        const profilePromiseArray = client.getPlayerProfile();
-        lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-
-        transport.simulateIncoming({
-          id: 'rpc-res-profile-array',
-          type: 'RPC_RESPONSE',
-          payload: {
-            requestId: lastMessage.id,
-            result: ['invalid', 'array', 'format'],
-          },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
-
-        const profileArray = await profilePromiseArray;
-        expect(profileArray).toEqual({});
-      });
-
-      it('throws ERR_NOT_CONNECTED when getPlayerProfile is called before the client is connected', async () => {
-        const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
-
-        await expect(disconnectedClient.getPlayerProfile()).rejects.toThrow(HydraBridgeError);
-        await expect(disconnectedClient.getPlayerProfile()).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
-        });
-
-        disconnectedClient.destroy();
-      });
-
-      it('throws ERR_NOT_IN_IFRAME when getPlayerProfile is called in standalone mode outside an iframe', async () => {
-        const standaloneClient = new WalletBridgeClient({
-          transport: new SimpleMockTransport(),
-          isIframeFn: () => false,
-        });
-
-        await expect(standaloneClient.getPlayerProfile()).rejects.toThrow(HydraBridgeError);
-        await expect(standaloneClient.getPlayerProfile()).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_IN_IFRAME,
-        });
-
-        standaloneClient.destroy();
-      });
-
-      it('throws ERR_TIMEOUT when the host does not answer within the query timeout (15s)', async () => {
-        const profilePromise = client.getPlayerProfile();
-
-        vi.advanceTimersByTime(TIERED_TIMEOUTS.QUERY + 100);
-
-        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
-        await expect(profilePromise).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_TIMEOUT,
-        });
-      });
-
-      it('supports a per-request timeout through options.timeoutMs', async () => {
-        const profilePromise = client.getPlayerProfile({ timeoutMs: 5000 });
-
-        vi.advanceTimersByTime(4999);
-        // Not timed out before 5000ms
-
-        vi.advanceTimersByTime(100);
-        // Timed out after 5000ms
-        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
-      });
-
-      it('silently drops a late GET_PLAYER_PROFILE response that arrives after the timeout', async () => {
-        const profilePromise = client.getPlayerProfile({ timeoutMs: 2000 });
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-
-        vi.advanceTimersByTime(2100);
-        await expect(profilePromise).rejects.toThrow(HydraTimeoutError);
-
-        // Late response arriving after the timeout
-        expect(() => {
-          transport.simulateIncoming({
-            id: 'rpc-res-late-profile',
-            type: 'RPC_RESPONSE',
-            payload: {
-              requestId: lastMessage.id,
-              result: { nickname: 'LateUser' },
-            },
-            timestamp: Date.now(),
-            source: 'hydra-host',
-          });
-        }).not.toThrow();
-      });
-
-      it('forwards RPC errors (RPC_ERROR) from the host shell', async () => {
-        const profilePromise = client.getPlayerProfile();
-        const lastMessage = transport.sentMessages[transport.sentMessages.length - 1];
-
-        transport.simulateIncoming({
-          id: 'rpc-err-profile',
-          type: 'RPC_ERROR',
-          payload: {
-            requestId: lastMessage.id,
-            error: {
-              code: ERROR_CODES.ERR_USER_REJECTED,
-              message: 'Player declined profile sharing',
-            },
-          },
-          timestamp: Date.now(),
-          source: 'hydra-host',
-        });
-
-        await expect(profilePromise).rejects.toThrow(HydraUserRejectedError);
-        await expect(profilePromise).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_USER_REJECTED,
-          message: 'Player declined profile sharing',
-        });
-      });
-    });
-  });
-
   describe('Code Review Patches & Invariant Hardening', () => {
     it('fixes a race: disconnect() while init() is pending must not leave the client connected', async () => {
       const transport = new SimpleMockTransport();
@@ -2797,49 +2682,6 @@ describe('WalletBridgeClient', () => {
       await expect(client.getBalance()).rejects.toThrow('WalletBridgeClient has been destroyed');
     });
 
-    it('extractAudioMuted supports both the audioMuted and muted payload fields', async () => {
-      const transport = new SimpleMockTransport();
-      const client = new WalletBridgeClient({ transport });
-
-      const initPromise = client.init();
-      const readyMsg = transport.sentMessages[0];
-      transport.simulateIncoming({
-        id: 'ack-4',
-        type: 'HOST_ACK',
-        payload: { requestId: readyMsg.id },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      await initPromise;
-
-      let mutedVal: boolean | undefined;
-      client.onAudioMutedChanged((muted) => {
-        mutedVal = muted;
-      });
-
-      // Send the audioMuted form
-      transport.simulateIncoming({
-        id: 'ev-audio-1',
-        type: 'AUDIO_MUTED_CHANGED',
-        payload: { audioMuted: true },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      expect(client.isAudioMuted).toBe(true);
-      expect(mutedVal).toBe(true);
-
-      // Send the muted form
-      transport.simulateIncoming({
-        id: 'ev-audio-2',
-        type: 'AUDIO_MUTED_CHANGED',
-        payload: { muted: false },
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      });
-      expect(client.isAudioMuted).toBe(false);
-      expect(mutedVal).toBe(false);
-    });
-
     it('throws ERR_INVALID_PARAMS for blank strings in signTx, submitTx and signData', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
@@ -2857,7 +2699,10 @@ describe('WalletBridgeClient', () => {
 
       await expect(client.signTx('   ')).rejects.toThrow('Invalid transaction CBOR');
       await expect(client.submitTx('   ')).rejects.toThrow('Invalid transaction CBOR');
-      await expect(client.signData('   ', 'deadbeef')).rejects.toThrow('Invalid wallet address');
+      await expect(client.signData('   ', 'deadbeef')).rejects.toThrow('Invalid address');
+      await expect(client.signData('   ', 'deadbeef')).rejects.toMatchObject({
+        code: ERROR_CODES.ERR_INVALID_PARAMS,
+      });
     });
   });
 });
