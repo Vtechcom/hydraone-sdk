@@ -32,14 +32,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Build
+        run: pnpm run build
+
       - name: Lint
         run: pnpm run lint
 
       - name: Type check
         run: pnpm run typecheck
-
-      - name: Build
-        run: pnpm run build
 
       - name: Test with coverage
         run: pnpm run test:coverage
