@@ -60,7 +60,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:package": "publint && attw --pack . --profile node16",
-    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
+    "prepublishOnly": "pnpm --filter @hydraone-sdk/core run build && pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test",
     "prepack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.copyFileSync('../../'+n,n)\"",
     "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
   },
