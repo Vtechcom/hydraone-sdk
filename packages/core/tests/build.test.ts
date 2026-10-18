@@ -54,18 +54,5 @@ describe('Build Output Verification', () => {
     expect(reactEsmContent).toMatch(/from ["']react["']/);
 
     expect(esmContent).toContain('checkBridgeHealth');
-
-    const cliEsm = path.join(distPath, 'cli/index.js');
-    const cliCjs = path.join(distPath, 'cli/index.cjs');
-    const cliDts = path.join(distPath, 'cli/index.d.ts');
-
-    expect(fs.existsSync(cliEsm)).toBe(true);
-    expect(fs.existsSync(cliCjs)).toBe(true);
-    expect(fs.existsSync(cliDts)).toBe(true);
-
-    const cliEsmContent = fs.readFileSync(cliEsm, 'utf-8');
-    expect(cliEsmContent).toContain('runCli');
-    expect(cliEsmContent).toContain('scaffoldProject');
-    expect(cliEsmContent).toContain('parseCliArgs');
   });
 });

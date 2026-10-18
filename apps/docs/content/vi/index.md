@@ -138,7 +138,7 @@ Cùng một đoạn code client chạy được khi nhúng trong App Center và 
   steps:
     - icon: i-lucide-package
       title: Cài đặt
-      text: Thêm @hydraone-sdk/core, hoặc dựng dự án bằng create-hydraone-game.
+      text: Thêm @hydraone-sdk/core vào dự án bằng npm, pnpm, yarn hoặc bun.
     - icon: i-lucide-plug
       title: Kết nối
       text: Tạo WalletBridgeClient với origin của App Center rồi gọi init().

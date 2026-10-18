@@ -31,7 +31,6 @@ body:
         - React adapter
         - Vue adapter
         - Diagnostics
-        - CLI and templates
         - Documentation
     validations:
       required: true

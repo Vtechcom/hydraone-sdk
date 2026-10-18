@@ -20,7 +20,6 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 - **Lưu trữ an toàn với Safari ITP**: host storage relay giữ dữ liệu phiên khi trình duyệt phân vùng storage của iframe.
 - **Adapter cho framework**: React hooks (`@hydraone-sdk/core/react`) và Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Chẩn đoán sức khỏe** cho cầu nối.
-- **Khởi tạo dự án** bằng `npx create-hydraone-game` (Next.js, Nuxt).
 - Không có runtime dependency. Có bản build ESM và CommonJS kèm type declaration đóng gói sẵn.
 
 ## Yêu cầu
@@ -38,14 +37,6 @@ yarn add @hydraone-sdk/core
 pnpm add @hydraone-sdk/core
 bun add @hydraone-sdk/core
 ```
-
-Khởi tạo dự án mới từ template:
-
-```bash
-npx create-hydraone-game my-game --template next-js
-```
-
-Các template: `next-js`, `nuxt`. Chạy `npx create-hydraone-game --help` để xem mọi tùy chọn.
 
 ## Bắt đầu nhanh
 
@@ -213,19 +204,6 @@ for (const check of report.checks) {
 ```
 
 `client.checkHealth()` chạy cùng báo cáo này.
-
-### CLI
-
-```text
-npx create-hydraone-game [project-name] [options]
-
-  -t, --template <name>   next-js or nuxt
-  --pm <package-manager>  pnpm, npm, yarn or bun
-  --force                 Use the target directory even if it is not empty
-  -y, --yes               Skip prompts and use defaults
-  -h, --help              Show help
-  -v, --version           Show the CLI version
-```
 
 ## Xử lý lỗi
 

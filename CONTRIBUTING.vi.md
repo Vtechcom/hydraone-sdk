@@ -16,7 +16,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-Repository là một pnpm monorepo: `packages/core` là SDK, `packages/core/templates/*` là các template dự án mà CLI sử dụng, và `apps/docs` là trang tài liệu (Nuxt). Chạy các script bên dưới từ thư mục gốc của repository.
+Repository là một pnpm monorepo: `packages/core` là SDK, `packages/host` là cầu nối phía host, và `apps/docs` là trang tài liệu (Nuxt). Chạy các script bên dưới từ thư mục gốc của repository.
 
 ## Scripts
 

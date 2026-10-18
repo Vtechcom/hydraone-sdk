@@ -138,7 +138,7 @@ Your game runs in an iframe and reaches the wallet through the App Center.
   steps:
     - icon: i-lucide-package
       title: Install
-      text: Add @hydraone-sdk/core, or scaffold a project with create-hydraone-game.
+      text: Add @hydraone-sdk/core to your project with npm, pnpm, yarn or bun.
     - icon: i-lucide-plug
       title: Connect
       text: Create a WalletBridgeClient with the App Center origin and call init().

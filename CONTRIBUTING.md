@@ -14,7 +14,7 @@ cd hydraone-sdk
 pnpm install
 ```
 
-The repository is a pnpm monorepo: `packages/core` is the SDK, `packages/host` is the host-side bridge, `packages/core/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
+The repository is a pnpm monorepo: `packages/core` is the SDK, `packages/host` is the host-side bridge, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
 
 ## Scripts
 
