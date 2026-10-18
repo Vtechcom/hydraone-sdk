@@ -226,12 +226,12 @@ function requireApi(): Cip30Api {
 
 const wallet: HostWalletAdapter = {
   isConnected: () => connected.value,
-  getAddress: () => address.value,
-  getExtension: () =>
+  getChangeAddress: () => address.value,
+  getCip30Wallet: () =>
     api.value ? toHostExtension(api.value, activeWallet.value?.icon ?? '') : null,
   isEmbedded: () => false,
   getNetworkId: async () => (api.value ? api.value.getNetworkId() : null),
-  fetchAssets: async () => decodeValue(await requireApi().getBalance()),
+  fetchBalance: async () => decodeValue(await requireApi().getBalance()),
   fetchUtxos: async () => ((await requireApi().getUtxos()) ?? []).map(decodeUtxo),
   // Only used for non-extension wallets; with an extension the host calls it directly.
   submitTx: (cbor) => requireApi().submitTx(cbor),

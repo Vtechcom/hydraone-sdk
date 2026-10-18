@@ -847,23 +847,23 @@ export class WalletBridgeClient {
    * to the transaction and the full signed transaction CBOR is returned, ready for {@link submitTx}.
    * The transaction body is never re-serialized, so its hash does not change.
    *
-   * @param cbor Hex-encoded CBOR of the transaction to sign.
+   * @param txCbor Hex-encoded CBOR of the transaction to sign.
    * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignTxOptions} object.
    * @param options Signing options when `partialSignOrOptions` is a boolean.
    * @returns Hex CBOR of the TransactionWitnessSet, or of the signed transaction when `addVkey` is set.
    * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
-   * @throws {HydraBridgeError} With `addVkey`: ERR_INVALID_PARAMS before signing when `cbor` is not a
+   * @throws {HydraBridgeError} With `addVkey`: ERR_INVALID_PARAMS before signing when `txCbor` is not a
    * transaction, or ERR_INVALID_RESPONSE when the wallet's witness set cannot be merged; the witness set is
    * then in `details.witnessSet`.
    */
   public async signTx(
-    cbor: string,
+    txCbor: string,
     partialSignOrOptions?: boolean | SignTxOptions,
     options?: SignTxOptions,
   ): Promise<string> {
     this.assertConnected();
-    if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
+    if (!txCbor || typeof txCbor !== 'string' || txCbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
@@ -877,7 +877,7 @@ export class WalletBridgeClient {
     const addVkey = resolvedOptions.addVkey === true;
     if (addVkey) {
       // Fail on a transaction we cannot merge into before the user signs it.
-      assertTransaction(cbor);
+      assertTransaction(txCbor);
     }
 
     const timeout = resolvedOptions.timeoutMs ?? this.signingTimeoutMs;
@@ -885,7 +885,7 @@ export class WalletBridgeClient {
       id: generateId(),
       type: 'SIGN_TX',
       payload: {
-        cbor,
+        cbor: txCbor,
         partialSign,
       },
       timestamp: Date.now(),
@@ -897,7 +897,7 @@ export class WalletBridgeClient {
       return witnessSet;
     }
     try {
-      return applyWitnessSet(cbor, witnessSet);
+      return applyWitnessSet(txCbor, witnessSet);
     } catch (err) {
       // The user already signed: keep the witness set so the caller can still merge it themselves.
       throw new HydraBridgeError(
@@ -911,14 +911,14 @@ export class WalletBridgeClient {
   /**
    * Submits a fully signed transaction to the Cardano network through the host shell.
    *
-   * @param cbor Hex-encoded CBOR of the complete transaction.
+   * @param txCbor Hex-encoded CBOR of the complete transaction.
    * @param options Submit options (timeoutMs, default 120,000 ms).
    * @returns Transaction hash (32 bytes, hex).
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
    */
-  public async submitTx(cbor: string, options?: SignOptions): Promise<string> {
+  public async submitTx(txCbor: string, options?: SignOptions): Promise<string> {
     this.assertConnected();
-    if (!cbor || typeof cbor !== 'string' || cbor.trim().length === 0) {
+    if (!txCbor || typeof txCbor !== 'string' || txCbor.trim().length === 0) {
       throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
     }
 
@@ -927,7 +927,7 @@ export class WalletBridgeClient {
       id: generateId(),
       type: 'SUBMIT_TX',
       payload: {
-        cbor,
+        cbor: txCbor,
       },
       timestamp: Date.now(),
       source: 'hydra-client',

@@ -15,7 +15,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -301,12 +300,12 @@ export function useWalletBridgeClient(
   };
 
   const signTx = async (
-    tx: string,
+    txCbor: string,
     partialSignOrOptions?: boolean | SignTxOptions,
     signOptions?: SignTxOptions,
   ): Promise<string> => {
     try {
-      return await client.signTx(tx, partialSignOrOptions, signOptions);
+      return await client.signTx(txCbor, partialSignOrOptions, signOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
@@ -314,9 +313,9 @@ export function useWalletBridgeClient(
     }
   };
 
-  const submitTx = async (tx: string, queryOptions?: QueryOptions): Promise<string> => {
+  const submitTx = async (txCbor: string, submitOptions?: SignOptions): Promise<string> => {
     try {
-      return await client.submitTx(tx, queryOptions);
+      return await client.submitTx(txCbor, submitOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
@@ -325,12 +324,12 @@ export function useWalletBridgeClient(
   };
 
   const signData = async (
-    addr: string,
-    payload: string,
+    address: string,
+    payloadHex: string,
     signOptions?: SignOptions,
   ): Promise<DataSignature> => {
     try {
-      return await client.signData(addr, payload, signOptions);
+      return await client.signData(address, payloadHex, signOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;

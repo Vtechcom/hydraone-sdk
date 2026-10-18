@@ -5,7 +5,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -187,7 +186,7 @@ export interface UseWalletReturn {
   /**
    * Submits a signed transaction to the Cardano network through the wallet
    */
-  submitTx: (txCbor: string, options?: QueryOptions) => Promise<string>;
+  submitTx: (txCbor: string, options?: SignOptions) => Promise<string>;
 
   /**
    * Signs an authentication message following CIP-8

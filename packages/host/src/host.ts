@@ -113,7 +113,7 @@ export function createHost(options: HostOptions): Host {
   }
 
   function requireWallet(): string {
-    const address = wallet.getAddress();
+    const address = wallet.getChangeAddress();
     if (!wallet.isConnected() || !address) {
       throw new HostRpcError(
         HOST_ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
@@ -127,7 +127,7 @@ export function createHost(options: HostOptions): Host {
     const embedded = wallet.isEmbedded();
     const name = embedded
       ? (options.embeddedWalletName ?? 'HydraOne Wallet')
-      : (wallet.getExtension()?.name ?? 'CIP-30 Wallet');
+      : (wallet.getCip30Wallet()?.name ?? 'CIP-30 Wallet');
     // A function option is always current; otherwise the last setLanguage wins over the static value.
     const language =
       typeof options.language === 'function'
@@ -139,7 +139,7 @@ export function createHost(options: HostOptions): Host {
       network: resolveValue(options.network ?? 'preprod'),
       theme: resolveValue(options.theme ?? 'dark'),
       ...(language !== undefined ? { language } : {}),
-      wallet: { name, icon: embedded ? '' : (wallet.getExtension()?.icon ?? '') },
+      wallet: { name, icon: embedded ? '' : (wallet.getCip30Wallet()?.icon ?? '') },
     };
   }
 
@@ -195,7 +195,7 @@ export function createHost(options: HostOptions): Host {
     const custom = customHandlers.get(type);
     if (custom) return custom({ origin, payload, wallet, host });
 
-    const extension = wallet.getExtension();
+    const extension = wallet.getCip30Wallet();
 
     switch (type) {
       case 'PING':
@@ -231,7 +231,7 @@ export function createHost(options: HostOptions): Host {
       }
       case 'GET_BALANCE': {
         requireWallet();
-        const assets = await wallet.fetchAssets();
+        const assets = await wallet.fetchBalance();
         return assets.map(({ unit, quantity }) => ({ unit, quantity }));
       }
       case 'GET_UTXOS': {

@@ -25,12 +25,12 @@ export interface HostExtensionWallet {
 export interface HostWalletAdapter {
   isConnected(): boolean;
   /** Bech32 address of the connected wallet, or null. */
-  getAddress(): string | null;
+  getChangeAddress(): string | null;
   /** The active CIP-30 extension, or null for embedded / no wallet. */
-  getExtension(): HostExtensionWallet | null;
+  getCip30Wallet(): HostExtensionWallet | null;
   isEmbedded(): boolean;
   getNetworkId(): Promise<number | null>;
-  fetchAssets(): Promise<BalanceAsset[]>;
+  fetchBalance(): Promise<BalanceAsset[]>;
   fetchUtxos(): Promise<Utxo[]>;
   submitTx(cbor: string): Promise<string | null | undefined>;
   /** Signing for wallets that are not a CIP-30 extension (embedded wallet). */

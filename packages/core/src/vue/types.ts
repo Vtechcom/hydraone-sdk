@@ -5,7 +5,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -123,7 +122,7 @@ export interface UseWalletBridgeClientReturn {
   refreshBalance: () => Promise<string>;
 
   /**
-   * Refreshes the wallet address (getAddress)
+   * Refreshes the wallet address (getChangeAddress)
    */
   refreshAddress: () => Promise<string | null>;
 
@@ -131,7 +130,7 @@ export interface UseWalletBridgeClientReturn {
    * Asks the wallet to sign a transaction (signTx)
    */
   signTx: (
-    tx: string,
+    txCbor: string,
     partialSignOrOptions?: boolean | SignTxOptions,
     options?: SignTxOptions,
   ) => Promise<string>;
@@ -139,12 +138,12 @@ export interface UseWalletBridgeClientReturn {
   /**
    * Asks the host or wallet to submit a transaction to the Cardano network
    */
-  submitTx: (tx: string, options?: QueryOptions) => Promise<string>;
+  submitTx: (txCbor: string, options?: SignOptions) => Promise<string>;
 
   /**
    * Signs data following CIP-8
    */
-  signData: (addr: string, payload: string, options?: SignOptions) => Promise<DataSignature>;
+  signData: (address: string, payloadHex: string, options?: SignOptions) => Promise<DataSignature>;
 
   /**
    * Asks the Host Shell to lock the screen orientation

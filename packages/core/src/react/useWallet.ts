@@ -9,7 +9,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -188,19 +187,19 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
 
   const submitTx = useCallback(
-    async (txCbor: string, queryOptions?: QueryOptions): Promise<string> => {
-      return client.submitTx(txCbor, queryOptions);
+    async (txCbor: string, submitOptions?: SignOptions): Promise<string> => {
+      return client.submitTx(txCbor, submitOptions);
     },
     [client],
   );
 
   const signData = useCallback(
     async (
-      targetAddress: string,
+      address: string,
       payloadHex: string,
       signOptions?: SignOptions,
     ): Promise<DataSignature> => {
-      return client.signData(targetAddress, payloadHex, signOptions);
+      return client.signData(address, payloadHex, signOptions);
     },
     [client],
   );

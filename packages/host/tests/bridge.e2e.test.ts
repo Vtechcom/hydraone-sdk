@@ -91,11 +91,11 @@ function connect(options: { extension?: HostExtensionWallet | null; language?: s
   const extension = options.extension === undefined ? makeExtension() : options.extension;
   const wallet: HostWalletAdapter = {
     isConnected: () => address !== null,
-    getAddress: () => address,
-    getExtension: () => extension,
+    getChangeAddress: () => address,
+    getCip30Wallet: () => extension,
     isEmbedded: () => extension === null,
     getNetworkId: async () => 0,
-    fetchAssets: async () => [{ unit: 'lovelace', quantity: '12500000' }],
+    fetchBalance: async () => [{ unit: 'lovelace', quantity: '12500000' }],
     fetchUtxos: async () => [],
     submitTx: async () => 'embedded-hash',
     signTx: async () => `a10081825820${'ab'.repeat(32)}5840${'cd'.repeat(64)}`,
