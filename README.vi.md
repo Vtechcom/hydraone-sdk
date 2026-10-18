@@ -4,14 +4,14 @@
 
 # @hydraone-sdk/core
 
-SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu nối ví, ký dữ liệu CIP-8, adapter cho React và Vue, và trình giả lập chạy cục bộ.
+SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu nối ví, ký dữ liệu CIP-8, adapter cho React và Vue.
 
 [![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![CI](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/Vtechcom/hydraone-sdk/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/npm/l/@hydraone-sdk/core.svg)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](./tsconfig.json)
-[![Node.js](https://img.shields.io/node/v/@hydraone-sdk/core.svg)](./package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](./packages/core/tsconfig.json)
+[![Node.js](https://img.shields.io/node/v/@hydraone-sdk/core.svg)](./packages/core/package.json)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/@hydraone-sdk/core.svg)](https://bundlephobia.com/package/@hydraone-sdk/core)
 
 ## Tính năng
@@ -24,7 +24,7 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 
 ## Yêu cầu
 
-- Node.js 20 trở lên cho tooling và server-side rendering.
+- Node.js 22 trở lên cho tooling và server-side rendering.
 - Môi trường trình duyệt cho các tính năng ví (`window`, `postMessage`).
 - Peer dependency tùy chọn, chỉ cần cho adapter bạn dùng: `react` >= 18, `vue` >= 3.3.
 
@@ -67,17 +67,18 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 
 `new WalletBridgeClient(options)` nhận:
 
-| Option               | Type            | Mặc định     | Mô tả                                                                                         |
-| -------------------- | --------------- | ------------ | --------------------------------------------------------------------------------------------- |
-| `transport`          | `ITransport`    | không có     | Transport adapter. Có thể bỏ qua khi đã đặt `appCenterOrigin`.                                |
-| `handshakeTimeoutMs` | `number`        | `3000`       | Thời gian chờ tối đa cho handshake `CLIENT_READY`.                                            |
-| `pingTimeoutMs`      | `number`        | `3000`       | Thời gian chờ tối đa cho phép đo độ trễ `ping()`.                                             |
-| `queryTimeoutMs`     | `number`        | `15000`      | Timeout mặc định cho các truy vấn trạng thái ví.                                              |
-| `signingTimeoutMs`   | `number`        | `120000`     | Timeout mặc định cho ký và gửi giao dịch, vì các bước này chờ người dùng.                     |
-| `autoConnect`        | `boolean`       | `false`      | Chạy handshake ngay khi client được khởi tạo.                                                 |
-| `isIframeFn`         | `() => boolean` | tự phát hiện | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                        |
-| `debug`              | `boolean`       | `false`      | Ghi cảnh báo qua logger.                                                                      |
-| `logger`             | `Logger`        | `console`    | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/3.guides/7.logging-debugging.md). |
+| Option               | Type                 | Mặc định     | Mô tả                                                                                                                |
+| -------------------- | -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `transport`          | `ITransport`         | không có     | Transport adapter. Có thể bỏ qua khi đã đặt `appCenterOrigin`.                                                       |
+| `appCenterOrigin`    | `string \| string[]` | không có     | Origin của host shell. Khi không có `transport`, client tự tạo và quản lý một `PostMessageTransport` cho origin này. |
+| `handshakeTimeoutMs` | `number`             | `3000`       | Thời gian chờ tối đa cho handshake `CLIENT_READY`.                                                                   |
+| `pingTimeoutMs`      | `number`             | `3000`       | Thời gian chờ tối đa cho phép đo độ trễ `ping()`.                                                                    |
+| `queryTimeoutMs`     | `number`             | `15000`      | Timeout mặc định cho các truy vấn trạng thái ví.                                                                     |
+| `signingTimeoutMs`   | `number`             | `120000`     | Timeout mặc định cho ký và gửi giao dịch, vì các bước này chờ người dùng.                                            |
+| `autoConnect`        | `boolean`            | `false`      | Chạy handshake ngay khi client được khởi tạo.                                                                        |
+| `isIframeFn`         | `() => boolean`      | tự phát hiện | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                                               |
+| `debug`              | `boolean`            | `false`      | Ghi cảnh báo qua logger.                                                                                             |
+| `logger`             | `Logger`             | `console`    | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/3.guides/7.logging-debugging.md).                        |
 
 `new PostMessageTransport(options)` nhận:
 
@@ -117,7 +118,9 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onLanguageChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
+Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onLanguageChanged`, `on`; giá trị hiện tại nằm ở `client.theme` và `client.language`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
+
+Các truy vấn địa chỉ mặc định trả về bech32; truyền `{ format: 'hex' }` để lấy hex CIP-30 gốc (`getUsedAddresses` nhận nó ở tham số thứ hai, sau phân trang). Các helper địa chỉ: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstAddress`. `applyWitnessSet(txHex, witnessSetHex)` tự gộp witness set CIP-30 vào giao dịch, giống như `addVkey: true`.
 
 ### Lưu trữ và Safari ITP
 
@@ -190,8 +193,7 @@ Xem [hướng dẫn Vue](./apps/docs/content/vi/3.guides/5.vue-nuxt.md).
 ### Chẩn đoán
 
 ```ts
-import { WalletBridgeClient } from '@hydraone-sdk/core';
-import { checkBridgeHealth } from '@hydraone-sdk/core';
+import { WalletBridgeClient, checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -204,6 +206,27 @@ for (const check of report.checks) {
 ```
 
 `client.checkHealth()` chạy cùng báo cáo này.
+
+### Host (`@hydraone-sdk/host`)
+
+Trang nhúng game (ví dụ App Center) dùng package riêng `@hydraone-sdk/host`. Package này trả lời các request của client bằng wallet adapter do bạn cung cấp:
+
+```ts
+import { createHost, type HostWalletAdapter } from '@hydraone-sdk/host';
+
+export function embedGames(wallet: HostWalletAdapter) {
+  const host = createHost({
+    wallet,
+    allowedOrigins: ['https://game.example.com'],
+    theme: 'dark',
+    language: 'en',
+  });
+  host.start();
+  return host;
+}
+```
+
+`host.setLanguage(tag)` gửi `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` gửi các sự kiện tài khoản và mạng, còn `handlers` hoặc `host.setHandler(type, handler)` thêm hoặc ghi đè các loại request. Extension CIP-30 truyền qua `HostExtensionWallet` phải có `getRewardAddresses()`. Gọi `host.destroy()` khi trang unmount.
 
 ## Xử lý lỗi
 
@@ -218,12 +241,13 @@ Mọi lỗi do SDK ném ra đều là `HydraBridgeError` với `code` ổn đị
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage bị chặn hoặc không liên lạc được host relay.                                       |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | Client chưa kết nối, đã bị hủy, hoặc không có địa chỉ ví.                                  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | Một tham số không qua được bước kiểm tra hợp lệ.                                           |
+| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | Host trả về giá trị sai cấu trúc.                                                          |
 
-Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
+Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Chi tiết nằm trong [Error handling](./apps/docs/content/vi/4.reference/4.errors.md).
 
 ## Logging và debug
 
-SDK mặc định im lặng. Đặt `debug: true` để ghi cảnh báo, và truyền `logger` để chuyển chúng vào hệ thống log của bạn:
+SDK mặc định im lặng, trừ một cảnh báo khi host trả về địa chỉ không đọc được. Đặt `debug: true` để ghi các cảnh báo còn lại, và truyền `logger` để chuyển chúng vào hệ thống log của bạn:
 
 ```ts
 import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';
@@ -250,7 +274,7 @@ Package phát hành bản build ESM (`.js`) và CommonJS (`.cjs`) kèm declarati
 const { WalletBridgeClient } = require('@hydraone-sdk/core');
 ```
 
-Các entry point: `@hydraone-sdk/core`, `@hydraone-sdk/core/react`, `@hydraone-sdk/core/vue`. Entry gốc nặng khoảng 23 KB sau khi gzip. Chỉ import những subpath bạn cần.
+Các entry point: `@hydraone-sdk/core`, `@hydraone-sdk/core/react`, `@hydraone-sdk/core/vue`. Entry gốc nặng khoảng 22 KB sau khi gzip. Chỉ import những subpath bạn cần.
 
 ## Tài liệu API
 
@@ -272,7 +296,7 @@ Có thêm câu trả lời trong [FAQ](./apps/docs/content/vi/5.help/2.faq.md) v
 
 ## Phiên bản và hỗ trợ
 
-SDK tuân theo [Semantic Versioning](https://semver.org). Khi phiên bản còn dưới 1.0.0, các bản minor có thể chứa breaking change; mỗi thay đổi được liệt kê trong [CHANGELOG](./CHANGELOG.md), kèm các bước migrate trong [MIGRATION](./MIGRATION.vi.md). Bản sửa lỗi bảo mật được áp dụng cho bản phát hành mới nhất. Xem [SUPPORT](./SUPPORT.md) để biết nơi đặt câu hỏi.
+SDK tuân theo [Semantic Versioning](https://semver.org). Khi phiên bản còn dưới 1.0.0, các bản minor có thể chứa breaking change; mỗi thay đổi được liệt kê trong [CHANGELOG](./packages/core/CHANGELOG.md), kèm các bước migrate trong [MIGRATION](./MIGRATION.vi.md). Bản sửa lỗi bảo mật được áp dụng cho bản phát hành mới nhất. Xem [SUPPORT](./SUPPORT.md) để biết nơi đặt câu hỏi.
 
 ## Đóng góp, bảo mật và giấy phép
 

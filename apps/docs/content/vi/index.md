@@ -51,7 +51,7 @@ items:
     label: Wallet bridge
   - value: CIP-8
     label: Ký dữ liệu
-  - value: ~23 KB
+  - value: ~22 KB
     label: Lõi sau gzip
   - value: React · Vue
     label: Adapter framework

@@ -65,17 +65,18 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 
 `new WalletBridgeClient(options)` accepts:
 
-| Option               | Type            | Default            | Description                                                                                            |
-| -------------------- | --------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `transport`          | `ITransport`    | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                             |
-| `handshakeTimeoutMs` | `number`        | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                         |
-| `pingTimeoutMs`      | `number`        | `3000`             | Maximum wait for a `ping()` latency probe.                                                             |
-| `queryTimeoutMs`     | `number`        | `15000`            | Default timeout for wallet state queries.                                                              |
-| `signingTimeoutMs`   | `number`        | `120000`           | Default timeout for signing and submitting, which wait for the user.                                   |
-| `autoConnect`        | `boolean`       | `false`            | Run the handshake as soon as the client is constructed.                                                |
-| `isIframeFn`         | `() => boolean` | built-in detection | Custom iframe detection, mainly for tests.                                                             |
-| `debug`              | `boolean`       | `false`            | Emit warnings through the logger.                                                                      |
-| `logger`             | `Logger`        | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging). |
+| Option               | Type                 | Default            | Description                                                                                             |
+| -------------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `transport`          | `ITransport`         | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                              |
+| `appCenterOrigin`    | `string \| string[]` | none               | Host shell origin(s). Without `transport`, the client creates and owns a `PostMessageTransport` for it. |
+| `handshakeTimeoutMs` | `number`             | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                          |
+| `pingTimeoutMs`      | `number`             | `3000`             | Maximum wait for a `ping()` latency probe.                                                              |
+| `queryTimeoutMs`     | `number`             | `15000`            | Default timeout for wallet state queries.                                                               |
+| `signingTimeoutMs`   | `number`             | `120000`           | Default timeout for signing and submitting, which wait for the user.                                    |
+| `autoConnect`        | `boolean`            | `false`            | Run the handshake as soon as the client is constructed.                                                 |
+| `isIframeFn`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
+| `debug`              | `boolean`            | `false`            | Emit warnings through the logger.                                                                       |
+| `logger`             | `Logger`             | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging).  |
 
 `new PostMessageTransport(options)` accepts:
 
@@ -115,7 +116,9 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onLanguageChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
+Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onLanguageChanged`, `on`; the current values are on `client.theme` and `client.language`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
+
+Address queries return bech32 by default; pass `{ format: 'hex' }` for the raw CIP-30 hex (`getUsedAddresses` takes it as the second argument, after pagination). Address helpers: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstAddress`. `applyWitnessSet(txHex, witnessSetHex)` merges a CIP-30 witness set into a transaction yourself, as `addVkey: true` does.
 
 ### Storage and Safari ITP
 
@@ -188,8 +191,7 @@ See the [Vue guide](https://developers.hydraone.app/guides/vue-nuxt).
 ### Diagnostics
 
 ```ts
-import { WalletBridgeClient } from '@hydraone-sdk/core';
-import { checkBridgeHealth } from '@hydraone-sdk/core';
+import { WalletBridgeClient, checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -202,6 +204,27 @@ for (const check of report.checks) {
 ```
 
 `client.checkHealth()` runs the same report.
+
+### Host (`@hydraone-sdk/host`)
+
+The page that embeds games (such as App Center) uses the separate `@hydraone-sdk/host` package. It answers the client's requests from a wallet adapter you provide:
+
+```ts
+import { createHost, type HostWalletAdapter } from '@hydraone-sdk/host';
+
+export function embedGames(wallet: HostWalletAdapter) {
+  const host = createHost({
+    wallet,
+    allowedOrigins: ['https://game.example.com'],
+    theme: 'dark',
+    language: 'en',
+  });
+  host.start();
+  return host;
+}
+```
+
+`host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostExtensionWallet` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
 
 ## Error handling
 
@@ -216,12 +239,13 @@ Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
+| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
 
 ## Logging and debugging
 
-The SDK is silent by default. Set `debug: true` to emit warnings, and pass a `logger` to route them into your own logging:
+The SDK is silent by default, except for a warning when the host returns addresses it cannot read. Set `debug: true` to emit the other warnings, and pass a `logger` to route them into your own logging:
 
 ```ts
 import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';

@@ -8,7 +8,7 @@ Cảm ơn bạn đã giúp cải thiện `@hydraone-sdk/core`. Hướng dẫn n�
 
 ## Thiết lập
 
-Bạn cần Node.js 22 (xem `.nvmrc`; package hỗ trợ Node 20 trở lên) và [pnpm](https://pnpm.io).
+Bạn cần Node.js 22 trở lên (xem `.nvmrc`) và [pnpm](https://pnpm.io).
 
 ```bash
 git clone https://github.com/Vtechcom/hydraone-sdk.git
@@ -20,18 +20,20 @@ Repository là một pnpm monorepo: `packages/core` là SDK, `packages/host` là
 
 ## Scripts
 
-| Script                   | Chức năng                                                 |
-| ------------------------ | --------------------------------------------------------- |
-| `pnpm run build`         | Build ESM, CJS và type declaration vào `dist/` bằng tsup. |
-| `pnpm run clean`         | Xóa `dist/`.                                              |
-| `pnpm run lint`          | Chạy ESLint.                                              |
-| `pnpm run format`        | Định dạng bằng Prettier. `format:check` chỉ kiểm tra.     |
-| `pnpm run typecheck`     | Chạy `tsc --noEmit` (mã nguồn và test).                   |
-| `pnpm test`              | Chạy bộ test Vitest. `test:watch` cho chế độ watch.       |
-| `pnpm run test:coverage` | Chạy bộ test kèm coverage V8.                             |
-| `pnpm run docs:api`      | Sinh tài liệu API TypeDoc vào `packages/core/docs/api/`.   |
-| `pnpm run size`          | Kiểm tra giới hạn kích thước bundle (chạy sau `build`).   |
-| `pnpm run changeset`     | Thêm một changeset mô tả thay đổi của bạn.                |
+| Script                    | Chức năng                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm run build`          | Build ESM, CJS và type declaration vào `dist/` bằng tsup.                                                      |
+| `pnpm run lint`           | Chạy ESLint cho `core` và `host`.                                                                              |
+| `pnpm run format`         | Định dạng bằng Prettier. `format:check` chỉ kiểm tra.                                                          |
+| `pnpm run typecheck`      | Chạy `tsc --noEmit` (mã nguồn và test).                                                                        |
+| `pnpm test`               | Chạy bộ test Vitest của `core` và `host`. Dùng `pnpm --filter @hydraone-sdk/core test:watch` cho chế độ watch. |
+| `pnpm run test:coverage`  | Chạy bộ test của `core` kèm coverage V8.                                                                       |
+| `pnpm run docs:api`       | Sinh tài liệu API TypeDoc vào `packages/core/docs/api/`.                                                       |
+| `pnpm run dev:docs`       | Chạy trang tài liệu (`apps/docs`) ở chế độ development.                                                        |
+| `pnpm run build:docs`     | Sinh trang tài liệu tĩnh.                                                                                      |
+| `pnpm run dev:playground` | Build hai package và chạy playground host và client cục bộ (`apps/playground`).                                |
+| `pnpm run size`           | Kiểm tra giới hạn kích thước bundle (chạy sau `build`).                                                        |
+| `pnpm run changeset`      | Thêm một changeset mô tả thay đổi của bạn.                                                                     |
 
 Các bước kiểm tra package, giống như CI chạy (sau `build`):
 

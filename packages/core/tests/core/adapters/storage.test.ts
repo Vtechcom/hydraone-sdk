@@ -248,7 +248,9 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       mockStorage.throwOnSetItem = quotaError;
 
       // Must not throw
-      await expect(adapter.setItem('hydra:sdk:session:token', 'quota_token')).resolves.not.toThrow();
+      await expect(
+        adapter.setItem('hydra:sdk:session:token', 'quota_token'),
+      ).resolves.not.toThrow();
 
       // Verify the switch to fallback
       expect(adapter.isUsingFallback).toBe(true);

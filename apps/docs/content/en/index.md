@@ -51,7 +51,7 @@ items:
     label: Wallet bridge
   - value: CIP-8
     label: Data signing
-  - value: ~23 KB
+  - value: ~22 KB
     label: Gzipped core
   - value: React · Vue
     label: Framework adapters
