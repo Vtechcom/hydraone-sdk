@@ -53,17 +53,28 @@ function setup(wallet = makeWallet(), storage?: Storage) {
       source: app,
       data: { id: 'r1', type, payload, timestamp: 0, source: 'hydra-client' },
     } as MessageEvent);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
   };
-  const sendFrom = async (source: Window, type: string, origin = 'https://g.hydraone.app', payload: unknown = {}) => {
+  const sendFrom = async (
+    source: Window,
+    type: string,
+    origin = 'https://g.hydraone.app',
+    payload: unknown = {},
+  ) => {
     listeners[0]!({
       origin,
       source,
       data: { id: 'r1', type, payload, timestamp: 0, source: 'hydra-client' },
     } as MessageEvent);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
   };
-  return { host, win, app: app as unknown as { postMessage: ReturnType<typeof vi.fn> }, send, sendFrom };
+  return {
+    host,
+    win,
+    app: app as unknown as { postMessage: ReturnType<typeof vi.fn> },
+    send,
+    sendFrom,
+  };
 }
 
 describe('matchOriginPattern', () => {
@@ -90,7 +101,9 @@ describe('createHost', () => {
   it('serves embedded wallet requests', async () => {
     const { send, app } = setup();
     await send('GET_BALANCE');
-    expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([{ unit: 'lovelace', quantity: '10000000' }]);
+    expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([
+      { unit: 'lovelace', quantity: '10000000' },
+    ]);
   });
 
   it('returns ERR_NOT_CONNECTED when disconnected', async () => {
@@ -126,7 +139,7 @@ describe('createHost client compatibility', () => {
     app.postMessage.mockClear();
     await host.handleAddressChange(null, 'addr_test1q');
     host.handleConnectionChange(false);
-    const types = app.postMessage.mock.calls.map(c => c[0].type);
+    const types = app.postMessage.mock.calls.map((c) => c[0].type);
     expect(types).toEqual(['DISCONNECTED']);
   });
 
@@ -134,7 +147,11 @@ describe('createHost client compatibility', () => {
     const { send, app } = setup();
     await send('CLIENT_READY');
     const info = app.postMessage.mock.calls[0]![0].payload.hostInfo;
-    expect(info).toMatchObject({ network: 'preprod', theme: 'dark', walletName: 'HydraOne Wallet' });
+    expect(info).toMatchObject({
+      network: 'preprod',
+      theme: 'dark',
+      walletName: 'HydraOne Wallet',
+    });
   });
 });
 
@@ -145,7 +162,9 @@ describe('createHost UTxO requests', () => {
   });
 
   it('returns decoded UTxOs from GET_UTXOS', async () => {
-    const { send, app } = setup(makeWallet({ fetchUtxos: async () => [utxo('2000000'), utxo('9000000', 1)] }));
+    const { send, app } = setup(
+      makeWallet({ fetchUtxos: async () => [utxo('2000000'), utxo('9000000', 1)] }),
+    );
     await send('GET_UTXOS', { paginate: { page: 0, limit: 1 } });
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([utxo('2000000')]);
   });
@@ -158,7 +177,9 @@ describe('createHost UTxO requests', () => {
 
   it('returns one pure-ADA UTxO of at least 5 ADA as collateral', async () => {
     const { send, app } = setup(
-      makeWallet({ fetchUtxos: async () => [utxo('2000000'), utxo('6000000', 1), utxo('8000000', 2)] }),
+      makeWallet({
+        fetchUtxos: async () => [utxo('2000000'), utxo('6000000', 1), utxo('8000000', 2)],
+      }),
     );
     await send('GET_COLLATERAL', {});
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([utxo('6000000', 1)]);
@@ -170,7 +191,7 @@ describe('createHost frame guards', () => {
     const { sendFrom } = setup();
     const nested = { parent: {}, postMessage: vi.fn() } as unknown as Window;
     await sendFrom(nested, 'PING');
-    expect((nested.postMessage as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(nested.postMessage as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('blocks a registered window that switches to another allowed origin', async () => {
@@ -245,7 +266,10 @@ describe('createHost host storage', () => {
     const { win, sendFrom } = setup(makeWallet(), memoryStorage());
     const portApp = { parent: win, postMessage: vi.fn() } as unknown as Window;
     const plainApp = { parent: win, postMessage: vi.fn() } as unknown as Window;
-    await sendFrom(portApp, 'HOST_STORAGE_SET', 'https://a.hydraone.app:8080', { key: 'x', value: 'secret' });
+    await sendFrom(portApp, 'HOST_STORAGE_SET', 'https://a.hydraone.app:8080', {
+      key: 'x',
+      value: 'secret',
+    });
     await sendFrom(plainApp, 'HOST_STORAGE_GET', 'https://a.hydraone.app', { key: '8080:x' });
     const post = plainApp.postMessage as ReturnType<typeof vi.fn>;
     expect(post.mock.calls[0]![0].payload.result).toBeNull();
@@ -270,8 +294,8 @@ describe('createHost events', () => {
     host.handleConnectionChange(false);
     host.handleConnectionChange(true);
     host.handleConnectionChange(false);
-    const types = app.postMessage.mock.calls.map(c => c[0].type);
-    expect(types.filter(t => t === 'DISCONNECTED')).toHaveLength(2);
+    const types = app.postMessage.mock.calls.map((c) => c[0].type);
+    expect(types.filter((t) => t === 'DISCONNECTED')).toHaveLength(2);
   });
 
   it('still sends ACCOUNT_CHANGED when getNetworkId rejects', async () => {
@@ -284,7 +308,7 @@ describe('createHost events', () => {
     );
     host.registerIframe(app as unknown as Window, 'https://g.hydraone.app');
     await host.handleAddressChange('addr_new', null);
-    expect(app.postMessage.mock.calls.map(c => c[0].type)).toContain('ACCOUNT_CHANGED');
+    expect(app.postMessage.mock.calls.map((c) => c[0].type)).toContain('ACCOUNT_CHANGED');
   });
 });
 

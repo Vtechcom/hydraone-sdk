@@ -2,7 +2,15 @@
   "name": "@hydraone-sdk/host",
   "version": "0.1.0",
   "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone-sdk/core",
-  "keywords": ["cardano", "hydra", "hydraone", "host", "iframe", "cip-30", "wallet-bridge"],
+  "keywords": [
+    "cardano",
+    "hydra",
+    "hydraone",
+    "host",
+    "iframe",
+    "cip-30",
+    "wallet-bridge"
+  ],
   "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
   "bugs": {
     "url": "https://github.com/Vtechcom/hydraone-sdk/issues"
@@ -30,7 +38,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "CHANGELOG.md", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
   "engines": {
     "node": ">=22"

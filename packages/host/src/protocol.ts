@@ -26,7 +26,9 @@ export class HostRpcError extends Error {
 export function isClientMessage(data: unknown): data is BridgeMessage {
   if (!data || typeof data !== 'object') return false;
   const msg = data as Record<string, unknown>;
-  return msg.source === 'hydra-client' && typeof msg.id === 'string' && typeof msg.type === 'string';
+  return (
+    msg.source === 'hydra-client' && typeof msg.id === 'string' && typeof msg.type === 'string'
+  );
 }
 
 function newId(): string {

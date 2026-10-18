@@ -33,7 +33,6 @@ export interface HostWalletAdapter {
   /** Signing for wallets that are not a CIP-30 extension (embedded wallet). */
   signTx(cbor: string, partialSign: boolean): Promise<string>;
   signData(address: string, payloadHex: string): Promise<unknown>;
-
 }
 
 export interface HostRequestContext {
@@ -85,7 +84,10 @@ export interface Host {
   /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, ...) to every embedded app. */
   notify(type: string, payload?: unknown): void;
   /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/DISCONNECTED events. */
-  handleAddressChange(newAddress: string | null | undefined, oldAddress: string | null | undefined): Promise<void>;
+  handleAddressChange(
+    newAddress: string | null | undefined,
+    oldAddress: string | null | undefined,
+  ): Promise<void>;
   handleConnectionChange(connected: boolean): void;
   /** Registers or overrides a request handler at runtime; `null` removes it. */
   setHandler(type: string, handler: HostRequestHandler | null): void;

@@ -56,7 +56,9 @@ export function createHost(options: HostOptions): Host {
   const win = options.window ?? (typeof window !== 'undefined' ? window : undefined);
   const logger = options.logger ?? console;
   const allowSameOrigin = options.allowSameOrigin ?? true;
-  const customHandlers = new Map<string, HostRequestHandler>(Object.entries(options.handlers ?? {}));
+  const customHandlers = new Map<string, HostRequestHandler>(
+    Object.entries(options.handlers ?? {}),
+  );
 
   // Plain Map (never reactive) so a framework does not proxy cross-origin Window objects.
   const registeredIframes = new Map<Window, RegisteredIframe>();
@@ -67,7 +69,7 @@ export function createHost(options: HostOptions): Host {
   function isOriginAllowed(origin: string): boolean {
     if (!origin) return false;
     if (allowSameOrigin && win && origin === win.location.origin) return true;
-    return resolveValue(options.allowedOrigins).some(p => matchOriginPattern(p, origin));
+    return resolveValue(options.allowedOrigins).some((p) => matchOriginPattern(p, origin));
   }
 
   function registerIframe(target: Window, origin: string, slug?: string) {
@@ -110,7 +112,10 @@ export function createHost(options: HostOptions): Host {
   function requireWallet(): string {
     const address = wallet.getAddress();
     if (!wallet.isConnected() || !address) {
-      throw new HostRpcError(HOST_ERROR_CODES.ERR_NOT_CONNECTED, 'Wallet is not connected in the host');
+      throw new HostRpcError(
+        HOST_ERROR_CODES.ERR_NOT_CONNECTED,
+        'Wallet is not connected in the host',
+      );
     }
     return address;
   }
@@ -139,7 +144,10 @@ export function createHost(options: HostOptions): Host {
         case 'HOST_STORAGE_SET': {
           const value = payload.value;
           if (typeof value !== 'string') {
-            throw new HostRpcError(HOST_ERROR_CODES.ERR_INVALID_PARAMS, 'Invalid or missing "value"');
+            throw new HostRpcError(
+              HOST_ERROR_CODES.ERR_INVALID_PARAMS,
+              'Invalid or missing "value"',
+            );
           }
           store.setItem(scoped(requireString(payload.key, 'key')), value);
           return { success: true };
@@ -148,7 +156,9 @@ export function createHost(options: HostOptions): Host {
           store.removeItem(scoped(requireString(payload.key, 'key')));
           return { success: true };
         default: {
-          const prefix = scoped(typeof payload.prefix === 'string' ? payload.prefix : SDK_STORAGE_PREFIX);
+          const prefix = scoped(
+            typeof payload.prefix === 'string' ? payload.prefix : SDK_STORAGE_PREFIX,
+          );
           const keys: string[] = [];
           for (let i = 0; i < store.length; i++) {
             const k = store.key(i);
@@ -160,11 +170,18 @@ export function createHost(options: HostOptions): Host {
       }
     } catch (err) {
       if (err instanceof HostRpcError) throw err;
-      throw new HostRpcError(HOST_ERROR_CODES.ERR_STORAGE_UNAVAILABLE, 'Host storage is not available');
+      throw new HostRpcError(
+        HOST_ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
+        'Host storage is not available',
+      );
     }
   }
 
-  async function dispatch(type: string, payload: HostRequestPayload, origin: string): Promise<unknown> {
+  async function dispatch(
+    type: string,
+    payload: HostRequestPayload,
+    origin: string,
+  ): Promise<unknown> {
     const custom = customHandlers.get(type);
     if (custom) return custom({ origin, payload, wallet, host });
 
@@ -190,7 +207,8 @@ export function createHost(options: HostOptions): Host {
       case 'GET_NETWORK_ID': {
         requireWallet();
         const networkId = await wallet.getNetworkId();
-        if (networkId === null) throw new HostRpcError(HOST_ERROR_CODES.ERR_RPC_FAILED, 'Unable to resolve network id');
+        if (networkId === null)
+          throw new HostRpcError(HOST_ERROR_CODES.ERR_RPC_FAILED, 'Unable to resolve network id');
         return networkId;
       }
       case 'GET_BALANCE': {
@@ -220,7 +238,8 @@ export function createHost(options: HostOptions): Host {
         const cbor = requireString(payload.cbor, 'cbor');
         if (extension) return extension.submitTx(cbor);
         const txHash = await wallet.submitTx(cbor);
-        if (!txHash) throw new HostRpcError(HOST_ERROR_CODES.ERR_RPC_FAILED, 'Transaction submission failed');
+        if (!txHash)
+          throw new HostRpcError(HOST_ERROR_CODES.ERR_RPC_FAILED, 'Transaction submission failed');
         return txHash;
       }
       case 'SIGN_DATA': {
@@ -228,12 +247,16 @@ export function createHost(options: HostOptions): Host {
         const address = requireString(payload.address, 'address');
         // The client allows an empty payload (signing an empty message is valid CIP-8).
         const payloadHex = requireString(payload.payloadHex, 'payloadHex', true);
-        return extension ? extension.signData(address, payloadHex) : wallet.signData(address, payloadHex);
+        return extension
+          ? extension.signData(address, payloadHex)
+          : wallet.signData(address, payloadHex);
       }
       case 'GET_PLAYER_PROFILE': {
         const address = wallet.getAddress();
         if (options.getPlayerProfile) return options.getPlayerProfile(address);
-        const profile: PlayerProfile = address ? { nickname: `${address.slice(0, 10)}…${address.slice(-4)}`, vipLevel: 0 } : {};
+        const profile: PlayerProfile = address
+          ? { nickname: `${address.slice(0, 10)}…${address.slice(-4)}`, vipLevel: 0 }
+          : {};
         return profile;
       }
       case 'REQUEST_DEPOSIT_MODAL':
@@ -243,8 +266,7 @@ export function createHost(options: HostOptions): Host {
       case 'SET_ORIENTATION': {
         const orientation = payload.orientation as string | undefined;
         const api = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
-          | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
-          | undefined;
+          (ScreenOrientation & { lock?: (o: string) => Promise<void> }) | undefined;
         if (orientation === 'any') {
           api?.unlock?.();
         } else if (orientation && typeof api?.lock === 'function') {
@@ -254,7 +276,11 @@ export function createHost(options: HostOptions): Host {
       }
       case 'TRIGGER_HAPTIC': {
         const pattern = payload.pattern as number | number[] | undefined;
-        if (pattern !== undefined && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        if (
+          pattern !== undefined &&
+          typeof navigator !== 'undefined' &&
+          typeof navigator.vibrate === 'function'
+        ) {
           navigator.vibrate(pattern);
         }
         return { acknowledged: true };
@@ -266,14 +292,21 @@ export function createHost(options: HostOptions): Host {
         return handleStorage(type, payload, origin);
 
       default:
-        throw new HostRpcError(HOST_ERROR_CODES.ERR_UNSUPPORTED_METHOD, `Unsupported request type: ${type}`);
+        throw new HostRpcError(
+          HOST_ERROR_CODES.ERR_UNSUPPORTED_METHOD,
+          `Unsupported request type: ${type}`,
+        );
     }
   }
 
   async function handleRequest(message: BridgeMessage, source: Window, origin: string) {
     try {
       if (message.type === 'CLIENT_READY') {
-        post(source, origin, createHostMessage('HOST_ACK', { requestId: message.id, hostInfo: hostInfo() }));
+        post(
+          source,
+          origin,
+          createHostMessage('HOST_ACK', { requestId: message.id, hostInfo: hostInfo() }),
+        );
         return;
       }
       const payload = (
@@ -310,17 +343,28 @@ export function createHost(options: HostOptions): Host {
 
     // Popups or nested frames of the same origin as an embedded app must not reach the wallet.
     if (!isDirectChildFrame(source)) {
-      logger.warn('[Host] Blocked message from a window that is not a direct child iframe:', event.origin);
+      logger.warn(
+        '[Host] Blocked message from a window that is not a direct child iframe:',
+        event.origin,
+      );
       return;
     }
     const registered = registeredIframes.get(source);
     if (registered && registered.origin !== event.origin) {
-      logger.warn('[Host] Blocked message whose origin differs from the registered one:', event.origin);
+      logger.warn(
+        '[Host] Blocked message whose origin differs from the registered one:',
+        event.origin,
+      );
       return;
     }
-    if (!registered) registeredIframes.set(source, { window: source, origin: event.origin, registeredAt: Date.now() });
+    if (!registered)
+      registeredIframes.set(source, {
+        window: source,
+        origin: event.origin,
+        registeredAt: Date.now(),
+      });
 
-    handleRequest(event.data, source, event.origin).catch(err =>
+    handleRequest(event.data, source, event.origin).catch((err) =>
       logger.error('[Host] Unhandled request failure:', err),
     );
   }
