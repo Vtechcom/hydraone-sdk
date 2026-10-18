@@ -21,8 +21,9 @@ export * from './core/adapters';
 // Core Engine Client
 export * from './core/client';
 
-// Web3 Auth & Session Management
-export * from './core/auth';
+// Address & Transaction Helpers
+export * from './core/wallet/address';
+export { applyWitnessSet } from './core/wallet/transaction';
 
 // Bridge Health Diagnostics Suite
 export * from './core/diagnostics';

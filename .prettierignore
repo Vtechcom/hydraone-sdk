@@ -2,7 +2,6 @@
 **/coverage
 node_modules
 pnpm-lock.yaml
-packages/core/templates
 packages/core/docs/api
 pnpm-workspace.yaml
 apps/docs

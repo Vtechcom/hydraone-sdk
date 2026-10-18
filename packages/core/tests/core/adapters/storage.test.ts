@@ -3,10 +3,8 @@ import {
   InMemoryStorageAdapter,
   SafeLocalStorageAdapter,
   STORAGE_PREFIX,
-  STORAGE_AUTH_PREFIX,
   STORAGE_SESSION_PREFIX,
   isSdkStorageKey,
-  isAuthStorageKey,
   isSessionStorageKey,
   buildStorageKey,
 } from '../../../src';
@@ -68,12 +66,11 @@ describe('Storage Module & Sub-Namespace Policy', () => {
   describe('Sub-Namespace Policy & Helpers', () => {
     it('should have standard namespace prefixes', () => {
       expect(STORAGE_PREFIX).toBe('hydra:sdk:');
-      expect(STORAGE_AUTH_PREFIX).toBe('hydra:sdk:auth:');
       expect(STORAGE_SESSION_PREFIX).toBe('hydra:sdk:session:');
     });
 
     it('should correctly identify SDK keys', () => {
-      expect(isSdkStorageKey('hydra:sdk:auth:token')).toBe(true);
+      expect(isSdkStorageKey('hydra:sdk:session:token')).toBe(true);
       expect(isSdkStorageKey('hydra:sdk:session:state')).toBe(true);
       expect(isSdkStorageKey('hydra:sdk:custom')).toBe(true);
 
@@ -84,34 +81,29 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(isSdkStorageKey('')).toBe(false);
     });
 
-    it('should correctly identify auth and session specific keys', () => {
-      expect(isAuthStorageKey('hydra:sdk:auth:token')).toBe(true);
-      expect(isAuthStorageKey('hydra:sdk:session:theme')).toBe(false);
-
+    it('should correctly identify session specific keys', () => {
       expect(isSessionStorageKey('hydra:sdk:session:theme')).toBe(true);
-      expect(isSessionStorageKey('hydra:sdk:auth:token')).toBe(false);
+      expect(isSessionStorageKey('hydra:sdk:custom')).toBe(false);
     });
 
     it('should construct valid namespaced storage keys', () => {
-      expect(buildStorageKey('auth', 'token')).toBe('hydra:sdk:auth:token');
-      expect(buildStorageKey('auth', 'address')).toBe('hydra:sdk:auth:address');
       expect(buildStorageKey('session', 'state')).toBe('hydra:sdk:session:state');
       expect(buildStorageKey('session', ':custom')).toBe('hydra:sdk:session:custom');
     });
 
     it('should throw an error if subKey is empty or invalid', () => {
-      expect(() => buildStorageKey('auth', '')).toThrow();
-      expect(() => buildStorageKey('auth', ':::')).toThrow();
-      expect(() => buildStorageKey('auth', '   ')).toThrow();
+      expect(() => buildStorageKey('session', '')).toThrow();
+      expect(() => buildStorageKey('session', ':::')).toThrow();
+      expect(() => buildStorageKey('session', '   ')).toThrow();
       expect(() => buildStorageKey('session', undefined as unknown as string)).toThrow();
     });
 
-    it('should throw an error if subNamespace is not auth or session', () => {
+    it('should throw an error if subNamespace is not session', () => {
       expect(() => buildStorageKey('invalid' as any, 'token')).toThrow(
-        "Storage subNamespace must be 'auth' or 'session'",
+        "Storage subNamespace must be 'session'",
       );
       expect(() => buildStorageKey('' as any, 'token')).toThrow(
-        "Storage subNamespace must be 'auth' or 'session'",
+        "Storage subNamespace must be 'session'",
       );
     });
   });
@@ -122,33 +114,33 @@ describe('Storage Module & Sub-Namespace Policy', () => {
 
       expect(await storage.getItem('any_key')).toBeNull();
 
-      await storage.setItem('hydra:sdk:auth:token', 'secret_jwt_token');
-      expect(await storage.getItem('hydra:sdk:auth:token')).toBe('secret_jwt_token');
+      await storage.setItem('hydra:sdk:session:token', 'secret_jwt_token');
+      expect(await storage.getItem('hydra:sdk:session:token')).toBe('secret_jwt_token');
       expect(storage.size).toBe(1);
 
-      await storage.removeItem('hydra:sdk:auth:token');
-      expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
+      await storage.removeItem('hydra:sdk:session:token');
+      expect(await storage.getItem('hydra:sdk:session:token')).toBeNull();
       expect(storage.size).toBe(0);
     });
 
     it('should initialize with initial entries if provided', async () => {
       const storage = new InMemoryStorageAdapter({
-        'hydra:sdk:auth:token': 'init_token',
+        'hydra:sdk:session:token': 'init_token',
         game_score: '999',
       });
 
-      expect(await storage.getItem('hydra:sdk:auth:token')).toBe('init_token');
+      expect(await storage.getItem('hydra:sdk:session:token')).toBe('init_token');
       expect(await storage.getItem('game_score')).toBe('999');
       expect(storage.size).toBe(2);
     });
 
     it('should initialize from Map and coerce non-string values to string', async () => {
       const map = new Map<string, any>([
-        ['hydra:sdk:auth:token', 'map_token'],
+        ['hydra:sdk:session:token', 'map_token'],
         ['count', 42],
       ]);
       const storage = new InMemoryStorageAdapter(map);
-      expect(await storage.getItem('hydra:sdk:auth:token')).toBe('map_token');
+      expect(await storage.getItem('hydra:sdk:session:token')).toBe('map_token');
       expect(await storage.getItem('count')).toBe('42');
       expect(storage.size).toBe(2);
     });
@@ -157,7 +149,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       const storage = new InMemoryStorageAdapter();
 
       // SDK keys
-      await storage.setItem('hydra:sdk:auth:token', 'jwt_1');
+      await storage.setItem('hydra:sdk:session:token', 'jwt_1');
       await storage.setItem('hydra:sdk:session:state', 'active');
       // Game-specific keys
       await storage.setItem('game_save_slot_1', 'level_10_inventory');
@@ -170,7 +162,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       await storage.clear();
 
       // SDK keys must be removed
-      expect(await storage.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await storage.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await storage.getItem('hydra:sdk:session:state')).toBeNull();
 
       // Game keys must be left intact
@@ -182,7 +174,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
 
     it('should clear all entries when clearAll() is explicitly called', async () => {
       const storage = new InMemoryStorageAdapter();
-      await storage.setItem('hydra:sdk:auth:token', 'jwt_1');
+      await storage.setItem('hydra:sdk:session:token', 'jwt_1');
       await storage.setItem('game_save', 'saved');
 
       await storage.clearAll();
@@ -205,14 +197,14 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(onFallback).not.toHaveBeenCalled();
 
       // Store and read back
-      await adapter.setItem('hydra:sdk:auth:token', 'browser_token_123');
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('browser_token_123');
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBe('browser_token_123');
+      await adapter.setItem('hydra:sdk:session:token', 'browser_token_123');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBe('browser_token_123');
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBe('browser_token_123');
 
       // Remove the key
-      await adapter.removeItem('hydra:sdk:auth:token');
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+      await adapter.removeItem('hydra:sdk:session:token');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBeNull();
     });
 
     it('should automatically fallback to InMemoryStorage when initial probe throws SecurityError (Safari ITP)', async () => {
@@ -232,12 +224,12 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(onFallback).toHaveBeenCalledWith(securityError);
 
       // Reads and writes still succeed without throwing
-      await adapter.setItem('hydra:sdk:auth:token', 'fallback_token');
-      const retrieved = await adapter.getItem('hydra:sdk:auth:token');
+      await adapter.setItem('hydra:sdk:session:token', 'fallback_token');
+      const retrieved = await adapter.getItem('hydra:sdk:session:token');
 
       expect(retrieved).toBe('fallback_token');
       // The value must not be written to the broken mockStorage; it lives in memory
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBeNull();
     });
 
     it('should gracefully switch to fallback when setItem encounters runtime DOMException or QuotaExceededError', async () => {
@@ -256,14 +248,16 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       mockStorage.throwOnSetItem = quotaError;
 
       // Must not throw
-      await expect(adapter.setItem('hydra:sdk:auth:token', 'quota_token')).resolves.not.toThrow();
+      await expect(
+        adapter.setItem('hydra:sdk:session:token', 'quota_token'),
+      ).resolves.not.toThrow();
 
       // Verify the switch to fallback
       expect(adapter.isUsingFallback).toBe(true);
       expect(onFallback).toHaveBeenCalledWith(quotaError);
 
       // Data is still read correctly from fallbackStorage
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('quota_token');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBe('quota_token');
     });
 
     it('should gracefully switch to fallback when getItem throws SecurityError at runtime', async () => {
@@ -278,7 +272,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       mockStorage.throwOnGetItem = securityError;
 
       // getItem must not throw
-      const result = await adapter.getItem('hydra:sdk:auth:token');
+      const result = await adapter.getItem('hydra:sdk:session:token');
       expect(result).toBeNull();
       expect(adapter.isUsingFallback).toBe(true);
       expect(onFallback).toHaveBeenCalledWith(securityError);
@@ -294,8 +288,8 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(adapter.isUsingFallback).toBe(true);
       expect(onFallback).toHaveBeenCalled();
 
-      await adapter.setItem('hydra:sdk:auth:token', 'ssr_token');
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('ssr_token');
+      await adapter.setItem('hydra:sdk:session:token', 'ssr_token');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBe('ssr_token');
     });
 
     it('should delete ONLY hydra:sdk:* keys in clear() and leave game keys untouched', async () => {
@@ -305,7 +299,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       });
 
       // Create SDK keys
-      await adapter.setItem('hydra:sdk:auth:token', 'token_123');
+      await adapter.setItem('hydra:sdk:session:token', 'token_123');
       await adapter.setItem('hydra:sdk:session:profile', 'user_abc');
 
       // Simulate the game writing directly to localStorage
@@ -319,7 +313,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       await adapter.clear();
 
       // Verify the SDK keys were removed
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('hydra:sdk:session:profile')).toBeNull();
 
       // Game-owned keys must remain in localStorage
@@ -339,12 +333,12 @@ describe('Storage Module & Sub-Namespace Policy', () => {
 
       expect(adapter.isUsingFallback).toBe(true);
 
-      await adapter.setItem('hydra:sdk:auth:token', 'ram_token');
+      await adapter.setItem('hydra:sdk:session:token', 'ram_token');
       await adapter.setItem('game_save', 'ram_game');
 
       await adapter.clear();
 
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('game_save')).toBe('ram_game');
     });
 
@@ -361,7 +355,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
       // Store a key successfully before the failure
-      await adapter.setItem('hydra:sdk:auth:token', 'pre_saved_token');
+      await adapter.setItem('hydra:sdk:session:token', 'pre_saved_token');
 
       // Simulate a full quota on subsequent writes
       mockStorage.throwOnSetItem = new Error('QuotaExceededError');
@@ -371,7 +365,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       // Read the new key from memory
       expect(await adapter.getItem('hydra:sdk:session:state')).toBe('new_state');
       // Read the old key from the original localStorage
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('pre_saved_token');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBe('pre_saved_token');
     });
 
     it('should not crash if onFallback callback throws an error', () => {
@@ -412,8 +406,8 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
       // Store the key first
-      await adapter.setItem('hydra:sdk:auth:token', 'pre_saved_token');
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBe('pre_saved_token');
+      await adapter.setItem('hydra:sdk:session:token', 'pre_saved_token');
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBe('pre_saved_token');
 
       // Simulate a write failure to switch to fallback mode
       mockStorage.throwOnSetItem = new Error('QuotaExceededError');
@@ -421,51 +415,51 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(adapter.isUsingFallback).toBe(true);
 
       // Remove a key stored before the fallback
-      await adapter.removeItem('hydra:sdk:auth:token');
+      await adapter.removeItem('hydra:sdk:session:token');
 
       // getItem must return null and not resurrect the value from underlyingStorage
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBeNull();
     });
 
     it('should not resurrect a removed key when the native removeItem throws', async () => {
       const mockStorage = new MockBrowserStorage();
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
-      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      await adapter.setItem('hydra:sdk:session:token', 'old_jwt');
       mockStorage.throwOnRemoveItem = new Error('SecurityError');
 
-      await adapter.removeItem('hydra:sdk:auth:token');
+      await adapter.removeItem('hydra:sdk:session:token');
 
       expect(adapter.isUsingFallback).toBe(true);
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBe('old_jwt');
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBe('old_jwt');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
     });
 
     it('should serve a value written after a failed removal', async () => {
       const mockStorage = new MockBrowserStorage();
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
-      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      await adapter.setItem('hydra:sdk:session:token', 'old_jwt');
       mockStorage.throwOnRemoveItem = new Error('SecurityError');
-      await adapter.removeItem('hydra:sdk:auth:token');
+      await adapter.removeItem('hydra:sdk:session:token');
 
-      await adapter.setItem('hydra:sdk:auth:token', 'new_jwt');
+      await adapter.setItem('hydra:sdk:session:token', 'new_jwt');
 
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBe('new_jwt');
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBe('new_jwt');
     });
 
     it('should not resurrect SDK keys that clear() could not delete', async () => {
       const mockStorage = new MockBrowserStorage();
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
-      await adapter.setItem('hydra:sdk:auth:token', 'old_jwt');
+      await adapter.setItem('hydra:sdk:session:token', 'old_jwt');
       mockStorage.setItem('game_gold', '500');
       mockStorage.throwOnRemoveItem = new Error('SecurityError');
 
       await adapter.clear();
 
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('game_gold')).toBe('500');
     });
 
@@ -474,7 +468,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       const adapter = new SafeLocalStorageAdapter({ storage: mockStorage });
 
       // Store an SDK key and a game key before the failure
-      await adapter.setItem('hydra:sdk:auth:token', 'pre_saved_token');
+      await adapter.setItem('hydra:sdk:session:token', 'pre_saved_token');
       mockStorage.setItem('game_gold', '500');
 
       // Simulate a write failure to switch to fallback mode
@@ -486,9 +480,9 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       await adapter.clear();
 
       // SDK keys in both memory and underlyingStorage must be cleared
-      expect(await adapter.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('hydra:sdk:session:active')).toBeNull();
-      expect(mockStorage.getItem('hydra:sdk:auth:token')).toBeNull();
+      expect(mockStorage.getItem('hydra:sdk:session:token')).toBeNull();
 
       // Game-owned data in storage must be left intact
       expect(mockStorage.getItem('game_gold')).toBe('500');

@@ -1,7 +1,7 @@
 ---
 seo:
-  title: HydraOne SDK - Wallet bridge and CIP-8 auth for Cardano games
-  description: Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth and React/Vue adapters.
+  title: HydraOne SDK - Wallet bridge for Cardano games
+  description: Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, host features and React/Vue adapters.
 ---
 
 ::u-page-hero{class="relative overflow-hidden"}
@@ -18,7 +18,7 @@ seo:
 Build HydraOne games with [@hydraone-sdk/core]{.text-primary}.
 
 #description
-Wallet bridge, CIP-8 authentication and React/Vue adapters for games and dApps running on Cardano. Ship once and run inside the App Center or in a plain browser tab.
+Wallet bridge, host features and React/Vue adapters for games and dApps running on Cardano. Ship once and run inside the App Center or in a plain browser tab.
 
 #links
   :::u-button
@@ -50,8 +50,8 @@ items:
   - value: CIP-30
     label: Wallet bridge
   - value: CIP-8
-    label: One-click login
-  - value: ~23 KB
+    label: Data signing
+  - value: ~22 KB
     label: Gzipped core
   - value: React · Vue
     label: Framework adapters
@@ -68,7 +68,7 @@ What you get
 Everything a game needs to talk to a wallet
 
 #description
-One package covers the wallet, the player session and the host features, so you spend your time on the game.
+One package covers the wallet, storage and the host features, so you spend your time on the game.
 
 #features
   :::u-page-card
@@ -83,19 +83,9 @@ One package covers the wallet, the player session and the host features, so you 
 
   :::u-page-card
   ---
-  icon: i-lucide-fingerprint
-  title: One-click login
-  description: CIP-8 data signing and a JWT session lifecycle. You issue the challenge, the SDK handles the rest.
-  to: /guides/authentication
-  class: hcard
-  ---
-  :::
-
-  :::u-page-card
-  ---
   icon: i-lucide-gamepad-2
   title: Host features
-  description: Theme and audio events, screen orientation, haptics, the deposit modal and the player profile.
+  description: Theme and language events, screen orientation and haptics.
   to: /guides/host-features
   class: hcard
   ---
@@ -148,7 +138,7 @@ Your game runs in an iframe and reaches the wallet through the App Center.
   steps:
     - icon: i-lucide-package
       title: Install
-      text: Add @hydraone-sdk/core, or scaffold a project with create-hydraone-game.
+      text: Add @hydraone-sdk/core to your project with npm, pnpm, yarn or bun.
     - icon: i-lucide-plug
       title: Connect
       text: Create a WalletBridgeClient with the App Center origin and call init().
@@ -167,7 +157,7 @@ Your game runs in an iframe and reaches the wallet through the App Center.
 Quick look
 
 #title
-Connect and sign in a few lines
+Connect and sign with a few lines
 
 #description
 Pick your stack. Every example creates the client for you from the App Center origin.
@@ -186,8 +176,7 @@ Pick your stack. Every example creates the client for you from the App Center or
 
         await client.init();
         const [address] = await client.getUsedAddresses();
-        const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, addVkey: true });
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
@@ -256,7 +245,7 @@ Find what you need
   ---
   icon: i-lucide-book-open
   title: Guides
-  description: Wallet operations, authentication, React, Vue, Safari storage and testing.
+  description: Wallet operations, host features, React, Vue, Safari storage and testing.
   to: /guides/wallet-operations
   class: hcard
   ---

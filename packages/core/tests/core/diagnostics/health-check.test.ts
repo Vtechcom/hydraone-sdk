@@ -361,7 +361,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     });
 
     it('restores existing localStorage data when customKey points at a real key', async () => {
-      const customKey = 'hydra:sdk:auth:token';
+      const customKey = 'hydra:sdk:session:token';
       localStorage.setItem(customKey, 'real-user-token');
       try {
         const results = await checkStorageHealth(undefined, { customKey });
@@ -373,7 +373,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     });
 
     it('restores existing data in a custom storage adapter when customKey points at a real key', async () => {
-      const customKey = 'hydra:sdk:auth:token';
+      const customKey = 'hydra:sdk:session:token';
       const store = new Map<string, string>([[customKey, 'real-relay-token']]);
       const storage = {
         getItem: async (k: string) => store.get(k) ?? null,

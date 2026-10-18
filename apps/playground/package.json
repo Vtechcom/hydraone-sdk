@@ -1,0 +1,9 @@
+{
+  "name": "@hydraone-sdk/playground",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local host + client apps for testing @hydraone-sdk/core and @hydraone-sdk/host during development",
+  "scripts": {
+    "dev": "pnpm --filter @hydraone-sdk/core --filter @hydraone-sdk/host build && pnpm --parallel --filter @hydraone-sdk/core --filter @hydraone-sdk/host --filter @hydraone-sdk/playground-host --filter @hydraone-sdk/playground-client dev"
+  }
+}

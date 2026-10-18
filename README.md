@@ -2,7 +2,7 @@ English | [Tiếng Việt](https://github.com/Vtechcom/hydraone-sdk/blob/main/RE
 
 # @hydraone-sdk/core
 
-Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 login, React and Vue adapters.
+Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 data signing, React and Vue adapters.
 
 [![npm version](https://img.shields.io/npm/v/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
 [![npm downloads](https://img.shields.io/npm/dm/@hydraone-sdk/core.svg)](https://www.npmjs.com/package/@hydraone-sdk/core)
@@ -15,18 +15,16 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 ## Features
 
 - **Wallet bridge** between a game running in an iframe and the HydraOne App Center host shell, over `postMessage` with strict origin validation and correlation IDs.
-- **CIP-8 one-click login** with JWT lifecycle management (`GameAuthManager`).
 - **Safari ITP-safe storage**: a host storage relay keeps session data alive when the browser partitions iframe storage.
 - **Framework adapters**: React hooks (`@hydraone-sdk/core/react`) and Vue/Nuxt composables (`@hydraone-sdk/core/vue`).
 - **Health diagnostics** for the bridge.
-- **Project scaffolding** with `npx create-hydraone-game` (Next.js, Nuxt).
 - Zero runtime dependencies. ESM and CommonJS builds with bundled type declarations.
 
 ## Requirements
 
 - Node.js 22 or later for tooling and server-side rendering.
 - A browser environment for wallet features (`window`, `postMessage`).
-- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.3.
+- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.5.
 
 ## Installation
 
@@ -37,14 +35,6 @@ yarn add @hydraone-sdk/core
 pnpm add @hydraone-sdk/core
 bun add @hydraone-sdk/core
 ```
-
-Start a new project from a template:
-
-```bash
-npx create-hydraone-game my-game --template next-js
-```
-
-Templates: `next-js`, `nuxt`. Run `npx create-hydraone-game --help` for all options.
 
 ## Quick start
 
@@ -75,17 +65,18 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 
 `new WalletBridgeClient(options)` accepts:
 
-| Option               | Type            | Default            | Description                                                                                            |
-| -------------------- | --------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `transport`          | `ITransport`    | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                             |
-| `handshakeTimeoutMs` | `number`        | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                         |
-| `pingTimeoutMs`      | `number`        | `3000`             | Maximum wait for a `ping()` latency probe.                                                             |
-| `queryTimeoutMs`     | `number`        | `15000`            | Default timeout for wallet state queries.                                                              |
-| `signingTimeoutMs`   | `number`        | `120000`           | Default timeout for signing and submitting, which wait for the user.                                   |
-| `autoConnect`        | `boolean`       | `false`            | Run the handshake as soon as the client is constructed.                                                |
-| `isIframeFn`         | `() => boolean` | built-in detection | Custom iframe detection, mainly for tests.                                                             |
-| `debug`              | `boolean`       | `false`            | Emit warnings through the logger.                                                                      |
-| `logger`             | `Logger`        | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging). |
+| Option               | Type                 | Default            | Description                                                                                             |
+| -------------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `transport`          | `ITransport`         | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                              |
+| `appCenterOrigin`    | `string \| string[]` | none               | Host shell origin(s). Without `transport`, the client creates and owns a `PostMessageTransport` for it. |
+| `handshakeTimeoutMs` | `number`             | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                          |
+| `pingTimeoutMs`      | `number`             | `3000`             | Maximum wait for a `ping()` latency probe.                                                              |
+| `queryTimeoutMs`     | `number`             | `15000`            | Default timeout for wallet state queries.                                                               |
+| `signingTimeoutMs`   | `number`             | `120000`           | Default timeout for signing and submitting, which wait for the user.                                    |
+| `autoConnect`        | `boolean`            | `false`            | Run the handshake as soon as the client is constructed.                                                 |
+| `isIframeFn`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
+| `debug`              | `boolean`            | `false`            | Emit warnings through the logger.                                                                       |
+| `logger`             | `Logger`             | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging).  |
 
 `new PostMessageTransport(options)` accepts:
 
@@ -109,8 +100,12 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
-    const witnessSet = await client.signTx(unsignedTxCbor, true, { timeoutMs: 60_000 });
-    const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+    // addVkey: true returns the signed transaction instead of the CIP-30 witness set.
+    const signedTx = await client.signTx(unsignedTxCbor, {
+      partialSign: true,
+      addVkey: true,
+      timeoutMs: 60_000,
+    });
     const txHash = await client.submitTx(signedTx);
     return txHash;
   } catch (err) {
@@ -121,45 +116,9 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Other queries: `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
+Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onLanguageChanged`, `on`; the current values are on `client.theme` and `client.language`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
 
-### CIP-8 login
-
-```ts
-import {
-  WalletBridgeClient,
-  PostMessageTransport,
-  HostStorageRelayAdapter,
-  GameAuthManager,
-  parseJwt,
-} from '@hydraone-sdk/core';
-
-const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
-const client = new WalletBridgeClient({ transport });
-const storage = new HostStorageRelayAdapter({ transport });
-
-const auth = new GameAuthManager({
-  client,
-  storage,
-  exchangeToken: async ({ address, signature, key, challenge }) => {
-    const res = await fetch('https://api.example.com/auth/verify', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ address, signature, key, challenge }),
-    });
-    const body = (await res.json()) as { token: string };
-    return body.token;
-  },
-});
-
-export async function login(nonce: string) {
-  await client.init();
-  const session = await auth.signIn({ challenge: nonce });
-  return parseJwt<{ sub?: string }>(session.token ?? '').sub;
-}
-```
-
-`https://api.example.com` stands for your own backend: it issues the challenge and verifies the CIP-8 signature. See [Authentication](https://developers.hydraone.app/guides/authentication).
+Address queries return bech32 by default; pass `{ format: 'hex' }` for the raw CIP-30 hex (`getUsedAddresses` takes it as the second argument, after pagination). Address helpers: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstAddress`. `applyWitnessSet(txHex, witnessSetHex)` merges a CIP-30 witness set into a transaction yourself, as `addVkey: true` does.
 
 ### Storage and Safari ITP
 
@@ -190,22 +149,16 @@ Safari partitions or wipes storage for cross-origin iframes. `HostStorageRelayAd
 
 ```tsx
 import React from 'react';
-import { HydraOneProvider, useWallet, useHydraAuth } from '@hydraone-sdk/core/react';
+import { HydraOneProvider, useWallet } from '@hydraone-sdk/core/react';
 
 function Game() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWallet();
-  const { isAuthenticated, signIn, signOut } = useHydraAuth();
 
   return (
     <div>
       <p>{isConnected ? `${address} (${balanceADA} ADA)` : 'Not connected'}</p>
       <button onClick={() => (isConnected ? disconnect() : connect())}>
         {isConnected ? 'Disconnect' : 'Connect'}
-      </button>
-      <button
-        onClick={() => (isAuthenticated ? signOut() : signIn({ challenge: 'server-issued-nonce' }))}
-      >
-        {isAuthenticated ? 'Sign out' : 'Sign in'}
       </button>
     </div>
   );
@@ -225,21 +178,11 @@ Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See th
 ### Vue and Nuxt
 
 ```ts
-import { useWalletBridgeClient, useGameAuth } from '@hydraone-sdk/core/vue';
+import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
 export function setup() {
   const { isConnected, address, balanceADA, connect, disconnect } = useWalletBridgeClient();
-  const { isAuthenticated, signIn, signOut } = useGameAuth();
-  return {
-    isConnected,
-    address,
-    balanceADA,
-    connect,
-    disconnect,
-    isAuthenticated,
-    signIn,
-    signOut,
-  };
+  return { isConnected, address, balanceADA, connect, disconnect };
 }
 ```
 
@@ -248,8 +191,7 @@ See the [Vue guide](https://developers.hydraone.app/guides/vue-nuxt).
 ### Diagnostics
 
 ```ts
-import { WalletBridgeClient } from '@hydraone-sdk/core';
-import { checkBridgeHealth } from '@hydraone-sdk/core';
+import { WalletBridgeClient, checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
   appCenterOrigin: 'https://alpha.hydraone.app',
@@ -263,18 +205,26 @@ for (const check of report.checks) {
 
 `client.checkHealth()` runs the same report.
 
-### CLI
+### Host (`@hydraone-sdk/host`)
 
-```text
-npx create-hydraone-game [project-name] [options]
+The page that embeds games (such as App Center) uses the separate `@hydraone-sdk/host` package. It answers the client's requests from a wallet adapter you provide:
 
-  -t, --template <name>   next-js or nuxt
-  --pm <package-manager>  pnpm, npm, yarn or bun
-  --force                 Use the target directory even if it is not empty
-  -y, --yes               Skip prompts and use defaults
-  -h, --help              Show help
-  -v, --version           Show the CLI version
+```ts
+import { createHost, type HostWalletAdapter } from '@hydraone-sdk/host';
+
+export function embedGames(wallet: HostWalletAdapter) {
+  const host = createHost({
+    wallet,
+    allowedOrigins: ['https://game.example.com'],
+    theme: 'dark',
+    language: 'en',
+  });
+  host.start();
+  return host;
+}
 ```
+
+`host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostExtensionWallet` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
 
 ## Error handling
 
@@ -286,12 +236,12 @@ Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 | `ERR_USER_REJECTED`       | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
 | `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell found, or the page is not inside an iframe.                       |
 | `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
-| `ERR_AUTH_EXPIRED`        | `HydraAuthError`         | The JWT session has expired.                                                    |
 | `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
 | `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
 | `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
+| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_TRANSPORT_FAILED`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
 
 ## Logging and debugging
 

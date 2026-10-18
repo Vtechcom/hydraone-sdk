@@ -87,7 +87,7 @@ function generateId(): string {
  * HostStorageRelayAdapter - IStorage implementation that delegates storage to the Host Shell.
  *
  * Works around Safari ITP (storage partitioning) blocking or wiping iframe storage
- * after a reload. Session data (JWT, user address) is kept on the App Center host's
+ * after a reload. Game data is kept on the App Center host's
  * first-party domain via a postMessage relay.
  *
  * Security: when the Host Shell disconnects or times out, throws a HydraStorageError

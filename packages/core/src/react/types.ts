@@ -4,19 +4,14 @@ import type {
   HostInfo,
   ThemeMode,
   SignOptions,
+  SignTxOptions,
   QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
-  DepositModalOptions,
-  PlayerProfile,
   WalletBridgeClientOptions,
-  AuthSession,
-  AuthState,
-  SignInParams,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
-import type { GameAuthManager } from '../core/auth';
 import type { IStorage } from '../core/ports/storage';
 
 /**
@@ -27,11 +22,6 @@ export interface HydraOneContextValue {
    * WalletBridgeClient instance shared across the React tree
    */
   client: WalletBridgeClient;
-
-  /**
-   * GameAuthManager instance shared across the React tree
-   */
-  authManager: GameAuthManager;
 
   /**
    * IStorage instance (storage relay or local)
@@ -53,12 +43,6 @@ export interface HydraOneProviderProps {
    * If omitted, the provider creates a new instance.
    */
   client?: WalletBridgeClient;
-
-  /**
-   * Accepts a pre-built GameAuthManager instance.
-   * If omitted, the provider creates a new instance bound to the client.
-   */
-  authManager?: GameAuthManager;
 
   /**
    * Accepts a custom IStorage instance.
@@ -137,14 +121,9 @@ export interface UseWalletReturn {
   isConnected: boolean;
 
   /**
-   * Active Cardano wallet address (first entry of usedAddresses) or null
+   * Change address of the wallet (bech32), or null when not connected
    */
   address: string | null;
-
-  /**
-   * All used addresses of the wallet
-   */
-  usedAddresses: string[];
 
   /**
    * ADA balance as an exact decimal string (never in exponent notation)
@@ -167,9 +146,9 @@ export interface UseWalletReturn {
   hostInfo: HostInfo | null;
 
   /**
-   * Audio mute state synced from the Host Shell
+   * UI language synced from the Host Shell (BCP-47 tag such as 'en' or 'vi'), or null
    */
-  isAudioMuted: boolean;
+  language: string | null;
 
   /**
    * Current dark/light theme synced from the Host Shell
@@ -194,7 +173,11 @@ export interface UseWalletReturn {
   /**
    * Asks the player to sign a Cardano transaction through the wallet
    */
-  signTx: (txCbor: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
+  signTx: (
+    txCbor: string,
+    partialSignOrOptions?: boolean | SignTxOptions,
+    options?: SignTxOptions,
+  ) => Promise<string>;
 
   /**
    * Submits a signed transaction to the Cardano network through the wallet
@@ -215,127 +198,6 @@ export interface UseWalletReturn {
    * Triggers haptic feedback on a mobile device
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
-
-  /**
-   * Asks the Host Shell to show the deposit / token swap popup
-   */
-  requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
-
-  /**
-   * Fetches the player profile from the Host Shell
-   */
-  getPlayerProfile: () => Promise<PlayerProfile>;
-}
-
-/**
- * Configuration options for the useHydraAuth hook
- */
-export interface UseHydraAuthOptions {
-  /**
-   * Overrides the GameAuthManager instance.
-   * If omitted, the hook reads it from HydraOneContext.
-   */
-  authManager?: GameAuthManager;
-
-  /**
-   * Accepts a client used to build a GameAuthManager when no provider is present.
-   */
-  client?: WalletBridgeClient;
-
-  /**
-   * Accepts a custom storage when building with a dedicated client.
-   */
-  storage?: IStorage;
-}
-
-/**
- * Value returned by the useHydraAuth hook
- */
-export interface UseHydraAuthReturn {
-  /**
-   * GameAuthManager instance in use
-   */
-  authManager: GameAuthManager;
-
-  /**
-   * Current Web3 authentication state ('unauthenticated' | 'authenticating' | 'authenticated' | 'expired')
-   */
-  authState: AuthState;
-
-  /**
-   * true when the player is signed in and the JWT is still valid
-   */
-  isAuthenticated: boolean;
-
-  /**
-   * Session JWT or null
-   */
-  token: string | null;
-
-  /**
-   * Alias cho token
-   */
-  jwtToken: string | null;
-
-  /**
-   * Authenticated user wallet address or null
-   */
-  address: string | null;
-
-  /**
-   * Claims extracted from the JWT payload or null
-   */
-  claims: Record<string, unknown> | null;
-
-  /**
-   * User identity (the claims, or an object containing the address)
-   */
-  user: Record<string, unknown> | null;
-
-  /**
-   * true when the current JWT has expired
-   */
-  isExpired: boolean;
-
-  /**
-   * true while the sign-in wallet signature is in progress
-   */
-  isAuthenticating: boolean;
-
-  /**
-   * Error raised during sign-in, if any
-   */
-  error: Error | null;
-
-  /**
-   * One-click sign-in via a CIP-8 data signature
-   */
-  signIn: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Alias cho signIn
-   */
-  login: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Signs out and clears the stored session/token
-   */
-  signOut: () => Promise<void>;
-
-  /**
-   * Alias cho signOut
-   */
-  logout: () => Promise<void>;
-
-  /**
-   * Checks storage and restores a saved session
-   */
-  checkSession: () => Promise<AuthState>;
-
-  /**
-   * Alias cho checkSession
-   */
-  refreshSession: () => Promise<AuthState>;
 }
 
 /**

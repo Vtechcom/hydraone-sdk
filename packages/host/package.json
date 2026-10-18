@@ -2,7 +2,15 @@
   "name": "@hydraone-sdk/host",
   "version": "0.1.0",
   "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone-sdk/core",
-  "keywords": ["cardano", "hydra", "hydraone", "host", "iframe", "cip-30", "wallet-bridge"],
+  "keywords": [
+    "cardano",
+    "hydra",
+    "hydraone",
+    "host",
+    "iframe",
+    "cip-30",
+    "wallet-bridge"
+  ],
   "homepage": "https://github.com/Vtechcom/hydraone-sdk#readme",
   "bugs": {
     "url": "https://github.com/Vtechcom/hydraone-sdk/issues"
@@ -30,7 +38,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "CHANGELOG.md", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
   "engines": {
     "node": ">=22"
@@ -41,6 +54,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "dev": "tsup --watch",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -50,13 +64,12 @@
     "prepack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.copyFileSync('../../'+n,n)\"",
     "postpack": "node -e \"const f=require('node:fs');for(const n of ['README.md','LICENSE'])f.rmSync(n,{force:true})\""
   },
-  "peerDependencies": {
-    "@hydraone-sdk/core": ">=0.1.0"
+  "dependencies": {
+    "@hydraone-sdk/core": "workspace:^"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
-    "@hydraone-sdk/core": "workspace:*",
     "@types/node": "^26.6.4",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",

@@ -1,7 +1,7 @@
 ---
 seo:
-  title: HydraOne SDK - Wallet bridge và xác thực CIP-8 cho game Cardano
-  description: SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: wallet bridge, xác thực CIP-8 và adapter React/Vue.
+  title: HydraOne SDK - Wallet bridge cho game Cardano
+  description: SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: wallet bridge, ký dữ liệu CIP-8 và adapter React/Vue.
 ---
 
 ::u-page-hero{class="relative overflow-hidden"}
@@ -18,7 +18,7 @@ seo:
 Xây dựng game HydraOne với [@hydraone-sdk/core]{.text-primary}.
 
 #description
-Wallet bridge, xác thực CIP-8 và adapter React/Vue cho game và dApp chạy trên Cardano. Viết một lần, chạy trong App Center hoặc trong một tab trình duyệt thường.
+Wallet bridge, ký dữ liệu CIP-8 và adapter React/Vue cho game và dApp chạy trên Cardano. Viết một lần, chạy trong App Center hoặc trong một tab trình duyệt thường.
 
 #links
   :::u-button
@@ -50,8 +50,8 @@ items:
   - value: CIP-30
     label: Wallet bridge
   - value: CIP-8
-    label: Đăng nhập một chạm
-  - value: ~23 KB
+    label: Ký dữ liệu
+  - value: ~22 KB
     label: Lõi sau gzip
   - value: React · Vue
     label: Adapter framework
@@ -68,7 +68,7 @@ Bạn nhận được gì
 Mọi thứ game cần để giao tiếp với ví
 
 #description
-Một package lo phần ví, phiên người chơi và các tính năng của host, để bạn dành thời gian cho chính game.
+Một package lo phần ví, storage và các tính năng của host, để bạn dành thời gian cho chính game.
 
 #features
   :::u-page-card
@@ -83,19 +83,9 @@ Một package lo phần ví, phiên người chơi và các tính năng của ho
 
   :::u-page-card
   ---
-  icon: i-lucide-fingerprint
-  title: Đăng nhập một chạm
-  description: Ký dữ liệu CIP-8 và vòng đời phiên JWT. Bạn phát hành challenge, SDK lo phần còn lại.
-  to: /vi/guides/authentication
-  class: hcard
-  ---
-  :::
-
-  :::u-page-card
-  ---
   icon: i-lucide-gamepad-2
   title: Tính năng của host
-  description: Sự kiện theme và âm thanh, hướng màn hình, haptic, deposit modal và hồ sơ người chơi.
+  description: Sự kiện theme và ngôn ngữ, hướng màn hình và haptic.
   to: /vi/guides/host-features
   class: hcard
   ---
@@ -148,7 +138,7 @@ Cùng một đoạn code client chạy được khi nhúng trong App Center và 
   steps:
     - icon: i-lucide-package
       title: Cài đặt
-      text: Thêm @hydraone-sdk/core, hoặc dựng dự án bằng create-hydraone-game.
+      text: Thêm @hydraone-sdk/core vào dự án bằng npm, pnpm, yarn hoặc bun.
     - icon: i-lucide-plug
       title: Kết nối
       text: Tạo WalletBridgeClient với origin của App Center rồi gọi init().
@@ -186,8 +176,7 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
 
         await client.init();
         const [address] = await client.getUsedAddresses();
-        const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, addVkey: true });
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
@@ -256,7 +245,7 @@ Tìm thứ bạn cần
   ---
   icon: i-lucide-book-open
   title: Hướng dẫn
-  description: Thao tác với ví, xác thực, React, Vue, storage trên Safari và kiểm thử.
+  description: Thao tác với ví, React, Vue, storage trên Safari và kiểm thử.
   to: /vi/guides/wallet-operations
   class: hcard
   ---

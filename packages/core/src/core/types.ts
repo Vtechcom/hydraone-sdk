@@ -1,5 +1,5 @@
 import type { ITransport } from './ports/transport';
-import type { IStorage } from './ports/storage';
+import type { AddressFormat } from './wallet/address';
 
 /**
  * Message types supported by the protocol between the game and the host shell.
@@ -10,6 +10,7 @@ export type BridgeMessageType =
   | 'PING'
   | 'GET_USED_ADDRESSES'
   | 'GET_UNUSED_ADDRESSES'
+  | 'GET_REWARD_ADDRESSES'
   | 'GET_CHANGE_ADDRESS'
   | 'GET_NETWORK_ID'
   | 'GET_UTXOS'
@@ -18,13 +19,10 @@ export type BridgeMessageType =
   | 'SIGN_TX'
   | 'SUBMIT_TX'
   | 'SIGN_DATA'
-  | 'AUDIO_MUTED_CHANGED'
   | 'THEME_CHANGED'
+  | 'LANGUAGE_CHANGED'
   | 'SET_ORIENTATION'
   | 'TRIGGER_HAPTIC'
-  | 'REQUEST_DEPOSIT_MODAL'
-  | 'GET_PLAYER_PROFILE'
-  | 'AUTH_STATE_CHANGED'
   | 'NETWORK_CHANGED'
   | 'ACCOUNT_CHANGED'
   | 'DISCONNECTED'
@@ -191,6 +189,14 @@ export interface QueryOptions {
 }
 
 /**
+ * Options for address queries.
+ */
+export interface AddressQueryOptions extends QueryOptions {
+  /** Encoding of the returned addresses (default: `'bech32'`). */
+  format?: AddressFormat;
+}
+
+/**
  * Host shell metadata received during the handshake.
  */
 export interface HostInfo {
@@ -198,7 +204,8 @@ export interface HostInfo {
   network?: string;
   walletName?: string;
   theme?: ThemeMode;
-  audioMuted?: boolean;
+  /** UI language of the host as a BCP-47 tag (for example `'en'`, `'vi'`, `'pt-BR'`). */
+  language?: string;
   [key: string]: unknown;
 }
 
@@ -268,6 +275,19 @@ export interface SignOptions {
 }
 
 /**
+ * Options for `signTx`.
+ */
+export interface SignTxOptions extends SignOptions {
+  /** Sign only the inputs the wallet owns (CIP-30 `partialSign`, default: `false`). */
+  partialSign?: boolean;
+  /**
+   * Add the wallet's vkey witnesses to the transaction and return the full signed transaction CBOR,
+   * ready for `submitTx`. When `false` (default) the CIP-30 witness set is returned unchanged.
+   */
+  addVkey?: boolean;
+}
+
+/**
  * Payload of the SIGN_TX request.
  */
 export interface SignTxPayload {
@@ -322,99 +342,6 @@ export interface HostStorageClearPayload {
   prefix?: string;
 }
 
-/**
- * Packaged CIP-8 authentication signature.
- */
-export interface AuthSignaturePayload {
-  address: string;
-  signature: string;
-  key: string;
-  challenge: string;
-  payloadHex: string;
-}
-
-/**
- * Authentication state of the player session.
- */
-export interface AuthState {
-  isAuthenticated: boolean;
-  token: string | null;
-  address: string | null;
-  claims?: Record<string, unknown> | null;
-  error?: Error | null;
-}
-
-/**
- * Result of a successful sign-in.
- */
-export interface AuthSession {
-  address: string;
-  signature: string;
-  key: string;
-  challenge: string;
-  payloadHex: string;
-  token?: string;
-  claims?: Record<string, unknown> | null;
-}
-
-/**
- * Parameters for GameAuthManager.signIn().
- */
-export interface SignInParams {
-  /** Challenge / nonce issued by the auth backend. */
-  challenge: string;
-  /**
-   * How the challenge is turned into the signed bytes (default: 'auto').
-   * 'utf8' signs the string's UTF-8 bytes; 'hex' signs the bytes the (optionally 0x-prefixed) hex string encodes;
-   * 'auto' treats only a `0x` prefix followed by even-length hex as hex and everything else as UTF-8.
-   */
-  challengeEncoding?: 'auto' | 'utf8' | 'hex';
-  /** Address used to sign (optional; resolved from the client when omitted). */
-  address?: string;
-  /** Existing JWT, if one was already issued (optional). */
-  token?: string;
-  /** Callback that sends the signature to the auth backend and returns a JWT (optional). */
-  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
-  /** CIP-8 signing options (for example a timeout override). */
-  signOptions?: SignOptions;
-}
-
-/**
- * Minimal wallet client surface required by the auth manager.
- */
-export interface IAuthSignerClient {
-  signData(address: string, payloadHex: string, options?: SignOptions): Promise<DataSignature>;
-  getUsedAddresses(paginate?: Paginate, options?: QueryOptions): Promise<string[]>;
-  getChangeAddress?(options?: QueryOptions): Promise<string>;
-  onHostEvent?(event: string, handler: (payload: unknown) => void): UnsubscribeFn;
-}
-
-/**
- * Options for the auth manager.
- */
-export interface AuthManagerOptions {
-  /** WalletBridgeClient instance or any object implementing IAuthSignerClient. */
-  client: IAuthSignerClient;
-  /** Storage adapter that persists the token (for example HostStorageRelayAdapter). */
-  storage: IStorage;
-  /** Storage key for the JWT (default: 'hydra:sdk:auth:token'). */
-  tokenStorageKey?: string;
-  /** Storage key for the player address (default: 'hydra:sdk:auth:address'). */
-  addressStorageKey?: string;
-  /** Clock tolerance in seconds applied when checking JWT expiry (default: 0). */
-  clockToleranceSeconds?: number;
-  /** Default callback that exchanges a signature for a JWT when signIn does not receive one (optional). */
-  exchangeToken?: (payload: AuthSignaturePayload) => Promise<string>;
-}
-
-/** Alias of AuthManagerOptions. */
-export type GameAuthManagerOptions = AuthManagerOptions;
-
-/**
- * Listener for authentication state changes.
- */
-export type AuthStateHandler = (state: AuthState) => void;
-
 // ==========================================
 // Game Lifecycle & Host Events Types
 // ==========================================
@@ -425,14 +352,6 @@ export type AuthStateHandler = (state: AuthState) => void;
 export type ThemeMode = 'dark' | 'light';
 
 /**
- * Payload of the AUDIO_MUTED_CHANGED event.
- */
-export interface AudioMutedPayload {
-  muted: boolean;
-  [key: string]: unknown;
-}
-
-/**
  * Payload of the THEME_CHANGED event.
  */
 export interface ThemeChangedPayload {
@@ -441,14 +360,23 @@ export interface ThemeChangedPayload {
 }
 
 /**
- * Listener for audio mute changes.
- */
-export type AudioMutedHandler = (muted: boolean) => void;
-
-/**
  * Listener for theme changes.
  */
 export type ThemeChangedHandler = (theme: ThemeMode) => void;
+
+/**
+ * Payload of the LANGUAGE_CHANGED event.
+ */
+export interface LanguageChangedPayload {
+  /** BCP-47 language tag (for example `'en'`, `'vi'`, `'pt-BR'`). */
+  language: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Listener for language changes.
+ */
+export type LanguageChangedHandler = (language: string) => void;
 
 /**
  * Screen orientation lock types.
@@ -496,40 +424,5 @@ export const HAPTIC_PATTERNS: Record<HapticFeedbackType, readonly number[]> = {
 export interface TriggerHapticPayload {
   type?: HapticFeedbackType;
   pattern: number | number[];
-  [key: string]: unknown;
-}
-
-// ==========================================
-// Host Modal Overlay & Player Profile Relay Types
-// ==========================================
-
-/**
- * Options for asking the host shell to show a deposit / token swap modal.
- */
-export interface DepositModalOptions {
-  /** Token to deposit (for example 'ADA', 'DJED', 'iUSD'). */
-  token?: string;
-  /** Minimum amount requested. */
-  minAmount?: number | bigint | string;
-  [key: string]: unknown;
-}
-
-/**
- * Payload of the REQUEST_DEPOSIT_MODAL request.
- */
-export type DepositModalPayload = DepositModalOptions;
-
-/**
- * Player profile returned by the host shell.
- */
-export interface PlayerProfile {
-  /** Player nickname. */
-  nickname?: string;
-  /** Avatar image URL. */
-  avatarUrl?: string;
-  /** VIP tier in the App Center. */
-  vipLevel?: number;
-  /** Cardano ADA Handle (for example '$player1'). */
-  adaHandle?: string;
   [key: string]: unknown;
 }

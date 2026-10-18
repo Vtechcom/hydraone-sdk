@@ -19,8 +19,7 @@
     "docs:api": "pnpm --filter @hydraone-sdk/core run docs",
     "dev:docs": "pnpm --filter @hydraone-sdk/docs dev",
     "build:docs": "pnpm --filter @hydraone-sdk/docs generate",
-    "dev:next": "pnpm --filter @hydraone-sdk/template-next-js dev",
-    "dev:nuxt": "pnpm --filter @hydraone-sdk/template-nuxt dev",
+    "dev:playground": "pnpm --filter @hydraone-sdk/playground dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "changeset": "changeset"

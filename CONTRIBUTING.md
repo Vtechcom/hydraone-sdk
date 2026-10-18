@@ -14,22 +14,24 @@ cd hydraone-sdk
 pnpm install
 ```
 
-The repository is a pnpm monorepo: `packages/core` is the SDK, `packages/host` is the host-side bridge, `packages/core/templates/*` are the project templates used by the CLI, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
+The repository is a pnpm monorepo: `packages/core` is the SDK, `packages/host` is the host-side bridge, and `apps/docs` is the documentation site (Nuxt). Run the scripts below from the repository root.
 
 ## Scripts
 
-| Script                   | What it does                                                      |
-| ------------------------ | ----------------------------------------------------------------- |
-| `pnpm run build`         | Build ESM, CJS and type declarations into `dist/` with tsup.      |
-| `pnpm run clean`         | Remove `dist/`.                                                   |
-| `pnpm run lint`          | Run ESLint.                                                       |
-| `pnpm run format`        | Format with Prettier. `format:check` only verifies.               |
-| `pnpm run typecheck`     | Run `tsc --noEmit` (sources and tests).                           |
-| `pnpm test`              | Run the Vitest suite. `test:watch` for watch mode.                |
-| `pnpm run test:coverage` | Run the suite with V8 coverage.                                   |
-| `pnpm run docs:api`      | Generate the TypeDoc API reference into `packages/core/docs/api/`. |
-| `pnpm run size`          | Check bundle size limits (run after `build`).                     |
-| `pnpm run changeset`     | Add a changeset describing your change.                           |
+| Script                    | What it does                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm run build`          | Build ESM, CJS and type declarations into `dist/` with tsup.                                                  |
+| `pnpm run lint`           | Run ESLint on `core` and `host`.                                                                              |
+| `pnpm run format`         | Format with Prettier. `format:check` only verifies.                                                           |
+| `pnpm run typecheck`      | Run `tsc --noEmit` (sources and tests).                                                                       |
+| `pnpm test`               | Run the Vitest suites of `core` and `host`. Use `pnpm --filter @hydraone-sdk/core test:watch` for watch mode. |
+| `pnpm run test:coverage`  | Run the `core` suite with V8 coverage.                                                                        |
+| `pnpm run docs:api`       | Generate the TypeDoc API reference into `packages/core/docs/api/`.                                            |
+| `pnpm run dev:docs`       | Start the documentation site (`apps/docs`) in development mode.                                               |
+| `pnpm run build:docs`     | Generate the static documentation site.                                                                       |
+| `pnpm run dev:playground` | Build both packages and start the local host and client playground (`apps/playground`).                       |
+| `pnpm run size`           | Check bundle size limits (run after `build`).                                                                 |
+| `pnpm run changeset`      | Add a changeset describing your change.                                                                       |
 
 Package checks, as CI runs them (after `build`):
 

@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useMemo, useRef, useEffect } from 'react';
 import type { HydraOneContextValue, HydraOneProviderProps } from './types';
 import { WalletBridgeClient } from '../core/client';
-import { GameAuthManager } from '../core/auth';
 import type { IStorage } from '../core/ports/storage';
 import { SafeLocalStorageAdapter, InMemoryStorageAdapter } from '../core/adapters/storage';
 import { PostMessageTransport } from '../core/adapters/transport/post-message-transport';
 import type { WalletBridgeClientOptions } from '../core/types';
 
 /**
- * React Context holding the WalletBridgeClient, GameAuthManager and IStorage instances
+ * React Context holding the WalletBridgeClient and IStorage instances
  */
 export const HydraOneContext = createContext<HydraOneContextValue | null>(null);
 HydraOneContext.displayName = 'HydraOneContext';
@@ -25,11 +24,10 @@ export function useHydraOneContext(componentName = 'useHydraOneContext'): HydraO
 }
 
 /**
- * Provider that exposes WalletBridgeClient, GameAuthManager and IStorage to the whole React tree
+ * Provider that exposes WalletBridgeClient and IStorage to the whole React tree
  */
 export function HydraOneProvider({
   client: clientProp,
-  authManager: authManagerProp,
   storage: storageProp,
   appCenterOrigin,
   options,
@@ -74,20 +72,6 @@ export function HydraOneProvider({
   }
   const activeClient = clientProp ?? clientRef.current;
 
-  // Create the authManager instance once and keep it stable across renders
-  const authManagerRef = useRef<GameAuthManager | null>(null);
-  if (!authManagerRef.current) {
-    if (authManagerProp) {
-      authManagerRef.current = authManagerProp;
-    } else {
-      authManagerRef.current = new GameAuthManager({
-        client: activeClient,
-        storage: activeStorage,
-      });
-    }
-  }
-  const activeAuthManager = authManagerProp ?? authManagerRef.current;
-
   // SSR-safe autoConnect: runs only on the client, inside useEffect
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -122,11 +106,10 @@ export function HydraOneProvider({
   const contextValue = useMemo<HydraOneContextValue>(
     () => ({
       client: activeClient,
-      authManager: activeAuthManager,
       storage: activeStorage,
       autoRefreshBalance,
     }),
-    [activeClient, activeAuthManager, activeStorage, autoRefreshBalance],
+    [activeClient, activeStorage, autoRefreshBalance],
   );
 
   return <HydraOneContext.Provider value={contextValue}>{children}</HydraOneContext.Provider>;

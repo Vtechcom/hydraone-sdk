@@ -26,8 +26,7 @@ function localizedCollections() {
       })],
       [`docs_${locale}`, defineCollection({
         type: 'page',
-        source: { include: `${locale}/**`, // TEMP: authentication guide hidden; remove the second entry to restore it.
-        exclude: [`${locale}/index.md`, `${locale}/3.guides/2.authentication.md`], prefix: '' },
+        source: { include: `${locale}/**`, exclude: [`${locale}/index.md`], prefix: '' },
         schema: docsSchema
       })]
     ])

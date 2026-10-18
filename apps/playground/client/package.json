@@ -1,0 +1,22 @@
+{
+  "name": "@hydraone-sdk/playground-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@hydra-sdk/cardano-wasm": "1.0.0",
+    "@hydraone-sdk/core": "workspace:*",
+    "nuxt": "^4.6.1",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite-plugin-wasm": "3.6.0"
+  }
+}

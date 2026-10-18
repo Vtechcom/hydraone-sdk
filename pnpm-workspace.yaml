@@ -1,9 +1,10 @@
 packages:
   - 'packages/*'
-  - 'packages/core/templates/*'
   - 'apps/*'
+  - 'apps/playground/*'
 
 allowBuilds:
+  cbor-extract: false
   esbuild: true
   unrs-resolver: true
   vue-demi: true

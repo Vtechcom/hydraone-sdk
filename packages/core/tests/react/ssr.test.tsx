@@ -29,7 +29,9 @@ describe('HydraOneProvider under server rendering', () => {
 
   it('renders with an explicit transport and no origin', () => {
     const html = renderToString(
-      <HydraOneProvider options={{ transport: { send: async () => {}, onMessage: () => () => {} } }}>
+      <HydraOneProvider
+        options={{ transport: { send: async () => {}, onMessage: () => () => {} } }}
+      >
         <Probe />
       </HydraOneProvider>,
     );

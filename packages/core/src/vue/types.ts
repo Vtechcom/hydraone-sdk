@@ -1,22 +1,17 @@
-import type { Ref, ComputedRef } from 'vue';
+import type { Ref } from 'vue';
 import type {
   ConnectionState,
   HostInfo,
   ThemeMode,
   SignOptions,
+  SignTxOptions,
   QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
-  DepositModalOptions,
-  PlayerProfile,
   WalletBridgeClientOptions,
-  AuthSession,
-  AuthState,
-  SignInParams,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
-import type { GameAuthManager } from '../core/auth';
 
 /**
  * Configuration options for the useWalletBridgeClient composable
@@ -61,14 +56,9 @@ export interface UseWalletBridgeClientReturn {
   isConnected: Ref<boolean>;
 
   /**
-   * Active Cardano wallet address (first entry of usedAddresses) or null
+   * Change address of the wallet (bech32), or null when not connected
    */
   address: Ref<string | null>;
-
-  /**
-   * All used addresses of the wallet
-   */
-  usedAddresses: Ref<string[]>;
 
   /**
    * ADA balance as an exact decimal string (never in exponent notation)
@@ -91,9 +81,9 @@ export interface UseWalletBridgeClientReturn {
   hostInfo: Ref<HostInfo | null>;
 
   /**
-   * Audio mute state synced from the Host Shell
+   * UI language synced from the Host Shell (BCP-47 tag such as 'en' or 'vi'), or null
    */
-  isAudioMuted: Ref<boolean>;
+  language: Ref<string | null>;
 
   /**
    * Theme (dark / light) synced from the Host Shell
@@ -128,14 +118,18 @@ export interface UseWalletBridgeClientReturn {
   refreshBalance: () => Promise<string>;
 
   /**
-   * Refreshes the list of used wallet addresses
+   * Refreshes the wallet address (getAddress)
    */
   refreshAddress: () => Promise<string | null>;
 
   /**
    * Asks the wallet to sign a transaction (signTx)
    */
-  signTx: (tx: string, partialSign?: boolean, options?: SignOptions) => Promise<string>;
+  signTx: (
+    tx: string,
+    partialSignOrOptions?: boolean | SignTxOptions,
+    options?: SignTxOptions,
+  ) => Promise<string>;
 
   /**
    * Asks the host or wallet to submit a transaction to the Cardano network
@@ -156,109 +150,4 @@ export interface UseWalletBridgeClientReturn {
    * Triggers haptic feedback through the Host Shell
    */
   triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
-
-  /**
-   * Asks the host to show the deposit / ADA swap modal
-   */
-  requestDepositModal: (options?: DepositModalOptions) => Promise<void>;
-
-  /**
-   * Fetches the player profile from the App Center host
-   */
-  getPlayerProfile: () => Promise<PlayerProfile>;
-}
-
-/**
- * Configuration options for the useGameAuth composable
- */
-export interface UseGameAuthOptions {
-  /**
-   * Existing GameAuthManager instance.
-   * If omitted, the composable creates a new instance or uses the shared default.
-   */
-  authManager?: GameAuthManager;
-
-  /**
-   * Client used when a new GameAuthManager is created
-   */
-  client?: WalletBridgeClient;
-
-  /**
-   * Origin of the Host Shell, used to build the shared client when none exists yet.
-   * Ignored when `client` or `authManager` is given, or when the shared client already exists.
-   */
-  appCenterOrigin?: string | string[];
-
-  /**
-   * Checks the saved session (checkSession) when the component mounts on the client.
-   * Defaults to true.
-   */
-  autoCheckSession?: boolean;
-}
-
-/**
- * Value returned by the useGameAuth composable
- */
-export interface UseGameAuthReturn {
-  /**
-   * GameAuthManager instance in use
-   */
-  authManager: GameAuthManager;
-
-  /**
-   * Whether the user is authenticated with a valid JWT session
-   */
-  isAuthenticated: Ref<boolean>;
-
-  /**
-   * Current JWT string or null
-   */
-  jwtToken: Ref<string | null>;
-
-  /**
-   * Cardano wallet address bound to the current session
-   */
-  address: Ref<string | null>;
-
-  /**
-   * All claims decoded from the JWT payload
-   */
-  claims: Ref<Record<string, unknown> | null>;
-
-  /**
-   * Computed flag telling whether the current JWT has expired
-   */
-  isExpired: ComputedRef<boolean>;
-
-  /**
-   * Error raised during sign-in or authentication
-   */
-  error: Ref<Error | null>;
-
-  // --- Actions ---
-
-  /**
-   * Performs the one-click CIP-8 Web3 sign-in
-   */
-  signIn: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Alias for signIn()
-   */
-  login: (params: SignInParams) => Promise<AuthSession>;
-
-  /**
-   * Signs out and clears the stored JWT session
-   */
-  signOut: () => Promise<void>;
-
-  /**
-   * Alias for signOut()
-   */
-  logout: () => Promise<void>;
-
-  /**
-   * Checks for a session saved in storage
-   */
-  checkSession: () => Promise<AuthState>;
 }

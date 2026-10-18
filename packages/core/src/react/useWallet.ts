@@ -2,17 +2,17 @@ import { useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { HydraOneContext } from './context';
 import type { UseWalletOptions, UseWalletReturn } from './types';
 import { readLovelaceBalance, lovelaceToAdaString } from '../core/wallet/balance';
+import { firstAddress } from '../core/wallet/address';
 import type {
   ConnectionState,
   HostInfo,
   ThemeMode,
   SignOptions,
+  SignTxOptions,
   QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
-  DepositModalOptions,
-  PlayerProfile,
 } from '../core/types';
 import type { WalletBridgeClient } from '../core/client';
 
@@ -38,12 +38,11 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
   const [isConnected, setIsConnected] = useState<boolean>(() => client.isConnected);
   const [address, setAddress] = useState<string | null>(null);
-  const [usedAddresses, setUsedAddresses] = useState<string[]>([]);
   const [balanceADA, setBalanceADA] = useState<string | null>(null);
   const [balanceLovelace, setBalanceLovelace] = useState<bigint | null>(null);
   const [networkId, setNetworkId] = useState<number | null>(null);
   const [hostInfo, setHostInfo] = useState<HostInfo | null>(() => client.hostInfo ?? null);
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(() => client.isAudioMuted ?? false);
+  const [language, setLanguage] = useState<string | null>(() => client.language ?? null);
   const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? 'dark');
 
   // Tracks unmount so state is never updated afterwards
@@ -76,40 +75,41 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     }
   }, [client]);
 
-  const refreshAddress = useCallback(async (): Promise<string | null> => {
-    try {
+  // Bumped on every address write so a slower, older query never overwrites a newer value.
+  const addressSeqRef = useRef(0);
+  const clearAddress = useCallback((): void => {
+    addressSeqRef.current++;
+    if (isMountedRef.current) {
+      setAddress(null);
+    }
+  }, []);
+
+  /** Reads the change address; `fallback` is used when the query fails. */
+  const loadAddress = useCallback(
+    async (fallback: string | null): Promise<string | null> => {
       if (!client.isConnected) {
-        if (isMountedRef.current) {
-          setAddress(null);
-          setUsedAddresses([]);
-        }
+        clearAddress();
         return null;
       }
-      const addrs = await client.getUsedAddresses();
-      if (Array.isArray(addrs) && addrs.length > 0 && addrs[0]) {
-        if (isMountedRef.current && client.isConnected) {
-          setUsedAddresses(addrs);
-          setAddress(addrs[0]);
-        }
-        return addrs[0];
-      }
+      const seq = ++addressSeqRef.current;
+      let currentAddr: string | null;
       try {
-        const changeAddr = await client.getChangeAddress();
-        if (changeAddr) {
-          if (isMountedRef.current && client.isConnected) {
-            setAddress(changeAddr);
-            setUsedAddresses([changeAddr]);
-          }
-          return changeAddr;
-        }
+        currentAddr = await client.getChangeAddress();
       } catch {
-        // Ignore errors from the change-address fallback
+        currentAddr = fallback;
       }
-      return null;
-    } catch {
-      return null;
-    }
-  }, [client]);
+      if (seq === addressSeqRef.current && isMountedRef.current && client.isConnected) {
+        setAddress(currentAddr);
+      }
+      return currentAddr;
+    },
+    [client, clearAddress],
+  );
+
+  const refreshAddress = useCallback(
+    async (): Promise<string | null> => loadAddress(null),
+    [loadAddress],
+  );
 
   const refreshBalance = useCallback(async (): Promise<string> => {
     try {
@@ -148,8 +148,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (client.theme !== undefined) {
         setTheme(client.theme);
       }
-      if (client.isAudioMuted !== undefined) {
-        setIsAudioMuted(client.isAudioMuted);
+      if (client.language !== undefined) {
+        setLanguage(client.language);
       }
     }
     await refreshNetwork();
@@ -168,18 +168,21 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     if (isMountedRef.current) {
       setConnectionState('disconnected');
       setIsConnected(false);
-      setAddress(null);
-      setUsedAddresses([]);
+      clearAddress();
       setBalanceADA(null);
       setBalanceLovelace(null);
       setNetworkId(null);
     }
-  }, [client]);
+  }, [client, clearAddress]);
 
   // 5. Proxy methods wrapped in useCallback
   const signTx = useCallback(
-    async (txCbor: string, partialSign?: boolean, signOptions?: SignOptions): Promise<string> => {
-      return client.signTx(txCbor, partialSign, signOptions);
+    async (
+      txCbor: string,
+      partialSignOrOptions?: boolean | SignTxOptions,
+      signOptions?: SignTxOptions,
+    ): Promise<string> => {
+      return client.signTx(txCbor, partialSignOrOptions, signOptions);
     },
     [client],
   );
@@ -216,17 +219,6 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     [client],
   );
 
-  const requestDepositModal = useCallback(
-    async (depositOptions?: DepositModalOptions): Promise<void> => {
-      return client.requestDepositModal(depositOptions);
-    },
-    [client],
-  );
-
-  const getPlayerProfile = useCallback(async (): Promise<PlayerProfile> => {
-    return client.getPlayerProfile();
-  }, [client]);
-
   // 6. Register event listeners with automatic cleanup in useEffect (SSR-safe)
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -245,8 +237,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (client.theme !== undefined) {
           setTheme(client.theme);
         }
-        if (client.isAudioMuted !== undefined) {
-          setIsAudioMuted(client.isAudioMuted);
+        if (client.language !== undefined) {
+          setLanguage(client.language);
         }
         refreshNetwork().catch(() => {});
         refreshAddress().catch(() => {});
@@ -254,8 +246,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
           refreshBalance().catch(() => {});
         }
       } else if (state === 'disconnected' || state === 'error') {
-        setAddress(null);
-        setUsedAddresses([]);
+        clearAddress();
         setBalanceADA(null);
         setBalanceLovelace(null);
         setNetworkId(null);
@@ -265,8 +256,13 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     const onAccountChanged = (addrs: string[]) => {
       if (!isMountedRef.current) return;
       if (Array.isArray(addrs)) {
-        setUsedAddresses(addrs);
-        setAddress(addrs[0] ?? null);
+        // DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
+        if (client.isConnected) {
+          setConnectionState('connected');
+          setIsConnected(true);
+        }
+        // Same source as connect; the payload only covers a failed query.
+        loadAddress(firstAddress(addrs)).catch(() => {});
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
@@ -282,8 +278,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (!isMountedRef.current) return;
       setConnectionState('disconnected');
       setIsConnected(false);
-      setAddress(null);
-      setUsedAddresses([]);
+      clearAddress();
       setBalanceADA(null);
       setBalanceLovelace(null);
       setNetworkId(null);
@@ -297,8 +292,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (client.theme !== undefined) {
         setTheme(client.theme);
       }
-      if (client.isAudioMuted !== undefined) {
-        setIsAudioMuted(client.isAudioMuted);
+      if (client.language !== undefined) {
+        setLanguage(client.language);
       }
       refreshNetwork().catch(() => {});
       refreshAddress().catch(() => {});
@@ -312,8 +307,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
     cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
     cleanups.push(
-      client.onAudioMutedChanged((muted) => {
-        if (isMountedRef.current) setIsAudioMuted(muted);
+      client.onLanguageChanged((newLanguage) => {
+        if (isMountedRef.current) setLanguage(newLanguage);
       }),
     );
     cleanups.push(
@@ -352,6 +347,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     refreshNetwork,
     refreshAddress,
     refreshBalance,
+    loadAddress,
+    clearAddress,
   ]);
 
   return {
@@ -359,12 +356,11 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     connectionState,
     isConnected,
     address,
-    usedAddresses,
     balanceADA,
     balanceLovelace,
     networkId,
     hostInfo,
-    isAudioMuted,
+    language,
     theme,
     connect,
     disconnect,
@@ -374,7 +370,5 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     signData,
     setOrientation,
     triggerHaptic,
-    requestDepositModal,
-    getPlayerProfile,
   };
 }

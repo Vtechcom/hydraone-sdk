@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { effectScope } from 'vue';
 import {
   useWalletBridgeClient,
@@ -7,13 +7,29 @@ import {
 import { WalletBridgeClient } from '../../src/core/client';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
+import { addressToBech32, addressToHex } from '../../src/core/wallet/address';
+import { HydraBridgeError } from '../../src/core/errors/errors';
+
+/** CIP-19 mainnet base address the mock host answers as the change address. */
+const PRIMARY_ADDRESS =
+  'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x';
+/** The host answers in hex, as CIP-30 wallets do; the client returns bech32. */
+const CHANGE_ADDRESS_HEX = addressToHex(PRIMARY_ADDRESS);
+/** Second base address used for ACCOUNT_CHANGED. */
+const NEW_ADDRESS = addressToBech32('01' + '77'.repeat(56));
 
 /**
  * Mock ITransport for unit tests
  */
 class MockTransport implements ITransport {
   public sentMessages: BridgeMessage[] = [];
-  public returnEmptyUsedAddresses: boolean = false;
+  public noAddress: boolean = false;
+  /** What the host answers to GET_CHANGE_ADDRESS (hex, like a CIP-30 wallet). */
+  public changeAddressHex: string = CHANGE_ADDRESS_HEX;
+  /** When set, GET_CHANGE_ADDRESS waits for this promise before answering. */
+  public changeAddressGate: Promise<void> | null = null;
+  /** Host error answered to GET_BALANCE, e.g. before the player connects a wallet in the host. */
+  public balanceError: { code: string; message: string } | null = null;
   private messageHandlers: Array<(msg: BridgeMessage) => void> = [];
 
   public async send(message: BridgeMessage): Promise<void> {
@@ -42,24 +58,7 @@ class MockTransport implements ITransport {
           appCenterVersion: '1.0.0',
           walletSupported: true,
           theme: 'dark',
-          audioMuted: false,
-        } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
-    if (msg.type === 'GET_USED_ADDRESSES') {
-      return {
-        id: msg.id || 'res_2',
-        type: 'RPC_RESPONSE',
-        payload: {
-          requestId: msg.id,
-          result: this.returnEmptyUsedAddresses
-            ? []
-            : [
-                'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-              ],
+          language: 'en',
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -67,13 +66,14 @@ class MockTransport implements ITransport {
     }
 
     if (msg.type === 'GET_CHANGE_ADDRESS') {
+      const answer = this.noAddress ? null : this.changeAddressHex;
+      if (this.changeAddressGate) await this.changeAddressGate;
       return {
         id: msg.id || 'res_change',
         type: 'RPC_RESPONSE',
         payload: {
           requestId: msg.id,
-          result:
-            'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
+          result: answer,
         } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -81,6 +81,10 @@ class MockTransport implements ITransport {
     }
 
     if (msg.type === 'GET_BALANCE') {
+      // Like PostMessageTransport, an RPC_ERROR from the host rejects the request.
+      if (this.balanceError) {
+        throw new HydraBridgeError(this.balanceError.message, this.balanceError.code);
+      }
       return {
         id: msg.id || 'res_3',
         type: 'RPC_RESPONSE',
@@ -128,24 +132,6 @@ class MockTransport implements ITransport {
           result: {
             signature: 'sig_123',
             key: 'key_123',
-          },
-        } as any,
-        timestamp: Date.now(),
-        source: 'hydra-host',
-      };
-    }
-
-    if (msg.type === 'GET_PLAYER_PROFILE') {
-      return {
-        id: msg.id || 'res_7',
-        type: 'RPC_RESPONSE',
-        payload: {
-          requestId: msg.id,
-          result: {
-            nickname: 'HydraMaster',
-            avatarUrl: 'https://hydra.one/avatar.png',
-            vipLevel: 3,
-            adaHandle: '$hydra',
           },
         } as any,
         timestamp: Date.now(),
@@ -209,9 +195,7 @@ describe('useWalletBridgeClient', () => {
 
     expect(isConnected.value).toBe(true);
     expect(connectionState.value).toBe('connected');
-    expect(address.value).toBe(
-      'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
-    );
+    expect(address.value).toBe(PRIMARY_ADDRESS);
     expect(balanceLovelace.value).toBe(45000000n);
     expect(balanceADA.value).toBe('45');
   });
@@ -230,22 +214,22 @@ describe('useWalletBridgeClient', () => {
     expect(balanceADA.value).toBeNull();
   });
 
-  it('listens to and applies AUDIO_MUTED_CHANGED and THEME_CHANGED from the Host Shell', async () => {
-    const { isAudioMuted, theme, init } = useWalletBridgeClient({ client });
+  it('listens to and applies LANGUAGE_CHANGED and THEME_CHANGED from the Host Shell', async () => {
+    const { language, theme, init } = useWalletBridgeClient({ client });
 
     await init();
     expect(theme.value).toBe('dark');
-    expect(isAudioMuted.value).toBe(false);
+    expect(language.value).toBe('en');
 
-    // Host Shell emits AUDIO_MUTED_CHANGED
+    // Host Shell emits LANGUAGE_CHANGED
     mockTransport.simulateMessage({
       id: 'evt_1',
-      type: 'AUDIO_MUTED_CHANGED',
-      payload: { muted: true },
+      type: 'LANGUAGE_CHANGED',
+      payload: { language: 'vi' },
       timestamp: Date.now(),
       source: 'hydra-host',
     });
-    expect(isAudioMuted.value).toBe(true);
+    expect(language.value).toBe('vi');
 
     // Host Shell emits THEME_CHANGED
     mockTransport.simulateMessage({
@@ -258,29 +242,94 @@ describe('useWalletBridgeClient', () => {
     expect(theme.value).toBe('light');
   });
 
-  it('listens to ACCOUNT_CHANGED and updates address and usedAddresses', async () => {
-    const { address, usedAddresses, init } = useWalletBridgeClient({ client });
+  it('reads the change address again on ACCOUNT_CHANGED instead of trusting the payload', async () => {
+    const { address, init } = useWalletBridgeClient({ client });
 
     await init();
-
-    const newAddrs = [
-      'addr1q9newaccount1234567890abcdefghijklmnopqrstuvwxyz9999999999999999999999999999999999',
-    ];
-
+    mockTransport.changeAddressHex = addressToHex(NEW_ADDRESS);
     mockTransport.simulateMessage({
       id: 'evt_3',
       type: 'ACCOUNT_CHANGED',
-      payload: newAddrs,
+      payload: [PRIMARY_ADDRESS],
       timestamp: Date.now(),
       source: 'hydra-host',
     });
 
-    expect(address.value).toBe(newAddrs[0]);
-    expect(usedAddresses.value).toEqual(newAddrs);
+    await vi.waitFor(() => expect(address.value).toBe(NEW_ADDRESS));
+  });
+
+  it('falls back to the first valid payload address when the change address query fails', async () => {
+    const { address, init } = useWalletBridgeClient({ client });
+
+    await init();
+    mockTransport.noAddress = true;
+    mockTransport.simulateMessage({
+      id: 'evt_3',
+      type: 'ACCOUNT_CHANGED',
+      payload: ['not-an-address', NEW_ADDRESS],
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    await vi.waitFor(() => expect(address.value).toBe(NEW_ADDRESS));
+
+    mockTransport.simulateMessage({
+      id: 'evt_4',
+      type: 'ACCOUNT_CHANGED',
+      payload: ['not-an-address'],
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    await vi.waitFor(() => expect(address.value).toBeNull());
+  });
+
+  it('ignores an address query that resolves after a newer one or after DISCONNECTED', async () => {
+    const { address, init, refreshAddress } = useWalletBridgeClient({ client });
+
+    await init();
+    let release!: () => void;
+    mockTransport.changeAddressGate = new Promise<void>((resolve) => (release = resolve));
+    mockTransport.changeAddressHex = addressToHex(NEW_ADDRESS);
+    const stale = refreshAddress();
+
+    mockTransport.simulateMessage({
+      id: 'evt_5',
+      type: 'DISCONNECTED',
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    release();
+    await stale;
+
+    expect(address.value).toBeNull();
+  });
+
+  it('marks the wallet connected again when ACCOUNT_CHANGED follows DISCONNECTED', async () => {
+    const { address, isConnected, connectionState, init } = useWalletBridgeClient({ client });
+
+    await init();
+    mockTransport.simulateMessage({
+      id: 'evt_5',
+      type: 'DISCONNECTED',
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    expect(isConnected.value).toBe(false);
+
+    mockTransport.changeAddressHex = addressToHex(NEW_ADDRESS);
+    mockTransport.simulateMessage({
+      id: 'evt_6',
+      type: 'ACCOUNT_CHANGED',
+      payload: [NEW_ADDRESS],
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    expect(isConnected.value).toBe(true);
+    expect(connectionState.value).toBe('connected');
+    await vi.waitFor(() => expect(address.value).toBe(NEW_ADDRESS));
   });
 
   it('forwards the signTx, submitTx and signData wallet actions through the composable', async () => {
-    const { init, signTx, submitTx, signData, getPlayerProfile } = useWalletBridgeClient({
+    const { init, signTx, submitTx, signData } = useWalletBridgeClient({
       client,
     });
 
@@ -289,15 +338,22 @@ describe('useWalletBridgeClient', () => {
     const signedTx = await signTx('cbor_tx_data');
     expect(signedTx).toBe('signed_tx_cbor_hex');
 
+    // Both the boolean and the SignTxOptions forms are forwarded to the client unchanged
+    const signTxSpy = vi.spyOn(client, 'signTx');
+    await signTx('cbor_tx_data', true, { timeoutMs: 500 });
+    expect(signTxSpy).toHaveBeenLastCalledWith('cbor_tx_data', true, { timeoutMs: 500 });
+    await signTx('cbor_tx_data', { partialSign: true, addVkey: false });
+    expect(signTxSpy).toHaveBeenLastCalledWith(
+      'cbor_tx_data',
+      { partialSign: true, addVkey: false },
+      undefined,
+    );
+
     const txHash = await submitTx('signed_tx_cbor_hex');
     expect(txHash).toBe('tx_hash_1234567890abcdef');
 
-    const dataSig = await signData('addr1test', 'payload_hex');
+    const dataSig = await signData(PRIMARY_ADDRESS, 'payload_hex');
     expect(dataSig.signature).toBe('sig_123');
-
-    const profile = await getPlayerProfile();
-    expect(profile.nickname).toBe('HydraMaster');
-    expect(profile.adaHandle).toBe('$hydra');
   });
 
   it('removes listeners automatically when the effectScope stops (onScopeDispose)', async () => {
@@ -309,7 +365,7 @@ describe('useWalletBridgeClient', () => {
     });
 
     await capturedComposable!.init();
-    expect(capturedComposable!.isAudioMuted.value).toBe(false);
+    expect(capturedComposable!.language.value).toBe('en');
 
     // Stop the scope (simulates component unmount / a Vue router page transition)
     scope.stop();
@@ -317,38 +373,109 @@ describe('useWalletBridgeClient', () => {
     // Simulate another event after unmount
     mockTransport.simulateMessage({
       id: 'evt_after_dispose',
-      type: 'AUDIO_MUTED_CHANGED',
-      payload: { muted: true },
+      type: 'LANGUAGE_CHANGED',
+      payload: { language: 'vi' },
       timestamp: Date.now(),
       source: 'hydra-host',
     });
 
     // The value stays unchanged because the listeners were removed
-    expect(capturedComposable!.isAudioMuted.value).toBe(false);
+    expect(capturedComposable!.language.value).toBe('en');
   });
 
-  it('falls back to getChangeAddress when usedAddresses is empty', async () => {
-    mockTransport.returnEmptyUsedAddresses = true;
+  it('exposes the change address of the wallet', async () => {
     const { address, init } = useWalletBridgeClient({ client });
 
     await init();
-    expect(address.value).toBe(
-      'addr1qchangeaddress99999999999999999999999999999999999999999999999999999999999999',
-    );
+    expect(address.value).toBe(PRIMARY_ADDRESS);
   });
 
-  it('starts with an already-connected client and syncs the initial theme and isAudioMuted', async () => {
+  it('does not report an error when the host wallet is connected after the game', async () => {
+    const notConnected = {
+      code: 'ERR_NOT_CONNECTED',
+      message: 'Wallet is not connected in the host',
+    };
+    mockTransport.balanceError = notConnected;
+    mockTransport.noAddress = true;
+    const { error, balanceADA, address, init } = useWalletBridgeClient({ client });
+
+    await init();
+    expect(error.value).toBeNull();
+    expect(balanceADA.value).toBeNull();
+
+    // The player connects a wallet in the host: the host announces the account.
+    mockTransport.balanceError = null;
+    mockTransport.noAddress = false;
+    mockTransport.simulateMessage({
+      id: 'evt_connect',
+      type: 'ACCOUNT_CHANGED',
+      payload: [PRIMARY_ADDRESS],
+      timestamp: Date.now(),
+      source: 'hydra-host',
+    });
+    await vi.waitFor(() => expect(balanceADA.value).toBe('45'));
+    expect(address.value).toBe(PRIMARY_ADDRESS);
+    expect(error.value).toBeNull();
+  });
+
+  it('clears a balance error once the balance loads successfully', async () => {
+    mockTransport.balanceError = { code: 'ERR_RPC_FAILED', message: 'Backend unavailable' };
+    const { error, balanceADA, init, refreshBalance } = useWalletBridgeClient({ client });
+
+    await init();
+    expect(error.value?.message).toBe('Backend unavailable');
+
+    mockTransport.balanceError = null;
+    await refreshBalance();
+    expect(balanceADA.value).toBe('45');
+    expect(error.value).toBeNull();
+  });
+
+  it('clears a balance error when the host wallet then reports ERR_NOT_CONNECTED', async () => {
+    mockTransport.balanceError = { code: 'ERR_RPC_FAILED', message: 'Backend unavailable' };
+    const { error, init, refreshBalance } = useWalletBridgeClient({ client });
+
+    await init();
+    expect(error.value?.message).toBe('Backend unavailable');
+
+    mockTransport.balanceError = { code: 'ERR_NOT_CONNECTED', message: 'No wallet' };
+    await expect(refreshBalance()).rejects.toBeDefined();
+    expect(error.value).toBeNull();
+  });
+
+  it('keeps a non-balance error when the balance later loads', async () => {
+    const { error, init, refreshBalance, signTx } = useWalletBridgeClient({ client });
+    await init();
+
+    await expect(signTx('')).rejects.toBeDefined();
+    const signError = error.value;
+    expect(signError).not.toBeNull();
+
+    await refreshBalance();
+    expect(error.value).toBe(signError);
+  });
+
+  it('leaves address null when the host has no change address', async () => {
+    mockTransport.noAddress = true;
+    const { address, isConnected, init } = useWalletBridgeClient({ client });
+
+    await init();
+    expect(isConnected.value).toBe(true);
+    expect(address.value).toBeNull();
+  });
+
+  it('starts with an already-connected client and syncs the initial theme and language', async () => {
     // Connect the client first
     await client.init();
-    // Simulate a client that already has a theme and mute state
+    // Simulate a client that already has a theme and language
     (client as any)._theme = 'light';
-    (client as any)._isAudioMuted = true;
+    (client as any)._language = 'vi';
 
-    const { theme, isAudioMuted, isConnected } = useWalletBridgeClient({ client });
+    const { theme, language, isConnected } = useWalletBridgeClient({ client });
 
     expect(isConnected.value).toBe(true);
     expect(theme.value).toBe('light');
-    expect(isAudioMuted.value).toBe(true);
+    expect(language.value).toBe('vi');
   });
 
   it('listens to HOST_ACK and switches the connection state to connected', async () => {
@@ -365,7 +492,7 @@ describe('useWalletBridgeClient', () => {
         appCenterVersion: '2.0.0',
         walletSupported: true,
         theme: 'dark',
-        audioMuted: true,
+        language: 'vi',
       } as any,
       timestamp: Date.now(),
       source: 'hydra-host',

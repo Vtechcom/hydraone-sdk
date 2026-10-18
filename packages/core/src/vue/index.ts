@@ -12,7 +12,5 @@ export {
   setSharedWalletBridgeClient,
 } from './useWalletBridgeClient';
 
-export { createHydraOne, HYDRA_CLIENT_KEY, HYDRA_AUTH_KEY } from './plugin';
+export { createHydraOne, HYDRA_CLIENT_KEY } from './plugin';
 export type { CreateHydraOneOptions } from './plugin';
-
-export { useGameAuth, getSharedGameAuthManager, setSharedGameAuthManager } from './useGameAuth';

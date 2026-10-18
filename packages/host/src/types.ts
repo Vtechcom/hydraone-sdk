@@ -1,4 +1,4 @@
-import type { BalanceAsset, PlayerProfile, ThemeMode, Utxo } from '@hydraone-sdk/core';
+import type { BalanceAsset, ThemeMode, Utxo } from '@hydraone-sdk/core';
 
 export type HostPaginate = { page: number; limit: number };
 export type HostRequestPayload = Record<string, unknown>;
@@ -8,6 +8,7 @@ export interface HostExtensionWallet {
   icon?: string;
   getUsedAddresses(): Promise<string[]>;
   getUnusedAddresses(): Promise<string[]>;
+  getRewardAddresses(): Promise<string[]>;
   getChangeAddress(): Promise<string>;
   getBalance(): Promise<string>;
   signTx(cbor: string, partialSign?: boolean): Promise<string>;
@@ -33,7 +34,6 @@ export interface HostWalletAdapter {
   /** Signing for wallets that are not a CIP-30 extension (embedded wallet). */
   signTx(cbor: string, partialSign: boolean): Promise<string>;
   signData(address: string, payloadHex: string): Promise<unknown>;
-
 }
 
 export interface HostRequestContext {
@@ -55,12 +55,12 @@ export interface HostOptions {
   /** `'mainnet'` / `'preprod'` etc. Defaults to `'preprod'`. */
   network?: string | (() => string);
   theme?: ThemeMode | (() => ThemeMode);
+  /** UI language as a BCP-47 tag (for example `'en'`, `'vi'`). Sent in the handshake; push changes with `setLanguage`. */
+  language?: string | (() => string);
   /** Name shown for the embedded wallet. */
   embeddedWalletName?: string;
   /** Extra or overriding handlers keyed by request type. */
   handlers?: Record<string, HostRequestHandler>;
-  onRequestDeposit?: () => void;
-  getPlayerProfile?: (address: string | null) => PlayerProfile | Promise<PlayerProfile>;
   /** Backs `HOST_STORAGE_*`. Defaults to `globalThis.localStorage`. */
   storage?: Storage;
   /** Window to listen on and compare iframes against. Defaults to `globalThis.window`. */
@@ -82,11 +82,16 @@ export interface Host {
   isOriginAllowed(origin: string): boolean;
   registerIframe(target: Window, origin: string, slug?: string): void;
   unregisterIframe(target: Window): void;
-  /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, ...) to every embedded app. */
+  /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, `LANGUAGE_CHANGED`, ...) to every embedded app. */
   notify(type: string, payload?: unknown): void;
   /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/DISCONNECTED events. */
-  handleAddressChange(newAddress: string | null | undefined, oldAddress: string | null | undefined): Promise<void>;
+  handleAddressChange(
+    newAddress: string | null | undefined,
+    oldAddress: string | null | undefined,
+  ): Promise<void>;
   handleConnectionChange(connected: boolean): void;
+  /** Notifies every embedded app that the UI language changed (BCP-47 tag such as `'en'` or `'vi'`). */
+  setLanguage(language: string): void;
   /** Registers or overrides a request handler at runtime; `null` removes it. */
   setHandler(type: string, handler: HostRequestHandler | null): void;
   /** Attaches the window `message` listener. Idempotent. */

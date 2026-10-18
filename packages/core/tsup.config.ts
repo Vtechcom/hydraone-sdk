@@ -9,7 +9,6 @@ export default defineConfig({
     index: 'src/index.ts',
     'vue/index': 'src/vue/index.ts',
     'react/index': 'src/react/index.ts',
-    'cli/index': 'src/cli/index.ts',
   },
   format: ['esm', 'cjs'],
   // tsup injects the deprecated `baseUrl` into its dts build, an error under TS 6.

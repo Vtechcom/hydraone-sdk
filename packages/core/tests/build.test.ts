@@ -34,7 +34,6 @@ describe('Build Output Verification', () => {
     const vueEsmContent = fs.readFileSync(vueEsm, 'utf-8');
     expect(vueEsmContent).toContain('useWalletBridgeClient');
     expect(vueEsmContent).toContain('lovelaceFromAssets');
-    expect(vueEsmContent).toContain('useGameAuth');
     // vue must stay an external peer dependency and not be bundled into dist/vue/index.js
     expect(vueEsmContent).toMatch(/from ["']vue["']/);
 
@@ -49,25 +48,11 @@ describe('Build Output Verification', () => {
     const reactEsmContent = fs.readFileSync(reactEsm, 'utf-8');
     expect(reactEsmContent).toContain('HydraOneProvider');
     expect(reactEsmContent).toContain('useWallet');
-    expect(reactEsmContent).toContain('useHydraAuth');
     expect(reactEsmContent).toContain('useHostStorage');
     expect(reactEsmContent).toContain('lovelaceFromAssets');
     // react must stay an external peer dependency and not be bundled into dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);
 
     expect(esmContent).toContain('checkBridgeHealth');
-
-    const cliEsm = path.join(distPath, 'cli/index.js');
-    const cliCjs = path.join(distPath, 'cli/index.cjs');
-    const cliDts = path.join(distPath, 'cli/index.d.ts');
-
-    expect(fs.existsSync(cliEsm)).toBe(true);
-    expect(fs.existsSync(cliCjs)).toBe(true);
-    expect(fs.existsSync(cliDts)).toBe(true);
-
-    const cliEsmContent = fs.readFileSync(cliEsm, 'utf-8');
-    expect(cliEsmContent).toContain('runCli');
-    expect(cliEsmContent).toContain('scaffoldProject');
-    expect(cliEsmContent).toContain('parseCliArgs');
   });
 });

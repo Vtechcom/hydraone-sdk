@@ -32,7 +32,7 @@ export default defineNuxtConfig({
   },
 
   // Default dev port for the docs site; `nuxt dev --port <n>` or NUXT_PORT still override it.
-  devServer: { port: 3002 },
+  devServer: { port: 4000 },
 
   // TEMP: landing page disabled; the domain root opens the quick start. Remove to restore the landing page.
   routeRules: {
@@ -78,7 +78,7 @@ export default defineNuxtConfig({
   llms: {
     domain: 'https://developers.hydraone.app',
     title: 'HydraOne SDK',
-    description: 'Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CIP-8 auth and React/Vue adapters.',
+    description: 'Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, host features and React/Vue adapters.',
     // Locale-aware handler lives in server/routes/raw/.
     contentRawMarkdown: false,
     full: {

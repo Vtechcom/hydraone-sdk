@@ -10,7 +10,9 @@ export function extractOriginFromUrl(item: string): string {
 
   if (trimmed.includes('*')) {
     const pattern = trimmed.replace(/\/+$/, '');
-    return pattern === '*' || /^[a-z][a-z0-9+.-]*:\/\//i.test(pattern) ? pattern : `https://${pattern}`;
+    return pattern === '*' || /^[a-z][a-z0-9+.-]*:\/\//i.test(pattern)
+      ? pattern
+      : `https://${pattern}`;
   }
 
   try {
@@ -51,6 +53,6 @@ export function matchOriginPattern(patternOrUrl: string, origin: string): boolea
 export function parseOriginList(value: string | undefined | null): string[] {
   return (value ?? '')
     .split(',')
-    .map(p => p.trim())
+    .map((p) => p.trim())
     .filter(Boolean);
 }

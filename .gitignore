@@ -9,7 +9,7 @@ coverage/
 .env.*
 !.env.example
 
-# Template build output
+# Framework build output
 .nuxt/
 .next/
 .output/

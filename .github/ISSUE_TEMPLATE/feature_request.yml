@@ -27,12 +27,10 @@ body:
       label: Area
       options:
         - Core client or transports
-        - Authentication
         - Storage
         - React adapter
         - Vue adapter
         - Diagnostics
-        - CLI and templates
         - Documentation
     validations:
       required: true
