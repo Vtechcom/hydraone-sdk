@@ -25,6 +25,35 @@ const { signature, key } = await client.signData(address, payloadHex);
 // POST { address, signature, key, challenge } to your backend, then store the token it returns.
 ```
 
+### Addresses are bech32 by default
+
+`getUsedAddresses`, `getUnusedAddresses` and `getChangeAddress` used to return the raw hex the wallet sent. They now return bech32 (`addr1…`, `addr_test1…`). To keep hex, pass `{ format: 'hex' }`:
+
+```ts
+const [hex] = await client.getUsedAddresses(undefined, { format: 'hex' });
+const change = await client.getChangeAddress({ format: 'hex' });
+```
+
+`signData` accepts either format. Use `addressToHex` or `addressToBech32` to convert addresses you already stored.
+
+### Hook `address` is the change address
+
+In `useWallet` (React) and `useWalletBridgeClient` (Vue), `address` is now the wallet's change address. It used to be the first used address. `usedAddresses` is removed; call `client.getUsedAddresses()` when you need the list. If you keyed player data on `address`, check that the value is the same for your users.
+
+### Audio mute replaced by language
+
+`isAudioMuted`, `onAudioMutedChanged`, `AudioMutedHandler`, `AudioMutedPayload`, `HostInfo.audioMuted` and the `AUDIO_MUTED_CHANGED` message are gone. The host now syncs its UI language instead: `client.language`, `client.onLanguageChanged(tag => …)`, `HostInfo.language`, and `language` in both hooks.
+
+### Deposit modal and player profile removed
+
+`requestDepositModal`, `getPlayerProfile`, `DepositModalOptions`, `DepositModalPayload`, `PlayerProfile` and the `REQUEST_DEPOSIT_MODAL` / `GET_PLAYER_PROFILE` messages are removed from the client and the hooks. Build these flows in your host app. On the host, register a custom handler (`handlers` option or `host.setHandler`) if a game still sends them.
+
+### Host
+
+- `HostExtensionWallet` requires `getRewardAddresses()`. Forward it from the CIP-30 API: `getRewardAddresses: () => api.getRewardAddresses()`.
+- The `onRequestDeposit` and `getPlayerProfile` options are removed.
+- `@hydraone-sdk/core` is a regular dependency now, so you no longer need to install it next to the host.
+
 ## Pre-release builds to 0.1.0
 
 0.1.0 is the first public release. If you used an internal or pre-release build, apply the changes below. The package name stays `@hydraone-sdk/core`.

@@ -85,7 +85,7 @@ Một package lo phần ví, storage và các tính năng của host, để bạ
   ---
   icon: i-lucide-gamepad-2
   title: Tính năng của host
-  description: Sự kiện theme và âm thanh, hướng màn hình, haptic, deposit modal và hồ sơ người chơi.
+  description: Sự kiện theme và ngôn ngữ, hướng màn hình và haptic.
   to: /vi/guides/host-features
   class: hcard
   ---
@@ -176,8 +176,7 @@ Chọn stack của bạn. Mọi ví dụ đều tự tạo client từ origin c�
 
         await client.init();
         const [address] = await client.getUsedAddresses();
-        const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, addVkey: true });
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |

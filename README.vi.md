@@ -110,8 +110,12 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
-    const witnessSet = await client.signTx(unsignedTxCbor, true, { timeoutMs: 60_000 });
-    const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+    // addVkey: true trả về giao dịch đã ký thay vì witness set của CIP-30.
+    const signedTx = await client.signTx(unsignedTxCbor, {
+      partialSign: true,
+      addVkey: true,
+      timeoutMs: 60_000,
+    });
     const txHash = await client.submitTx(signedTx);
     return txHash;
   } catch (err) {
@@ -122,7 +126,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onAudioMutedChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
+Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onLanguageChanged`, `on`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
 
 ### Lưu trữ và Safari ITP
 

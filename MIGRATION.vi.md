@@ -27,6 +27,35 @@ const { signature, key } = await client.signData(address, payloadHex);
 // Gửi { address, signature, key, challenge } lên backend, rồi lưu token mà backend trả về.
 ```
 
+### Địa chỉ mặc định là bech32
+
+Trước đây `getUsedAddresses`, `getUnusedAddresses` và `getChangeAddress` trả về nguyên hex mà ví gửi. Giờ chúng trả về bech32 (`addr1…`, `addr_test1…`). Muốn giữ hex, truyền `{ format: 'hex' }`:
+
+```ts
+const [hex] = await client.getUsedAddresses(undefined, { format: 'hex' });
+const change = await client.getChangeAddress({ format: 'hex' });
+```
+
+`signData` nhận cả hai định dạng. Dùng `addressToHex` hoặc `addressToBech32` để chuyển các địa chỉ bạn đã lưu.
+
+### `address` của hook là change address
+
+Trong `useWallet` (React) và `useWalletBridgeClient` (Vue), `address` giờ là change address của ví, trước đây là địa chỉ used đầu tiên. `usedAddresses` đã bị xóa; gọi `client.getUsedAddresses()` khi cần danh sách. Nếu bạn dùng `address` làm khóa dữ liệu người chơi, hãy kiểm tra giá trị có giữ nguyên với người dùng của bạn không.
+
+### Audio mute được thay bằng ngôn ngữ
+
+`isAudioMuted`, `onAudioMutedChanged`, `AudioMutedHandler`, `AudioMutedPayload`, `HostInfo.audioMuted` và message `AUDIO_MUTED_CHANGED` đã bị xóa. Host giờ đồng bộ ngôn ngữ giao diện: `client.language`, `client.onLanguageChanged(tag => …)`, `HostInfo.language` và `language` trong cả hai hook.
+
+### Đã xóa deposit modal và player profile
+
+`requestDepositModal`, `getPlayerProfile`, `DepositModalOptions`, `DepositModalPayload`, `PlayerProfile` và các message `REQUEST_DEPOSIT_MODAL` / `GET_PLAYER_PROFILE` đã bị xóa khỏi client và các hook. Hãy tự xây các luồng này trong app host. Ở phía host, đăng ký handler riêng (option `handlers` hoặc `host.setHandler`) nếu game vẫn gửi chúng.
+
+### Host
+
+- `HostExtensionWallet` bắt buộc có `getRewardAddresses()`. Chuyển tiếp từ CIP-30 API: `getRewardAddresses: () => api.getRewardAddresses()`.
+- Đã xóa các option `onRequestDeposit` và `getPlayerProfile`.
+- `@hydraone-sdk/core` giờ là dependency thường, nên không cần cài kèm khi dùng host.
+
 ## Từ bản pre-release lên 0.1.0
 
 0.1.0 là bản phát hành công khai đầu tiên. Nếu bạn từng dùng bản nội bộ hoặc bản pre-release, hãy áp dụng các thay đổi dưới đây. Tên package vẫn là `@hydraone-sdk/core`.

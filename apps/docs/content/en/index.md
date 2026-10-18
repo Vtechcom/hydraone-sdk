@@ -85,7 +85,7 @@ One package covers the wallet, storage and the host features, so you spend your 
   ---
   icon: i-lucide-gamepad-2
   title: Host features
-  description: Theme and audio events, screen orientation, haptics, the deposit modal and the player profile.
+  description: Theme and language events, screen orientation and haptics.
   to: /guides/host-features
   class: hcard
   ---
@@ -176,8 +176,7 @@ Pick your stack. Every example creates the client for you from the App Center or
 
         await client.init();
         const [address] = await client.getUsedAddresses();
-        const witnessSet = await client.signTx(unsignedTxCbor, true);
-        const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, addVkey: true });
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |

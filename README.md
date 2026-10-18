@@ -108,8 +108,12 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
-    const witnessSet = await client.signTx(unsignedTxCbor, true, { timeoutMs: 60_000 });
-    const signedTx = attachWitnessSet(unsignedTxCbor, witnessSet);
+    // addVkey: true returns the signed transaction instead of the CIP-30 witness set.
+    const signedTx = await client.signTx(unsignedTxCbor, {
+      partialSign: true,
+      addVkey: true,
+      timeoutMs: 60_000,
+    });
     const txHash = await client.submitTx(signedTx);
     return txHash;
   } catch (err) {
@@ -120,7 +124,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 }
 ```
 
-Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onAudioMutedChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`, `requestDepositModal`, `getPlayerProfile`.
+Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onLanguageChanged`, `on`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
 
 ### Storage and Safari ITP
 
