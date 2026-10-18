@@ -692,10 +692,11 @@ export class WalletBridgeClient {
     }
     // One unreadable entry (a Byron address, a host bug) must not hide the valid ones.
     const valid = result.filter(isValidAddress) as string[];
-    if (valid.length < result.length) {
+    if (this.debug && valid.length < result.length) {
+      const skipped = result.filter((entry) => !isValidAddress(entry));
       this.logger.warn(
-        `[WalletBridgeClient] ${type}: skipped invalid addresses from the host`,
-        result,
+        `[WalletBridgeClient] ${type}: skipped ${skipped.length} invalid address(es) from the host`,
+        skipped,
       );
     }
     return valid.map((address) => formatAddress(address, format));

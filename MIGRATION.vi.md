@@ -50,6 +50,10 @@ Trong `useWallet` (React) và `useWalletBridgeClient` (Vue), `address` giờ là
 
 `requestDepositModal`, `getPlayerProfile`, `DepositModalOptions`, `DepositModalPayload`, `PlayerProfile` và các message `REQUEST_DEPOSIT_MODAL` / `GET_PLAYER_PROFILE` đã bị xóa khỏi client và các hook. Hãy tự xây các luồng này trong app host. Ở phía host, đăng ký handler riêng (option `handlers` hoặc `host.setHandler`) nếu game vẫn gửi chúng.
 
+### Cần Vue 3.5 trở lên
+
+Peer dependency `vue` giờ là `>=3.5.0` (trước là `>=3.3.0`). Plugin `createHydraOne` hủy client qua `app.onUnmount`, API mà Vue 3.4 trở về trước không có, nên trên các bản đó client không bao giờ được giải phóng. Hãy nâng Vue (Nuxt 3.13 trở lên đã dùng 3.5).
+
 ### Đã xóa CLI và template
 
 CLI `create-hydraone-game` cùng các template Next.js và Nuxt không còn được phát hành kèm `@hydraone-sdk/core`, và package không còn mục `bin`. Hãy tạo dự án bằng công cụ của framework (`npx create-next-app`, `npx nuxi init`) rồi thêm `@hydraone-sdk/core`; hướng dẫn [React](./apps/docs/content/vi/3.guides/4.react-nextjs.md) và [Vue](./apps/docs/content/vi/3.guides/5.vue-nuxt.md) trình bày cách thiết lập.

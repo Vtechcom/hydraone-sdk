@@ -24,7 +24,7 @@ Official SDK for building HydraOne games and dApps on Cardano: wallet bridge, CI
 
 - Node.js 22 or later for tooling and server-side rendering.
 - A browser environment for wallet features (`window`, `postMessage`).
-- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.3.
+- Optional peer dependencies, only for the adapters you use: `react` >= 18, `vue` >= 3.5.
 
 ## Installation
 
@@ -245,7 +245,7 @@ Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTM
 
 ## Logging and debugging
 
-The SDK is silent by default, except for a warning when the host returns addresses it cannot read. Set `debug: true` to emit the other warnings, and pass a `logger` to route them into your own logging:
+The SDK is silent by default. Set `debug: true` to emit warnings, and pass a `logger` to route them into your own logging:
 
 ```ts
 import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';

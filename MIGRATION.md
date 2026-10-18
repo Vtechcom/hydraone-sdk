@@ -48,6 +48,10 @@ In `useWallet` (React) and `useWalletBridgeClient` (Vue), `address` is now the w
 
 `requestDepositModal`, `getPlayerProfile`, `DepositModalOptions`, `DepositModalPayload`, `PlayerProfile` and the `REQUEST_DEPOSIT_MODAL` / `GET_PLAYER_PROFILE` messages are removed from the client and the hooks. Build these flows in your host app. On the host, register a custom handler (`handlers` option or `host.setHandler`) if a game still sends them.
 
+### Vue 3.5 or later
+
+The `vue` peer dependency is now `>=3.5.0` (was `>=3.3.0`). The `createHydraOne` plugin destroys its client through `app.onUnmount`, which Vue 3.4 and older do not have, so on those versions the client was never released. Upgrade Vue (Nuxt 3.13 or later ships 3.5).
+
 ### CLI and templates removed
 
 The `create-hydraone-game` CLI and its Next.js and Nuxt templates are no longer shipped with `@hydraone-sdk/core`, and the package has no `bin` entry. Create the project with your framework's own tool (`npx create-next-app`, `npx nuxi init`) and add `@hydraone-sdk/core`; the [React](https://developers.hydraone.app/guides/react-nextjs) and [Vue](https://developers.hydraone.app/guides/vue-nuxt) guides show the setup.

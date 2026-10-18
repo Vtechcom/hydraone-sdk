@@ -481,8 +481,33 @@ describe('WalletBridgeClient', () => {
           const promise = q.call(client);
           respond(['addr_test1qp...', TEST_ADDRESS_HEX, null]);
           expect(await promise).toEqual([TEST_ADDRESS_BECH32]);
-          expect(warn).toHaveBeenCalledOnce();
+          // debug is off: skipped entries are not logged
+          expect(warn).not.toHaveBeenCalled();
           warn.mockRestore();
+        });
+
+        it(`${q.name}() logs only the skipped entries when debug is on`, async () => {
+          const logger = { warn: vi.fn(), error: vi.fn() };
+          const debugClient = new WalletBridgeClient({ transport, debug: true, logger });
+          const pInit = debugClient.init();
+          transport.simulateIncoming({
+            id: 'ack-debug',
+            type: 'HOST_ACK',
+            payload: { requestId: transport.sentMessages[transport.sentMessages.length - 1].id },
+            timestamp: Date.now(),
+            source: 'hydra-host',
+          });
+          await pInit;
+
+          const promise = q.call(debugClient);
+          respond(['addr_test1qp...', TEST_ADDRESS_HEX, null]);
+          expect(await promise).toEqual([TEST_ADDRESS_BECH32]);
+          expect(logger.warn).toHaveBeenCalledOnce();
+          expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining(`${q.type}: skipped 2 invalid address(es)`),
+            ['addr_test1qp...', null],
+          );
+          debugClient.destroy();
         });
       }
     });

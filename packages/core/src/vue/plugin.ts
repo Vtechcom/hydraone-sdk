@@ -27,9 +27,8 @@ export function createHydraOne(options: CreateHydraOneOptions = {}): Plugin {
       app.provide(HYDRA_CLIENT_KEY, client);
 
       // Release what the plugin created; a client passed in stays under the caller's control.
-      const onUnmount = (app as App & { onUnmount?: (cb: () => void) => void }).onUnmount;
-      if (typeof onUnmount === 'function' && !providedClient) {
-        onUnmount.call(app, () => {
+      if (!providedClient) {
+        app.onUnmount(() => {
           client.destroy();
         });
       }

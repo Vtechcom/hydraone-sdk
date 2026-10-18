@@ -26,7 +26,7 @@ SDK chính thức để xây dựng game và dApp HydraOne trên Cardano: cầu 
 
 - Node.js 22 trở lên cho tooling và server-side rendering.
 - Môi trường trình duyệt cho các tính năng ví (`window`, `postMessage`).
-- Peer dependency tùy chọn, chỉ cần cho adapter bạn dùng: `react` >= 18, `vue` >= 3.3.
+- Peer dependency tùy chọn, chỉ cần cho adapter bạn dùng: `react` >= 18, `vue` >= 3.5.
 
 ## Cài đặt
 
@@ -247,7 +247,7 @@ Các code bổ sung: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_PO
 
 ## Logging và debug
 
-SDK mặc định im lặng, trừ một cảnh báo khi host trả về địa chỉ không đọc được. Đặt `debug: true` để ghi các cảnh báo còn lại, và truyền `logger` để chuyển chúng vào hệ thống log của bạn:
+SDK mặc định im lặng. Đặt `debug: true` để ghi cảnh báo, và truyền `logger` để chuyển chúng vào hệ thống log của bạn:
 
 ```ts
 import { WalletBridgeClient, type Logger } from '@hydraone-sdk/core';
