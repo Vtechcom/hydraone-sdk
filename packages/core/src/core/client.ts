@@ -864,7 +864,7 @@ export class WalletBridgeClient {
   ): Promise<string> {
     this.assertConnected();
     if (!txCbor || typeof txCbor !== 'string' || txCbor.trim().length === 0) {
-      throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid transaction CBOR', ERROR_CODES.ERR_INVALID_PARAMS);
     }
 
     let resolvedOptions: SignTxOptions = options ?? {};
@@ -919,7 +919,7 @@ export class WalletBridgeClient {
   public async submitTx(txCbor: string, options?: SignOptions): Promise<string> {
     this.assertConnected();
     if (!txCbor || typeof txCbor !== 'string' || txCbor.trim().length === 0) {
-      throw new HydraBridgeError('Invalid transaction CBOR', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid transaction CBOR', ERROR_CODES.ERR_INVALID_PARAMS);
     }
 
     const timeout = options?.timeoutMs ?? this.signingTimeoutMs;
@@ -955,7 +955,7 @@ export class WalletBridgeClient {
     // Accepts bech32 or hex; the host receives hex, the form CIP-30 signData expects.
     const addressHex = formatAddress(address, 'hex');
     if (payloadHex === undefined || payloadHex === null || typeof payloadHex !== 'string') {
-      throw new HydraBridgeError('Invalid payload hex', 'ERR_INVALID_PARAMS');
+      throw new HydraBridgeError('Invalid payload hex', ERROR_CODES.ERR_INVALID_PARAMS);
     }
 
     const timeout = options?.timeoutMs ?? this.signingTimeoutMs;

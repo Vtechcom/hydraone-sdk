@@ -15,6 +15,7 @@ import type {
 import { HostStorageRelayAdapter } from '../adapters/storage/host-storage-relay';
 import type { IStorage } from '../ports/storage';
 import type { ITransport } from '../ports/transport';
+import { ERROR_CODES } from '../errors/errors';
 import { errorCode, errorMessage, errorName } from '../errors/error-utils';
 
 /** Optional capabilities a client or transport may expose; probed at runtime. */
@@ -281,11 +282,11 @@ export async function checkPostMessageLatency(
     const duration = Math.max(0, Math.round(endTime - startTime));
 
     const isTimeout =
-      errorCode(err) === 'ERR_TIMEOUT' ||
+      errorCode(err) === ERROR_CODES.ERR_TIMEOUT ||
       errorName(err) === 'HydraTimeoutError' ||
       /timed?\s*out|timeout/i.test(errorMessage(err));
 
-    if (errorCode(err) === 'ERR_NOT_IN_IFRAME') {
+    if (errorCode(err) === ERROR_CODES.ERR_NOT_IN_IFRAME) {
       return {
         id: 'postmessage-latency',
         name: 'PostMessage Roundtrip Latency',
@@ -294,13 +295,13 @@ export async function checkPostMessageLatency(
         message: 'PostMessage latency check skipped (running in standalone browser outside iframe)',
         details: {
           isStandalone: true,
-          code: 'ERR_NOT_IN_IFRAME',
+          code: ERROR_CODES.ERR_NOT_IN_IFRAME,
         },
         hint: 'Open the app inside the HydraOne web client (an iframe) so the host postMessage bridge is available.',
       };
     }
 
-    if (errorCode(err) === 'ERR_BRIDGE_NOT_CONNECTED') {
+    if (errorCode(err) === ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED) {
       return {
         id: 'postmessage-latency',
         name: 'PostMessage Roundtrip Latency',
@@ -308,7 +309,7 @@ export async function checkPostMessageLatency(
         latencyMs: duration,
         message: 'PostMessage latency test failed: Client is not connected to Host Shell',
         details: {
-          code: 'ERR_BRIDGE_NOT_CONNECTED',
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         },
         hint: 'Call client.init() or client.connect() to complete handshake before running diagnostics.',
       };

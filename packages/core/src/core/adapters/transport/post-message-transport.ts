@@ -23,7 +23,7 @@ import { errorMessage } from '../../errors/error-utils';
 /**
  * PostMessageTransport - ITransport implementation for iframe mode.
  * Two-way, zero-trust communication with the Host Shell:
- * unique IDs are generated and concurrent requests are multiplexed via the in-flight map.
+ * unique IDs are generated and concurrent requests are multiplexed via the pending-request map.
  */
 export class PostMessageTransport implements ITransport {
   /** Primary host origin (the first one when several are configured). */
@@ -347,7 +347,7 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Disconnects, removes listeners and clears the in-flight map
+   * Disconnects, removes listeners and clears the pending-request map
    */
   public destroy(): void {
     if (this.isDestroyed) {
@@ -378,14 +378,14 @@ export class PostMessageTransport implements ITransport {
   }
 
   /**
-   * Returns the number of pending requests in the in-flight map (for testing and diagnostics)
+   * Returns the number of pending requests (for testing and diagnostics)
    */
   public getPendingCount(): number {
     return this.pendingRequests.size;
   }
 
   /**
-   * Returns the in-flight entry for an ID
+   * Returns the pending entry for an ID
    */
   public getPendingEntry(id: string): PendingRequestEntry | undefined {
     return this.pendingRequests.get(id);

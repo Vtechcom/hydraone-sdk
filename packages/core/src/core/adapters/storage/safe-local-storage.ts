@@ -32,7 +32,7 @@ export class SafeLocalStorageAdapter implements IStorage {
   private _isUsingFallback: boolean = false;
   // Keys the caller removed but the native storage refused to delete; never read them back from native.
   private readonly removedKeys = new Set<string>();
-  // Set when clear() could not enumerate or delete native SDK keys; native SDK reads are then untrusted.
+  // Set when clearSdkData() could not enumerate or delete native SDK keys; native SDK reads are then untrusted.
   private nativeSdkKeysUntrusted = false;
 
   constructor(options: SafeLocalStorageAdapterOptions = {}) {

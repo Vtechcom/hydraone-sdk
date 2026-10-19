@@ -372,7 +372,7 @@ export class HostStorageRelayAdapter implements IStorage {
   }
 
   /**
-   * Internal dispatcher using the in-flight map for transports without a request method
+   * Internal dispatcher using the pending-request map for transports without a request method
    */
   private dispatchWithPendingMap(message: BridgeMessage): Promise<BridgeMessage> {
     return new Promise<BridgeMessage>((resolve, reject) => {

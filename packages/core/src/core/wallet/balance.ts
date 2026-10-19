@@ -1,10 +1,12 @@
-import { HydraBridgeError } from '../errors/errors';
+import { ERROR_CODES, HydraBridgeError } from '../errors/errors';
 import type { BalanceAsset, QueryOptions } from '../types';
 
 const LOVELACE_PER_ADA = 1_000_000n;
 
 function invalid(reason: string, value: string): HydraBridgeError {
-  return new HydraBridgeError(`Invalid balance: ${reason}`, 'ERR_INVALID_PARAMS', { value });
+  return new HydraBridgeError(`Invalid balance: ${reason}`, ERROR_CODES.ERR_INVALID_PARAMS, {
+    value,
+  });
 }
 
 /**
