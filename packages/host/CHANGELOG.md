@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- ce4b4ea: Separate "bridge connected" from "wallet connected".
+
+  The bridge is the link between the embedded app and the host. The wallet is the account the player connected inside the host. They used to share one name, so a wallet disconnect looked like a lost bridge.
+
+  - `ERR_NOT_CONNECTED` is split in two. `ERR_BRIDGE_NOT_CONNECTED` is raised by the client when the handshake has not finished, was cancelled, or the client was disconnected or destroyed. `ERR_WALLET_NOT_CONNECTED` is sent by the host when no wallet is connected.
+  - The `DISCONNECTED` event is now `WALLET_DISCONNECTED`, and `host.handleConnectionChange()` is now `host.handleWalletConnectionChange()`.
+  - `useWallet` and `useWalletBridgeClient` expose `isWalletConnected`. A wallet disconnect no longer resets `isConnected` or `connectionState`, because the bridge stays up. A new `ACCOUNT_CHANGED` restores the wallet state.
+  - `ConnectionState` no longer includes `'error'`, which the client never set.
+  - `client.onConnectionStateChanged(handler)` subscribes to bridge state changes (type `ConnectionStateChangedHandler`). `CONNECTION_STATE_CHANGED` is an internal client event and no longer goes through `client.on` / `onHostEvent`.
+
+- ce4b4ea: Make the handshake `HostInfo` match its meaning.
+
+  - The handshake field `appName` is now `hostName`, matching `HostOptions.hostName`. `client.hostName` reads it.
+  - `HostInfo.network` is now `networkName` (a string such as `'preprod'`), and `HostOptions.network` is now `networkName`. `networkId` stays the number from `getNetworkId()` and `NETWORK_CHANGED`.
+  - `HostInfo.wallet` (`{ name, icon }`) is declared, and the duplicate `walletName` is removed. `client.activeWalletName` reads `wallet.name`.
+  - `HostExtensionWallet` is now `HostCip30Api`, because it is the object returned by a wallet's CIP-30 `enable()`, not the wallet entry in `window.cardano`. It accepts an optional `name`, so an extension wallet reports its real name instead of `'CIP-30 Wallet'`.
+
+- ce4b4ea: Rename the `HostWalletAdapter` methods and trim the host API.
+
+  - `fetchAssets()` is now `fetchBalance()`, `getAddress()` is `getChangeAddress()`, and `getExtension()` is `getCip30Api()`.
+  - `HOST_ERROR_CODES` takes its shared codes from the core `ERROR_CODES`. `ERR_UNSUPPORTED_METHOD` stays host-only.
+  - `registerIframe(target, origin)` no longer takes `slug`, and `RegisteredIframe.slug` is removed. Nothing read it.
+  - `HostPaginate` is removed. The host uses the core `Paginate` type.
+  - `extractOriginFromUrl` is now `normalizeOrigin`.
+
+### Patch Changes
+
+- Updated dependencies [ce4b4ea]
+- Updated dependencies [ce4b4ea]
+- Updated dependencies [ce4b4ea]
+- Updated dependencies [ce4b4ea]
+- Updated dependencies [ce4b4ea]
+- Updated dependencies [ce4b4ea]
+  - @hydraone-sdk/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@hydraone-sdk/host",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Host-side bridge for HydraOne: lets an app such as App Center embed games that use @hydraone-sdk/core",
   "keywords": [
     "cardano",
