@@ -6,9 +6,13 @@
         <h1>Playground Client</h1>
       </div>
       <div class="top-actions">
-        <span class="pill" :class="stateTone">
+        <span class="pill" :class="stateTone" title="Bridge to the host">
           <span class="dot" />
-          {{ connectionState }}
+          bridge: {{ connectionState }}
+        </span>
+        <span class="pill" :class="walletTone" title="Wallet connected in the host">
+          <span class="dot" />
+          wallet: {{ isWalletConnected ? 'connected' : 'none' }}
         </span>
         <button v-if="!isConnected" class="btn primary" @click="run('connect', () => connect())">
           Connect
@@ -58,7 +62,7 @@
               :key="a.name"
               class="action"
               :class="{ running: running.has(a.name) }"
-              :disabled="(!isConnected && a.needsConnection) || running.has(a.name)"
+              :disabled="(!isWalletConnected && a.needsWallet) || running.has(a.name)"
               @click="run(a.name, a.fn)"
             >
               {{ a.name }}
@@ -91,7 +95,7 @@
             <button
               class="step"
               :class="stepClass(1)"
-              :disabled="!isConnected || busy !== null"
+              :disabled="!isWalletConnected || busy !== null"
               @click="buildStep"
             >
               <span class="num">1</span>{{ busy === 'build' ? 'Building…' : 'Build' }}
@@ -171,6 +175,7 @@ const {
   client,
   connectionState,
   isConnected,
+  isWalletConnected,
   address,
   balanceADA,
   networkId,
@@ -182,7 +187,7 @@ const {
   disconnect,
 } = useWalletBridgeClient({ autoConnect: true });
 
-type Action = { name: string; needsConnection: boolean; fn: () => Promise<unknown> };
+type Action = { name: string; needsWallet: boolean; fn: () => Promise<unknown> };
 
 // ---------- Transaction flow: build -> sign -> submit ----------
 type Step = 'build' | 'sign' | 'submit';
@@ -345,6 +350,7 @@ const stateTone = computed(() => {
   if (isConnected.value) return 'ok';
   return connectionState.value === 'connecting' ? 'warn' : 'off';
 });
+const walletTone = computed(() => (isWalletConnected.value ? 'ok' : 'off'));
 const networkLabel = computed(() => {
   // networkId only updates on NETWORK_CHANGED; the handshake already carries the host's network.
   if (networkId.value !== null) return networkId.value === 1 ? 'mainnet' : 'testnet';
@@ -355,26 +361,26 @@ const groups: { title: string; actions: Action[] }[] = [
   {
     title: 'Bridge',
     actions: [
-      { name: 'ping', needsConnection: false, fn: () => client.ping() },
-      { name: 'checkHealth', needsConnection: false, fn: () => client.checkHealth() },
+      { name: 'ping', needsWallet: false, fn: () => client.ping() },
+      { name: 'checkHealth', needsWallet: false, fn: () => client.checkHealth() },
     ],
   },
   {
     title: 'Wallet',
     actions: [
-      { name: 'getNetworkId', needsConnection: true, fn: () => client.getNetworkId() },
-      { name: 'getUsedAddresses', needsConnection: true, fn: () => client.getUsedAddresses() },
+      { name: 'getNetworkId', needsWallet: true, fn: () => client.getNetworkId() },
+      { name: 'getUsedAddresses', needsWallet: true, fn: () => client.getUsedAddresses() },
       {
         name: 'getUsedAddresses (hex)',
-        needsConnection: true,
+        needsWallet: true,
         fn: () => client.getUsedAddresses(undefined, { format: 'hex' }),
       },
-      { name: 'getUnusedAddresses', needsConnection: true, fn: () => client.getUnusedAddresses() },
-      { name: 'getRewardAddresses', needsConnection: true, fn: () => client.getRewardAddresses() },
-      { name: 'getChangeAddress', needsConnection: true, fn: () => client.getChangeAddress() },
-      { name: 'getBalance', needsConnection: true, fn: () => client.getBalance() },
-      { name: 'getUtxos', needsConnection: true, fn: () => client.getUtxos() },
-      { name: 'getCollateral', needsConnection: true, fn: () => client.getCollateral() },
+      { name: 'getUnusedAddresses', needsWallet: true, fn: () => client.getUnusedAddresses() },
+      { name: 'getRewardAddresses', needsWallet: true, fn: () => client.getRewardAddresses() },
+      { name: 'getChangeAddress', needsWallet: true, fn: () => client.getChangeAddress() },
+      { name: 'getBalance', needsWallet: true, fn: () => client.getBalance() },
+      { name: 'getUtxos', needsWallet: true, fn: () => client.getUtxos() },
+      { name: 'getCollateral', needsWallet: true, fn: () => client.getCollateral() },
     ],
   },
   {
@@ -382,10 +388,10 @@ const groups: { title: string; actions: Action[] }[] = [
     actions: [
       {
         name: 'signData',
-        needsConnection: true,
+        needsWallet: true,
         fn: () => client.signData(address.value!, '706c617967726f756e64'),
       },
-      { name: 'triggerHaptic', needsConnection: true, fn: () => client.triggerHaptic() },
+      { name: 'triggerHaptic', needsWallet: true, fn: () => client.triggerHaptic() },
     ],
   },
 ];

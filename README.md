@@ -224,7 +224,7 @@ export function embedGames(wallet: HostWalletAdapter) {
 }
 ```
 
-`host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostCip30Api` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
+`HostWalletAdapter` supplies the wallet state: `getChangeAddress()`, `getCip30Api()`, `fetchBalance()`, `fetchUtxos()` and `getNetworkId()`. `host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, `host.handleWalletConnectionChange(connected)` sends `WALLET_DISCONNECTED` when the player's wallet goes away (the bridge itself stays up), and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostCip30Api` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
 
 ## Error handling
 

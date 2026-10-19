@@ -227,7 +227,7 @@ function requireApi(): Cip30Api {
 const wallet: HostWalletAdapter = {
   isConnected: () => connected.value,
   getChangeAddress: () => address.value,
-  getCip30Api: () => (api.value ? toHostCip30Api(api.value, activeWallet.value?.icon ?? '') : null),
+  getCip30Api: () => (api.value ? toHostCip30Api(api.value, activeWallet.value) : null),
   isEmbedded: () => false,
   getNetworkId: async () => (api.value ? api.value.getNetworkId() : null),
   fetchBalance: async () => decodeValue(await requireApi().getBalance()),

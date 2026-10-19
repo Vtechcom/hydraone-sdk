@@ -64,13 +64,25 @@ const headline = computed(() => findPageHeadline(navigation?.value, page.value?.
 
 defineOgImage('Docs', { title, description, headline: headline.value })
 
+// `page.id` is `<collection>/<file path>` (for example `docs_vi/1.getting-started/1.introduction.md`),
+// and the collection name carries the language folder. `stem` has that folder stripped by the
+// collections' `prefix: ''`, so building the link from it points at a file that does not exist.
+// Using `id` also stays correct when a page falls back to English because it is not translated yet.
+const editPath = computed(() => {
+  const id = page.value?.id
+  if (!id) return null
+  const [collection, ...rest] = id.split('/')
+  const lang = collection?.replace(/^docs_/, '')
+  return lang && rest.length ? `${lang}/${rest.join('/')}` : null
+})
+
 const links = computed(() => {
   const links = []
-  if (toc?.bottom?.edit) {
+  if (toc?.bottom?.edit && editPath.value) {
     links.push({
       icon: 'i-lucide-external-link',
       label: 'Edit this page',
-      to: `${toc.bottom.edit}/${page?.value?.stem}.${page?.value?.extension}`,
+      to: `${toc.bottom.edit}/${editPath.value}`,
       target: '_blank'
     })
   }

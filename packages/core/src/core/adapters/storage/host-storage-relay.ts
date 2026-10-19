@@ -163,7 +163,7 @@ export class HostStorageRelayAdapter implements IStorage {
       source: 'hydra-client',
     };
 
-    const response = await this.executeRpc(message, 'getItem', key);
+    const response = await this.sendRequest(message, 'getItem', key);
     return this.extractValue(response);
   }
 
@@ -184,7 +184,7 @@ export class HostStorageRelayAdapter implements IStorage {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, 'setItem', key);
+    await this.sendRequest(message, 'setItem', key);
   }
 
   /**
@@ -203,7 +203,7 @@ export class HostStorageRelayAdapter implements IStorage {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, 'removeItem', key);
+    await this.sendRequest(message, 'removeItem', key);
   }
 
   /**
@@ -221,7 +221,7 @@ export class HostStorageRelayAdapter implements IStorage {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, 'clear');
+    await this.sendRequest(message, 'clearSdkData');
   }
 
   /**
@@ -311,7 +311,7 @@ export class HostStorageRelayAdapter implements IStorage {
   /**
    * Sends an RPC message over the transport and awaits the response, wrapping failures in HydraStorageError
    */
-  private async executeRpc(
+  private async sendRequest(
     message: BridgeMessage,
     operation: string,
     key?: string,

@@ -114,10 +114,14 @@ export function decodeUtxo(cbor: string): Utxo {
   };
 }
 
-/** Wraps a CIP-30 API in the shape `@hydraone-sdk/host` forwards extension requests to. */
-export function toHostCip30Api(api: Cip30Api, icon: string): HostCip30Api {
+/**
+ * Wraps a CIP-30 API in the shape `@hydraone-sdk/host` forwards extension requests to.
+ * `info` is the wallet's `window.cardano` entry, so the host reports its real name and icon.
+ */
+export function toHostCip30Api(api: Cip30Api, info?: { name: string; icon: string }): HostCip30Api {
   return {
-    icon,
+    name: info?.name,
+    icon: info?.icon ?? '',
     getUsedAddresses: () => api.getUsedAddresses(),
     getUnusedAddresses: () => api.getUnusedAddresses(),
     getRewardAddresses: () => api.getRewardAddresses(),

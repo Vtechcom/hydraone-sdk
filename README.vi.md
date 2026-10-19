@@ -226,7 +226,7 @@ export function embedGames(wallet: HostWalletAdapter) {
 }
 ```
 
-`host.setLanguage(tag)` gửi `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` gửi các sự kiện tài khoản và mạng, còn `handlers` hoặc `host.setHandler(type, handler)` thêm hoặc ghi đè các loại request. Extension CIP-30 truyền qua `HostCip30Api` phải có `getRewardAddresses()`. Gọi `host.destroy()` khi trang unmount.
+`HostWalletAdapter` cung cấp trạng thái ví: `getChangeAddress()`, `getCip30Api()`, `fetchBalance()`, `fetchUtxos()` và `getNetworkId()`. `host.setLanguage(tag)` gửi `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` gửi các sự kiện tài khoản và mạng, `host.handleWalletConnectionChange(connected)` gửi `WALLET_DISCONNECTED` khi ví của người chơi biến mất (bản thân bridge vẫn hoạt động), còn `handlers` hoặc `host.setHandler(type, handler)` thêm hoặc ghi đè các loại request. Extension CIP-30 truyền qua `HostCip30Api` phải có `getRewardAddresses()`. Gọi `host.destroy()` khi trang unmount.
 
 ## Xử lý lỗi
 
