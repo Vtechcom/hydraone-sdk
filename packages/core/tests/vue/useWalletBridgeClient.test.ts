@@ -55,7 +55,7 @@ class MockTransport implements ITransport {
         id: msg.id || 'res_1',
         type: 'HOST_ACK',
         payload: {
-          appCenterVersion: '1.0.0',
+          hostVersion: '1.0.0',
           walletSupported: true,
           theme: 'dark',
           language: 'en',
@@ -347,10 +347,10 @@ describe('useWalletBridgeClient', () => {
     const signTxSpy = vi.spyOn(client, 'signTx');
     await signTx('cbor_tx_data', true, { timeoutMs: 500 });
     expect(signTxSpy).toHaveBeenLastCalledWith('cbor_tx_data', true, { timeoutMs: 500 });
-    await signTx('cbor_tx_data', { partialSign: true, addVkey: false });
+    await signTx('cbor_tx_data', { partialSign: true, mergeWitnesses: false });
     expect(signTxSpy).toHaveBeenLastCalledWith(
       'cbor_tx_data',
-      { partialSign: true, addVkey: false },
+      { partialSign: true, mergeWitnesses: false },
       undefined,
     );
 
@@ -494,7 +494,7 @@ describe('useWalletBridgeClient', () => {
       id: 'ack_unsolicited',
       type: 'HOST_ACK',
       payload: {
-        appCenterVersion: '2.0.0',
+        hostVersion: '2.0.0',
         walletSupported: true,
         theme: 'dark',
         language: 'vi',
@@ -507,7 +507,7 @@ describe('useWalletBridgeClient', () => {
     expect(isConnected.value).toBe(true);
     expect(hostInfo.value).toEqual(
       expect.objectContaining({
-        appCenterVersion: '2.0.0',
+        hostVersion: '2.0.0',
         walletSupported: true,
       }),
     );

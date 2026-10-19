@@ -27,7 +27,7 @@ import { errorMessage } from '../../errors/error-utils';
  */
 export class PostMessageTransport implements ITransport {
   /** Primary host origin (the first one when several are configured). */
-  public readonly appCenterOrigin: string;
+  public readonly hostOrigin: string;
   /** Every origin accepted for incoming messages. */
   public readonly allowedOrigins: readonly string[];
   /** Host origin confirmed by an accepted incoming message, used as the postMessage target. */
@@ -44,18 +44,15 @@ export class PostMessageTransport implements ITransport {
 
   constructor(options: PostMessageTransportOptions) {
     const rawOrigins = options
-      ? Array.isArray(options.appCenterOrigin)
-        ? options.appCenterOrigin
-        : [options.appCenterOrigin]
+      ? Array.isArray(options.hostOrigin)
+        ? options.hostOrigin
+        : [options.hostOrigin]
       : [];
     if (
       rawOrigins.length === 0 ||
       rawOrigins.some((o) => typeof o !== 'string' || o.trim() === '')
     ) {
-      throw new HydraTransportError(
-        'appCenterOrigin must be provided',
-        ERROR_CODES.ERR_INVALID_OPTIONS,
-      );
+      throw new HydraTransportError('hostOrigin must be provided', ERROR_CODES.ERR_INVALID_OPTIONS);
     }
 
     // A wildcard makes every other entry redundant, so it collapses the list to '*'
@@ -72,13 +69,13 @@ export class PostMessageTransport implements ITransport {
             origin = new URL(trimmed).origin;
           } catch {
             throw new HydraTransportError(
-              `appCenterOrigin "${trimmed}" is not a valid origin`,
+              `hostOrigin "${trimmed}" is not a valid origin`,
               ERROR_CODES.ERR_INVALID_OPTIONS,
             );
           }
           if (origin === 'null') {
             throw new HydraTransportError(
-              `appCenterOrigin "${trimmed}" is not a valid origin`,
+              `hostOrigin "${trimmed}" is not a valid origin`,
               ERROR_CODES.ERR_INVALID_OPTIONS,
             );
           }
@@ -101,11 +98,11 @@ export class PostMessageTransport implements ITransport {
     const envKnown = options.env !== undefined || detectedEnv !== undefined;
     if (normalizedOrigin === '*' && (!wildcardAllowed || !envKnown)) {
       throw new HydraSecurityError('Wildcard origin "*" is not allowed in production environment', {
-        appCenterOrigin: '*',
+        hostOrigin: '*',
       });
     }
 
-    this.appCenterOrigin = normalizedOrigin;
+    this.hostOrigin = normalizedOrigin;
     this.allowedOrigins = normalizedOrigin === '*' ? ['*'] : normalizedList;
     this.targetWindow = options.targetWindow;
     this.sourceWindow =
@@ -132,7 +129,7 @@ export class PostMessageTransport implements ITransport {
     // 1. Zero-trust origin check. Foreign messages (extensions, devtools, other frames) are
     // dropped: throwing here would surface as an uncaught error in the window listener.
     if (
-      this.appCenterOrigin !== '*' &&
+      this.hostOrigin !== '*' &&
       (typeof event.origin !== 'string' || !this.allowedOrigins.includes(event.origin))
     ) {
       return;

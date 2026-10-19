@@ -394,7 +394,7 @@ describe('HostStorageRelayAdapter', () => {
       const sourceWindow = new MockSourceWindow(parentWindow);
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://host.hydraone.app',
+        hostOrigin: 'https://host.hydraone.app',
         targetWindow,
         sourceWindow,
         checkIframeSource: false,
@@ -458,7 +458,7 @@ describe('HostStorageRelayAdapter', () => {
       const sourceWindow = new MockSourceWindow(parentWindow);
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://host.hydraone.app',
+        hostOrigin: 'https://host.hydraone.app',
         targetWindow,
         sourceWindow,
         checkIframeSource: false,
@@ -476,7 +476,7 @@ describe('HostStorageRelayAdapter', () => {
       const sourceWindow = new MockSourceWindow(parentWindow);
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://host.hydraone.app',
+        hostOrigin: 'https://host.hydraone.app',
         targetWindow,
         sourceWindow,
         checkIframeSource: false,
@@ -540,7 +540,7 @@ describe('HostStorageRelayAdapter', () => {
       const sourceWindow = new MockSourceWindow(parentWindow);
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://host.hydraone.app',
+        hostOrigin: 'https://host.hydraone.app',
         targetWindow,
         sourceWindow,
         checkIframeSource: false,
@@ -657,7 +657,7 @@ describe('HostStorageRelayAdapter', () => {
       const sourceWindow = new MockSourceWindow(parentWindow);
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://host.hydraone.app',
+        hostOrigin: 'https://host.hydraone.app',
         targetWindow,
         sourceWindow,
         checkIframeSource: false,

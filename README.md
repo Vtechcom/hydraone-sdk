@@ -42,7 +42,7 @@ bun add @hydraone-sdk/core
 import { WalletBridgeClient, HydraBridgeError } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
 });
 
 try {
@@ -67,8 +67,8 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 
 | Option               | Type                 | Default            | Description                                                                                             |
 | -------------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `transport`          | `ITransport`         | none               | Transport adapter. Optional when `appCenterOrigin` is set.                                              |
-| `appCenterOrigin`    | `string \| string[]` | none               | Host shell origin(s). Without `transport`, the client creates and owns a `PostMessageTransport` for it. |
+| `transport`          | `ITransport`         | none               | Transport adapter. Optional when `hostOrigin` is set.                                                   |
+| `hostOrigin`         | `string \| string[]` | none               | Host shell origin(s). Without `transport`, the client creates and owns a `PostMessageTransport` for it. |
 | `handshakeTimeoutMs` | `number`             | `3000`             | Maximum wait for the `CLIENT_READY` handshake.                                                          |
 | `pingTimeoutMs`      | `number`             | `3000`             | Maximum wait for a `ping()` latency probe.                                                              |
 | `queryTimeoutMs`     | `number`             | `15000`            | Default timeout for wallet state queries.                                                               |
@@ -82,7 +82,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 
 | Option              | Type                 | Default                                 | Description                                                                                                    |
 | ------------------- | -------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `appCenterOrigin`   | `string \| string[]` | required                                | Exact origin of the host shell, or a list of origins. A wildcard `'*'` is rejected when `env` is `production`. |
+| `hostOrigin`        | `string \| string[]` | required                                | Exact origin of the host shell, or a list of origins. A wildcard `'*'` is rejected when `env` is `production`. |
 | `targetWindow`      | `PostMessageTarget`  | `window.parent`                         | Window that receives outgoing messages.                                                                        |
 | `sourceWindow`      | `MessageEventTarget` | `window`                                | Window that emits incoming message events.                                                                     |
 | `env`               | `string`             | `process.env.NODE_ENV` or `development` | Runtime environment used for the wildcard check.                                                               |
@@ -100,10 +100,10 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
-    // addVkey: true returns the signed transaction instead of the CIP-30 witness set.
+    // mergeWitnesses: true returns the signed transaction instead of the CIP-30 witness set.
     const signedTx = await client.signTx(unsignedTxCbor, {
       partialSign: true,
-      addVkey: true,
+      mergeWitnesses: true,
       timeoutMs: 60_000,
     });
     const txHash = await client.submitTx(signedTx);
@@ -118,7 +118,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 
 Other queries: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Host events: `onThemeChanged`, `onLanguageChanged`, `on`; the current values are on `client.theme` and `client.language`. Device and host controls: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
 
-Address queries return bech32 by default; pass `{ format: 'hex' }` for the raw CIP-30 hex (`getUsedAddresses` takes it as the second argument, after pagination). Address helpers: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstAddress`. `applyWitnessSet(txHex, witnessSetHex)` merges a CIP-30 witness set into a transaction yourself, as `addVkey: true` does.
+Address queries return bech32 by default; pass `{ format: 'hex' }` for the raw CIP-30 hex (`getUsedAddresses` takes it as the second argument, after pagination). Address helpers: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstValidAddress`. `applyWitnessSet(txHex, witnessSetHex)` merges a CIP-30 witness set into a transaction yourself, as `mergeWitnesses: true` does.
 
 ### Storage and Safari ITP
 
@@ -132,10 +132,10 @@ import {
   type IStorage,
 } from '@hydraone-sdk/core';
 
-const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
+const transport = new PostMessageTransport({ hostOrigin: 'https://alpha.hydraone.app' });
 
-export function pickStorage(insideAppCenter: boolean): IStorage {
-  if (insideAppCenter) return new HostStorageRelayAdapter({ transport, timeoutMs: 10_000 });
+export function pickStorage(insideHost: boolean): IStorage {
+  if (insideHost) return new HostStorageRelayAdapter({ transport, timeoutMs: 10_000 });
   return new SafeLocalStorageAdapter({
     fallbackStorage: new InMemoryStorageAdapter(),
     onFallback: (err) => console.warn('localStorage unavailable, using memory', err),
@@ -166,7 +166,7 @@ function Game() {
 
 export function App() {
   return (
-    <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app" autoConnect>
+    <HydraOneProvider hostOrigin="https://alpha.hydraone.app" autoConnect>
       <Game />
     </HydraOneProvider>
   );
@@ -194,7 +194,7 @@ See the [Vue guide](https://developers.hydraone.app/guides/vue-nuxt).
 import { WalletBridgeClient, checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
 });
 
 const report = await checkBridgeHealth(client, { warningThresholdMs: 200, skipStorageCheck: true });
@@ -224,7 +224,7 @@ export function embedGames(wallet: HostWalletAdapter) {
 }
 ```
 
-`host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostExtensionWallet` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
+`host.setLanguage(tag)` pushes `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` sends the account and network events, and `handlers` or `host.setHandler(type, handler)` add or override request types. A CIP-30 extension passed through `HostCip30Api` must implement `getRewardAddresses()`. Call `host.destroy()` when the page unmounts.
 
 ## Error handling
 
@@ -258,7 +258,7 @@ const logger: Logger = {
 };
 
 export const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
   debug: true,
   logger,
 });
@@ -289,7 +289,7 @@ The output is written to `packages/core/docs/api/`. Guides live in [docs/](https
 ## FAQ and troubleshooting
 
 - **`ERR_NOT_IN_IFRAME` on `init()`**: the game is running in a plain tab, where there is no host shell. Open it inside the HydraOne web client.
-- **`ERR_UNTRUSTED_ORIGIN` in the console**: `appCenterOrigin` must match the host shell origin exactly (scheme, host and port, no path). A wildcard is only accepted outside production.
+- **`ERR_UNTRUSTED_ORIGIN` in the console**: `hostOrigin` must match the host shell origin exactly (scheme, host and port, no path). A wildcard is only accepted outside production.
 - **Session lost after reload on iOS Safari**: store the session with `HostStorageRelayAdapter`. See the [Safari ITP guide](https://developers.hydraone.app/guides/safari-itp-storage).
 
 More answers are in the [FAQ](https://developers.hydraone.app/help/faq) and [Troubleshooting](https://developers.hydraone.app/help/troubleshooting).

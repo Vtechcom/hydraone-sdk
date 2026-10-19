@@ -52,7 +52,7 @@ export interface HydraOneProviderProps {
    * Origin of the Host Shell / App Center (for example: 'https://alpha.hydraone.app').
    * Pass an array to allow several hosts.
    */
-  appCenterOrigin?: string | string[];
+  hostOrigin?: string | string[];
 
   /**
    * Detailed configuration options for WalletBridgeClient
@@ -157,7 +157,12 @@ export interface UseWalletReturn {
   /**
    * Current dark/light theme synced from the Host Shell
    */
-  theme: ThemeMode;
+  theme: ThemeMode | null;
+
+  /**
+   * Most recent error raised while connecting, signing, submitting or reading the balance
+   */
+  error: Error | null;
 
   /**
    * Starts the handshake and connects the wallet to the Host Shell
@@ -167,7 +172,12 @@ export interface UseWalletReturn {
   /**
    * Disconnects the wallet and resets local state
    */
-  disconnect: () => Promise<void>;
+  disconnect: () => void;
+
+  /**
+   * Reloads the wallet change address
+   */
+  refreshAddress: () => Promise<string | null>;
 
   /**
    * Reloads the Cardano wallet balance (ADA and Lovelace)

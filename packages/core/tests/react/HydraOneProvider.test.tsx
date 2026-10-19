@@ -21,7 +21,7 @@ class MockTransport implements ITransport {
       return {
         id: msg.id || 'res_1',
         type: 'HOST_ACK',
-        payload: { appCenterVersion: '1.0.0', walletSupported: true } as any,
+        payload: { hostVersion: '1.0.0', walletSupported: true } as any,
         timestamp: Date.now(),
         source: 'hydra-host',
       };
@@ -49,7 +49,7 @@ function ConsumerComponent(): React.JSX.Element {
 describe('HydraOneProvider and Context', () => {
   it('provides client and storage to child components', () => {
     render(
-      <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+      <HydraOneProvider hostOrigin="https://alpha.hydraone.app">
         <ConsumerComponent />
       </HydraOneProvider>,
     );
@@ -103,7 +103,7 @@ describe('HydraOneProvider lifecycle', () => {
       return null;
     }
     const { unmount } = render(
-      <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+      <HydraOneProvider hostOrigin="https://alpha.hydraone.app">
         <Capture />
       </HydraOneProvider>,
     );
@@ -122,7 +122,7 @@ describe('HydraOneProvider lifecycle', () => {
     }
     render(
       <React.StrictMode>
-        <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+        <HydraOneProvider hostOrigin="https://alpha.hydraone.app">
           <Capture />
         </HydraOneProvider>
       </React.StrictMode>,

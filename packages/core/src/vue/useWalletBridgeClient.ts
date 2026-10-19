@@ -21,7 +21,7 @@ import type {
 } from '../core/types';
 import { WalletBridgeClient } from '../core/client';
 import { readLovelaceBalance, lovelaceToAdaString } from '../core/wallet/balance';
-import { firstAddress } from '../core/wallet/address';
+import { firstValidAddress } from '../core/wallet/address';
 import { ERROR_CODES } from '../core/errors/errors';
 import { errorCode } from '../core/errors/error-utils';
 import type { UseWalletBridgeClientOptions, UseWalletBridgeClientReturn } from './types';
@@ -183,15 +183,15 @@ export function useWalletBridgeClient(
           isConnected.value = true;
         }
         // Same source as init/connect; the payload only covers a failed query.
-        loadAddress(firstAddress(addrs)).catch(() => {});
+        loadAddress(firstValidAddress(addrs)).catch(() => {});
         if (options?.autoRefreshBalance !== false) {
           refreshBalance().catch(() => {});
         }
       }
     };
 
-    const onNetworkChanged = (netId: number) => {
-      networkId.value = netId;
+    const onNetworkChanged = (nextNetworkId: number) => {
+      networkId.value = nextNetworkId;
     };
 
     // Only the wallet left the host; the bridge stays connected.
@@ -219,7 +219,7 @@ export function useWalletBridgeClient(
 
     // Attach listeners to the client
     cleanups.push(client.on('HOST_ACK', onHostAck));
-    cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
+    cleanups.push(client.onConnectionStateChanged(onConnStateChanged));
     cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
     cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
     cleanups.push(

@@ -29,7 +29,7 @@ export function useHydraOneContext(componentName = 'useHydraOneContext'): HydraO
 export function HydraOneProvider({
   client: clientProp,
   storage: storageProp,
-  appCenterOrigin,
+  hostOrigin,
   options,
   autoConnect = false,
   autoRefreshBalance = true,
@@ -59,8 +59,7 @@ export function HydraOneProvider({
       clientRef.current = clientProp;
     } else {
       const transport =
-        options?.transport ??
-        (appCenterOrigin ? new PostMessageTransport({ appCenterOrigin }) : undefined);
+        options?.transport ?? (hostOrigin ? new PostMessageTransport({ hostOrigin }) : undefined);
 
       const clientOptions: WalletBridgeClientOptions = {
         transport,

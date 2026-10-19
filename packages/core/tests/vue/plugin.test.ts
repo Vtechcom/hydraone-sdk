@@ -38,23 +38,23 @@ describe('createHydraOne plugin', () => {
     setSharedWalletBridgeClient(null);
   });
 
-  it('provides a client with a PostMessageTransport built from appCenterOrigin', () => {
-    const { app, seen } = mountWith({ appCenterOrigin: ORIGIN });
+  it('provides a client with a PostMessageTransport built from hostOrigin', () => {
+    const { app, seen } = mountWith({ hostOrigin: ORIGIN });
 
     expect(seen.client?.transport).toBeInstanceOf(PostMessageTransport);
     app.unmount();
   });
 
   it('shares the same client inside one app', () => {
-    const { app, seen } = mountWith({ appCenterOrigin: ORIGIN });
+    const { app, seen } = mountWith({ hostOrigin: ORIGIN });
 
     expect(app._context.provides[HYDRA_CLIENT_KEY as symbol]).toBe(seen.client);
     app.unmount();
   });
 
   it('gives two apps independent clients (no cross-request leak)', () => {
-    const a = mountWith({ appCenterOrigin: ORIGIN });
-    const b = mountWith({ appCenterOrigin: ORIGIN });
+    const a = mountWith({ hostOrigin: ORIGIN });
+    const b = mountWith({ hostOrigin: ORIGIN });
 
     expect(a.seen.client).not.toBe(b.seen.client);
     a.app.unmount();
@@ -62,8 +62,8 @@ describe('createHydraOne plugin', () => {
   });
 
   it('does not touch the module-level shared client', () => {
-    const { app } = mountWith({ appCenterOrigin: ORIGIN });
-    const shared = getSharedWalletBridgeClient({ appCenterOrigin: ORIGIN });
+    const { app } = mountWith({ hostOrigin: ORIGIN });
+    const shared = getSharedWalletBridgeClient({ hostOrigin: ORIGIN });
 
     expect(shared.transport).toBeInstanceOf(PostMessageTransport);
     shared.destroy();
@@ -71,7 +71,7 @@ describe('createHydraOne plugin', () => {
   });
 
   it('destroys the client it created when the app unmounts', () => {
-    const { app, seen } = mountWith({ appCenterOrigin: ORIGIN });
+    const { app, seen } = mountWith({ hostOrigin: ORIGIN });
 
     app.unmount();
 
@@ -79,7 +79,7 @@ describe('createHydraOne plugin', () => {
   });
 
   it('leaves a client passed in by the caller alive on unmount', () => {
-    const client = new WalletBridgeClient({ appCenterOrigin: ORIGIN });
+    const client = new WalletBridgeClient({ hostOrigin: ORIGIN });
     const { app, seen } = mountWith({ client });
 
     expect(seen.client).toBe(client);
@@ -90,7 +90,7 @@ describe('createHydraOne plugin', () => {
   });
 
   it('throws when no origin or transport is given', () => {
-    expect(() => mountWith({})).toThrow('requires a transport or an appCenterOrigin');
+    expect(() => mountWith({})).toThrow('requires a transport or a hostOrigin');
   });
 });
 
@@ -111,8 +111,8 @@ describe('shared singletons on the server', () => {
   });
 
   it('returns a fresh client per call instead of caching it', () => {
-    const first = getSharedWalletBridgeClient({ appCenterOrigin: 'https://alpha.hydraone.app' });
-    const second = getSharedWalletBridgeClient({ appCenterOrigin: 'https://alpha.hydraone.app' });
+    const first = getSharedWalletBridgeClient({ hostOrigin: 'https://alpha.hydraone.app' });
+    const second = getSharedWalletBridgeClient({ hostOrigin: 'https://alpha.hydraone.app' });
 
     expect(first).not.toBe(second);
     first.destroy();

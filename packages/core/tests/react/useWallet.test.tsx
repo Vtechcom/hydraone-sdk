@@ -8,6 +8,7 @@ import { WalletBridgeClient } from '../../src/core/client';
 import type { ITransport } from '../../src/core/ports/transport';
 import type { BridgeMessage } from '../../src/core/types';
 import { addressToBech32 } from '../../src/core/wallet/address';
+import { HydraBridgeError } from '../../src/core/errors/errors';
 
 // CIP-19 mainnet base address; the host answers in hex, the hook exposes bech32.
 const WALLET_ADDRESS =
@@ -19,6 +20,10 @@ class MockTransport implements ITransport {
   public noAddress: boolean = false;
   /** What the host answers to GET_CHANGE_ADDRESS. */
   public changeAddress: string = WALLET_ADDRESS;
+  /** Host error answered to GET_BALANCE, e.g. before the player connects a wallet in the host. */
+  public balanceError: { code: string; message: string } | null = null;
+  /** Host error answered to SIGN_TX. */
+  public signError: { code: string; message: string } | null = null;
   private messageHandlers: Array<(msg: BridgeMessage) => void> = [];
 
   public async send(message: BridgeMessage): Promise<void> {
@@ -44,7 +49,7 @@ class MockTransport implements ITransport {
         id: msg.id || 'res_1',
         type: 'HOST_ACK',
         payload: {
-          appCenterVersion: '1.0.0',
+          hostVersion: '1.0.0',
           walletSupported: true,
           theme: 'dark',
           language: 'en',
@@ -68,6 +73,9 @@ class MockTransport implements ITransport {
     }
 
     if (msg.type === 'GET_BALANCE') {
+      if (this.balanceError) {
+        throw new HydraBridgeError(this.balanceError.message, this.balanceError.code);
+      }
       return {
         id: msg.id || 'res_3a',
         type: 'RPC_RESPONSE',
@@ -100,6 +108,9 @@ class MockTransport implements ITransport {
     }
 
     if (msg.type === 'SIGN_TX') {
+      if (this.signError) {
+        throw new HydraBridgeError(this.signError.message, this.signError.code);
+      }
       return {
         id: msg.id || 'res_sig',
         type: 'RPC_RESPONSE',
@@ -254,7 +265,7 @@ describe('useWallet hook', () => {
     expect(result.current.networkId).toBe(1);
 
     await act(async () => {
-      await result.current.disconnect();
+      result.current.disconnect();
     });
 
     expect(result.current.isConnected).toBe(false);
@@ -371,6 +382,72 @@ describe('useWallet hook', () => {
     expect(result.current.connectionState).toBe('connected');
     expect(result.current.address).toBe(NEW_ADDRESS);
     expect(result.current.isWalletConnected).toBe(true);
+  });
+
+  it('records a failed signTx in error, rethrows it and keeps the bridge connected', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.error).toBeNull();
+
+    transport.signError = { code: 'ERR_USER_REJECTED', message: 'User declined' };
+    await act(async () => {
+      await expect(result.current.signTx('84a0a0f5f6')).rejects.toMatchObject({
+        code: 'ERR_USER_REJECTED',
+      });
+    });
+
+    expect(result.current.error?.message).toBe('User declined');
+    expect(result.current.isConnected).toBe(true);
+  });
+
+  it('does not record ERR_WALLET_NOT_CONNECTED from the balance as an error', async () => {
+    transport.balanceError = {
+      code: 'ERR_WALLET_NOT_CONNECTED',
+      message: 'Wallet is not connected in the host',
+    };
+    const { result } = renderHook(() => useWallet(), { wrapper });
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.balanceADA).toBeNull();
+  });
+
+  it('records a balance failure in error and clears it after a successful refresh', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    transport.balanceError = { code: 'ERR_RPC_FAILED', message: 'Balance unavailable' };
+    await act(async () => {
+      await result.current.refreshBalance();
+    });
+    expect(result.current.error?.message).toBe('Balance unavailable');
+
+    transport.balanceError = null;
+    await act(async () => {
+      await result.current.refreshBalance();
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.balanceADA).toBe('7.5');
+  });
+
+  it('refreshAddress reloads the change address', async () => {
+    const { result } = renderHook(() => useWallet(), { wrapper });
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.address).toBe(WALLET_ADDRESS);
+
+    transport.changeAddress = NEW_ADDRESS;
+    await act(async () => {
+      await result.current.refreshAddress();
+    });
+    expect(result.current.address).toBe(NEW_ADDRESS);
   });
 
   it('reads the language from the handshake', async () => {

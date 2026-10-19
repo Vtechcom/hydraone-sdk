@@ -171,12 +171,12 @@ Pick your stack. Every example creates the client for you from the App Center or
         import { WalletBridgeClient } from '@hydraone-sdk/core';
 
         const client = new WalletBridgeClient({
-          appCenterOrigin: 'https://alpha.hydraone.app',
+          hostOrigin: 'https://alpha.hydraone.app',
         });
 
         await client.init();
         const [address] = await client.getUsedAddresses();
-        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, addVkey: true });
+        const signedTx = await client.signTx(unsignedTxCbor, { partialSign: true, mergeWitnesses: true });
         const txHash = await client.submitTx(signedTx);
     - label: React
       code: |
@@ -190,7 +190,7 @@ Pick your stack. Every example creates the client for you from the App Center or
 
         export function App() {
           return (
-            <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app" autoConnect>
+            <HydraOneProvider hostOrigin="https://alpha.hydraone.app" autoConnect>
               <Balance />
             </HydraOneProvider>
           );
@@ -201,7 +201,7 @@ Pick your stack. Every example creates the client for you from the App Center or
         import { useWalletBridgeClient } from '@hydraone-sdk/core/vue';
 
         const { isConnected, address, balanceADA, connect } = useWalletBridgeClient({
-          appCenterOrigin: 'https://alpha.hydraone.app',
+          hostOrigin: 'https://alpha.hydraone.app',
         });
         </script>
 

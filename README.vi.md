@@ -44,7 +44,7 @@ bun add @hydraone-sdk/core
 import { WalletBridgeClient, HydraBridgeError } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
 });
 
 try {
@@ -69,8 +69,8 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 
 | Option               | Type                 | Mặc định     | Mô tả                                                                                                                |
 | -------------------- | -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `transport`          | `ITransport`         | không có     | Transport adapter. Có thể bỏ qua khi đã đặt `appCenterOrigin`.                                                       |
-| `appCenterOrigin`    | `string \| string[]` | không có     | Origin của host shell. Khi không có `transport`, client tự tạo và quản lý một `PostMessageTransport` cho origin này. |
+| `transport`          | `ITransport`         | không có     | Transport adapter. Có thể bỏ qua khi đã đặt `hostOrigin`.                                                            |
+| `hostOrigin`         | `string \| string[]` | không có     | Origin của host shell. Khi không có `transport`, client tự tạo và quản lý một `PostMessageTransport` cho origin này. |
 | `handshakeTimeoutMs` | `number`             | `3000`       | Thời gian chờ tối đa cho handshake `CLIENT_READY`.                                                                   |
 | `pingTimeoutMs`      | `number`             | `3000`       | Thời gian chờ tối đa cho phép đo độ trễ `ping()`.                                                                    |
 | `queryTimeoutMs`     | `number`             | `15000`      | Timeout mặc định cho các truy vấn trạng thái ví.                                                                     |
@@ -84,7 +84,7 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 
 | Option              | Type                 | Mặc định                                  | Mô tả                                                                                                                  |
 | ------------------- | -------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `appCenterOrigin`   | `string \| string[]` | bắt buộc                                  | Origin chính xác của host shell, hoặc một danh sách origin. Ký tự đại diện `'*'` bị từ chối khi `env` là `production`. |
+| `hostOrigin`        | `string \| string[]` | bắt buộc                                  | Origin chính xác của host shell, hoặc một danh sách origin. Ký tự đại diện `'*'` bị từ chối khi `env` là `production`. |
 | `targetWindow`      | `PostMessageTarget`  | `window.parent`                           | Cửa sổ nhận các tin nhắn gửi đi.                                                                                       |
 | `sourceWindow`      | `MessageEventTarget` | `window`                                  | Cửa sổ phát ra các sự kiện tin nhắn đến.                                                                               |
 | `env`               | `string`             | `process.env.NODE_ENV` hoặc `development` | Môi trường chạy dùng cho việc kiểm tra ký tự đại diện.                                                                 |
@@ -102,10 +102,10 @@ import { WalletBridgeClient, HydraUserRejectedError, HydraTimeoutError } from '@
 
 export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: string) {
   try {
-    // addVkey: true trả về giao dịch đã ký thay vì witness set của CIP-30.
+    // mergeWitnesses: true trả về giao dịch đã ký thay vì witness set của CIP-30.
     const signedTx = await client.signTx(unsignedTxCbor, {
       partialSign: true,
-      addVkey: true,
+      mergeWitnesses: true,
       timeoutMs: 60_000,
     });
     const txHash = await client.submitTx(signedTx);
@@ -120,7 +120,7 @@ export async function signAndSubmit(client: WalletBridgeClient, unsignedTxCbor: 
 
 Các truy vấn khác: `signData` (CIP-8), `getUtxos`, `getCollateral`, `getUsedAddresses`, `getUnusedAddresses`, `getRewardAddresses`, `getChangeAddress`, `getNetworkId`. Sự kiện từ host: `onThemeChanged`, `onLanguageChanged`, `on`; giá trị hiện tại nằm ở `client.theme` và `client.language`. Điều khiển thiết bị và host: `setOrientation`, `unlockOrientation`, `triggerHaptic`.
 
-Các truy vấn địa chỉ mặc định trả về bech32; truyền `{ format: 'hex' }` để lấy hex CIP-30 gốc (`getUsedAddresses` nhận nó ở tham số thứ hai, sau phân trang). Các helper địa chỉ: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstAddress`. `applyWitnessSet(txHex, witnessSetHex)` tự gộp witness set CIP-30 vào giao dịch, giống như `addVkey: true`.
+Các truy vấn địa chỉ mặc định trả về bech32; truyền `{ format: 'hex' }` để lấy hex CIP-30 gốc (`getUsedAddresses` nhận nó ở tham số thứ hai, sau phân trang). Các helper địa chỉ: `isValidAddress`, `isBaseAddress`, `detectAddressFormat`, `addressToBech32`, `addressToHex`, `formatAddress`, `rewardAddressFromBase`, `firstValidAddress`. `applyWitnessSet(txHex, witnessSetHex)` tự gộp witness set CIP-30 vào giao dịch, giống như `mergeWitnesses: true`.
 
 ### Lưu trữ và Safari ITP
 
@@ -134,10 +134,10 @@ import {
   type IStorage,
 } from '@hydraone-sdk/core';
 
-const transport = new PostMessageTransport({ appCenterOrigin: 'https://alpha.hydraone.app' });
+const transport = new PostMessageTransport({ hostOrigin: 'https://alpha.hydraone.app' });
 
-export function pickStorage(insideAppCenter: boolean): IStorage {
-  if (insideAppCenter) return new HostStorageRelayAdapter({ transport, timeoutMs: 10_000 });
+export function pickStorage(insideHost: boolean): IStorage {
+  if (insideHost) return new HostStorageRelayAdapter({ transport, timeoutMs: 10_000 });
   return new SafeLocalStorageAdapter({
     fallbackStorage: new InMemoryStorageAdapter(),
     onFallback: (err) => console.warn('localStorage unavailable, using memory', err),
@@ -168,7 +168,7 @@ function Game() {
 
 export function App() {
   return (
-    <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app" autoConnect>
+    <HydraOneProvider hostOrigin="https://alpha.hydraone.app" autoConnect>
       <Game />
     </HydraOneProvider>
   );
@@ -196,7 +196,7 @@ Xem [hướng dẫn Vue](./apps/docs/content/vi/3.guides/5.vue-nuxt.md).
 import { WalletBridgeClient, checkBridgeHealth } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
 });
 
 const report = await checkBridgeHealth(client, { warningThresholdMs: 200, skipStorageCheck: true });
@@ -226,7 +226,7 @@ export function embedGames(wallet: HostWalletAdapter) {
 }
 ```
 
-`host.setLanguage(tag)` gửi `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` gửi các sự kiện tài khoản và mạng, còn `handlers` hoặc `host.setHandler(type, handler)` thêm hoặc ghi đè các loại request. Extension CIP-30 truyền qua `HostExtensionWallet` phải có `getRewardAddresses()`. Gọi `host.destroy()` khi trang unmount.
+`host.setLanguage(tag)` gửi `LANGUAGE_CHANGED`, `host.handleAddressChange(next, previous)` gửi các sự kiện tài khoản và mạng, còn `handlers` hoặc `host.setHandler(type, handler)` thêm hoặc ghi đè các loại request. Extension CIP-30 truyền qua `HostCip30Api` phải có `getRewardAddresses()`. Gọi `host.destroy()` khi trang unmount.
 
 ## Xử lý lỗi
 
@@ -260,7 +260,7 @@ const logger: Logger = {
 };
 
 export const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
   debug: true,
   logger,
 });
@@ -291,7 +291,7 @@ Kết quả được ghi vào `packages/core/docs/api/`. Các hướng dẫn n�
 ## FAQ và xử lý sự cố
 
 - **`ERR_NOT_IN_IFRAME` khi gọi `init()`**: game đang chạy trong một tab thường, nơi không có host shell. Hãy mở nó bên trong HydraOne web client.
-- **`ERR_UNTRUSTED_ORIGIN` trong console**: `appCenterOrigin` phải khớp chính xác origin của host shell (scheme, host và port, không có path). Ký tự đại diện chỉ được chấp nhận ngoài production.
+- **`ERR_UNTRUSTED_ORIGIN` trong console**: `hostOrigin` phải khớp chính xác origin của host shell (scheme, host và port, không có path). Ký tự đại diện chỉ được chấp nhận ngoài production.
 - **Mất phiên sau khi reload trên iOS Safari**: lưu phiên bằng `HostStorageRelayAdapter`. Xem [hướng dẫn Safari ITP](./apps/docs/content/vi/3.guides/6.safari-itp-storage.md).
 
 Có thêm câu trả lời trong [FAQ](./apps/docs/content/vi/5.help/2.faq.md) và [Troubleshooting](./apps/docs/content/vi/5.help/1.troubleshooting.md).

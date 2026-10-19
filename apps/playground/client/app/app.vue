@@ -70,11 +70,15 @@
             Transaction
             <span class="spacer" />
             <div class="segmented">
-              <button :class="{ active: addVkey }" :disabled="busy !== null" @click="setMode(true)">
-                addVkey
+              <button
+                :class="{ active: mergeWitnesses }"
+                :disabled="busy !== null"
+                @click="setMode(true)"
+              >
+                mergeWitnesses
               </button>
               <button
-                :class="{ active: !addVkey }"
+                :class="{ active: !mergeWitnesses }"
                 :disabled="busy !== null"
                 @click="setMode(false)"
               >
@@ -127,7 +131,7 @@
             }}</a>
           </p>
           <p v-else-if="signResult" class="status ok">
-            {{ addVkey ? 'Signed tx' : 'Witness set' }} · {{ signResult.length / 2 }} bytes
+            {{ mergeWitnesses ? 'Signed tx' : 'Witness set' }} · {{ signResult.length / 2 }} bytes
           </p>
           <p v-else-if="buildInfo" class="status">{{ buildInfo }}</p>
         </div>
@@ -186,8 +190,8 @@ type Step = 'build' | 'sign' | 'submit';
 const unsignedTx = ref('');
 const buildInfo = ref('');
 /** true: signTx returns the full signed tx; false: it returns the CIP-30 witness set. */
-const addVkey = ref(true);
-/** Output of step 2: a signed tx (addVkey) or a witness set. */
+const mergeWitnesses = ref(true);
+/** Output of step 2: a signed tx (mergeWitnesses) or a witness set. */
 const signResult = ref('');
 const txHash = ref('');
 const busy = ref<Step | null>(null);
@@ -222,7 +226,7 @@ function markSpent(input: string) {
 
 /** Mainnet when the wallet says so; networkId follows NETWORK_CHANGED, hostInfo is the handshake value. */
 const isMainnet = computed(() =>
-  networkId.value !== null ? networkId.value === 1 : hostInfo.value?.network === 'mainnet',
+  networkId.value !== null ? networkId.value === 1 : hostInfo.value?.networkName === 'mainnet',
 );
 
 const explorerUrl = computed(() => {
@@ -240,8 +244,8 @@ function stepClass(step: 1 | 2 | 3) {
 }
 
 function setMode(value: boolean) {
-  if (addVkey.value === value) return;
-  addVkey.value = value;
+  if (mergeWitnesses.value === value) return;
+  mergeWitnesses.value = value;
   resetFrom(2);
 }
 
@@ -306,9 +310,9 @@ async function signStep() {
   resetFrom(2);
   // Mode and tx are captured up front; the controls are locked while the wallet popup is open.
   const tx = unsignedTx.value;
-  const withVkey = addVkey.value;
-  const result = await runStep('sign', withVkey ? 'signTx (addVkey)' : 'signTx', () =>
-    withVkey ? client.signTx(tx, { addVkey: true }) : client.signTx(tx),
+  const shouldMerge = mergeWitnesses.value;
+  const result = await runStep('sign', shouldMerge ? 'signTx (mergeWitnesses)' : 'signTx', () =>
+    shouldMerge ? client.signTx(tx, { mergeWitnesses: true }) : client.signTx(tx),
   );
   if (result) signResult.value = result;
 }
@@ -317,10 +321,10 @@ async function submitStep() {
   resetFrom(3);
   const tx = unsignedTx.value;
   const signed = signResult.value;
-  const withVkey = addVkey.value;
+  const shouldMerge = mergeWitnesses.value;
   const hash = await runStep('submit', 'submitTx', () =>
-    // Witness-set mode shows the extra step addVkey does for you.
-    client.submitTx(withVkey ? signed : applyWitnessSet(tx, signed)),
+    // Witness-set mode shows the extra step mergeWitnesses does for you.
+    client.submitTx(shouldMerge ? signed : applyWitnessSet(tx, signed)),
   );
   if (!hash) return;
   txHash.value = hash;
@@ -344,7 +348,7 @@ const stateTone = computed(() => {
 const networkLabel = computed(() => {
   // networkId only updates on NETWORK_CHANGED; the handshake already carries the host's network.
   if (networkId.value !== null) return networkId.value === 1 ? 'mainnet' : 'testnet';
-  return hostInfo.value?.network ?? '—';
+  return hostInfo.value?.networkName ?? '—';
 });
 
 const groups: { title: string; actions: Action[] }[] = [

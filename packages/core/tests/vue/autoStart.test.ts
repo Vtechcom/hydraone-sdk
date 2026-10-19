@@ -37,6 +37,7 @@ describe('useWalletBridgeClient autoConnect', () => {
       onHostEvent: vi.fn(() => () => {}),
       onLanguageChanged: vi.fn(() => () => {}),
       onThemeChanged: vi.fn(() => () => {}),
+      onConnectionStateChanged: vi.fn(() => () => {}),
     };
     return client as unknown as WalletBridgeClient & { init: ReturnType<typeof vi.fn> };
   };

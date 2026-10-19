@@ -3,7 +3,7 @@ import type { BalanceAsset, ThemeMode, Utxo } from '@hydraone-sdk/core';
 export type HostRequestPayload = Record<string, unknown>;
 
 /** Subset of a CIP-30 wallet API the host forwards to when an extension wallet is active. */
-export interface HostExtensionWallet {
+export interface HostCip30Api {
   /** Display name of the wallet (for example 'Eternl'); shown to embedded apps as the wallet name. */
   name?: string;
   icon?: string;
@@ -26,7 +26,7 @@ export interface HostWalletAdapter {
   /** Bech32 address of the connected wallet, or null. */
   getChangeAddress(): string | null;
   /** The active CIP-30 extension, or null for embedded / no wallet. */
-  getCip30Wallet(): HostExtensionWallet | null;
+  getCip30Api(): HostCip30Api | null;
   isEmbedded(): boolean;
   getNetworkId(): Promise<number | null>;
   fetchBalance(): Promise<BalanceAsset[]>;
@@ -53,8 +53,8 @@ export interface HostOptions {
   allowedOrigins: string[] | (() => string[]);
   hostName?: string;
   hostVersion?: string;
-  /** `'mainnet'` / `'preprod'` etc. Defaults to `'preprod'`. */
-  network?: string | (() => string);
+  /** `'mainnet'` / `'preprod'` etc. Defaults to `'preprod'`. Sent in the handshake as `networkName`. */
+  networkName?: string | (() => string);
   theme?: ThemeMode | (() => ThemeMode);
   /** UI language as a BCP-47 tag (for example `'en'`, `'vi'`). Sent in the handshake; push changes with `setLanguage`. */
   language?: string | (() => string);
@@ -74,14 +74,13 @@ export interface HostOptions {
 export interface RegisteredIframe {
   window: Window;
   origin: string;
-  slug?: string;
   registeredAt: number;
 }
 
 export interface Host {
   readonly registeredIframes: Map<Window, RegisteredIframe>;
   isOriginAllowed(origin: string): boolean;
-  registerIframe(target: Window, origin: string, slug?: string): void;
+  registerIframe(target: Window, origin: string): void;
   unregisterIframe(target: Window): void;
   /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, `LANGUAGE_CHANGED`, ...) to every embedded app. */
   notify(type: string, payload?: unknown): void;

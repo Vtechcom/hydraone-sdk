@@ -20,7 +20,7 @@ function makeWallet(overrides: Partial<HostWalletAdapter> = {}): HostWalletAdapt
   return {
     isConnected: () => true,
     getChangeAddress: () => WALLET_ADDRESS,
-    getCip30Wallet: () => null,
+    getCip30Api: () => null,
     isEmbedded: () => true,
     getNetworkId: async () => 0,
     fetchBalance: async () => [{ unit: 'lovelace', quantity: '10000000' }],
@@ -167,7 +167,7 @@ describe('createHost client compatibility', () => {
     const info = app.postMessage.mock.calls[0]![0].payload.hostInfo;
     expect(info).toMatchObject({
       hostName: 'HydraOne Host',
-      network: 'preprod',
+      networkName: 'preprod',
       theme: 'dark',
       wallet: { name: 'HydraOne Wallet', icon: '' },
     });
@@ -256,7 +256,7 @@ describe('createHost extension wallet and submit', () => {
       submitTx: vi.fn(async () => 'ext-hash'),
       signData: vi.fn(async () => ({})),
     };
-    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension as never }));
+    const { send, app } = setup(makeWallet({ getCip30Api: () => extension as never }));
     await send('GET_CHANGE_ADDRESS');
     await send('SUBMIT_TX', { cbor: 'aa' });
     expect(app.postMessage.mock.calls[0]![0].payload.result).toBe('addr_change');
@@ -352,13 +352,13 @@ describe('createHost CIP-30 address lists', () => {
   });
 
   it('forwards GET_USED_ADDRESSES to the extension with pagination', async () => {
-    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension() as never }));
+    const { send, app } = setup(makeWallet({ getCip30Api: () => extension() as never }));
     await send('GET_USED_ADDRESSES', { paginate: { page: 1, limit: 2 } });
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);
   });
 
   it('forwards GET_UNUSED_ADDRESSES and GET_REWARD_ADDRESSES to the extension', async () => {
-    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension() as never }));
+    const { send, app } = setup(makeWallet({ getCip30Api: () => extension() as never }));
     await send('GET_UNUSED_ADDRESSES');
     await send('GET_REWARD_ADDRESSES');
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);

@@ -35,7 +35,7 @@ describe('PostMessageTransport with several origins', () => {
 
   const make = (origins: string | string[]) =>
     new PostMessageTransport({
-      appCenterOrigin: origins,
+      hostOrigin: origins,
       targetWindow: target,
       sourceWindow,
       checkIframeSource: false,
@@ -54,7 +54,7 @@ describe('PostMessageTransport with several origins', () => {
   it('keeps a single string origin working as before', () => {
     const transport = make(PROD);
 
-    expect(transport.appCenterOrigin).toBe(PROD);
+    expect(transport.hostOrigin).toBe(PROD);
     expect(transport.allowedOrigins).toEqual([PROD]);
   });
 
@@ -62,12 +62,12 @@ describe('PostMessageTransport with several origins', () => {
     const transport = make([`${PROD}/`, ` ${STAGING} `, PROD]);
 
     expect(transport.allowedOrigins).toEqual([PROD, STAGING]);
-    expect(transport.appCenterOrigin).toBe(PROD);
+    expect(transport.hostOrigin).toBe(PROD);
   });
 
   it('rejects an empty list and a list with a blank entry', () => {
-    expect(() => make([])).toThrow('appCenterOrigin must be provided');
-    expect(() => make([PROD, '  '])).toThrow('appCenterOrigin must be provided');
+    expect(() => make([])).toThrow('hostOrigin must be provided');
+    expect(() => make([PROD, '  '])).toThrow('hostOrigin must be provided');
   });
 
   it('accepts messages from every listed origin', () => {
@@ -93,7 +93,7 @@ describe('PostMessageTransport with several origins', () => {
 
   it('collapses to a wildcard when "*" is in the list', () => {
     const transport = new PostMessageTransport({
-      appCenterOrigin: [PROD, '*'],
+      hostOrigin: [PROD, '*'],
       env: 'development',
       targetWindow: target,
       sourceWindow,

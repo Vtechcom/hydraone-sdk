@@ -187,7 +187,7 @@ export function isBaseAddress(address: unknown): boolean {
  * First valid address of a list (for example an ACCOUNT_CHANGED payload) in bech32, or null when
  * there is none. Malformed entries are skipped.
  */
-export function firstAddress(addresses: unknown): string | null {
+export function firstValidAddress(addresses: unknown): string | null {
   if (!Array.isArray(addresses)) return null;
   const found = addresses.find(isValidAddress) as string | undefined;
   return found === undefined ? null : addressToBech32(found);

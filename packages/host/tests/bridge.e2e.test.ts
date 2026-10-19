@@ -7,7 +7,7 @@ import {
   addressToHex,
   type BridgeMessage,
 } from '@hydraone-sdk/core';
-import { createHost, type Host, type HostExtensionWallet, type HostWalletAdapter } from '../src';
+import { createHost, type Host, type HostCip30Api, type HostWalletAdapter } from '../src';
 
 // The full game <-> host round trip over a simulated postMessage channel: origins, the parent-window
 // check, the handshake and every RPC the client exposes, so both packages are tested against each other.
@@ -60,7 +60,7 @@ function makeFrames() {
   return { hostWin, gameWin, toHost };
 }
 
-function makeExtension(overrides: Partial<HostExtensionWallet> = {}): HostExtensionWallet {
+function makeExtension(overrides: Partial<HostCip30Api> = {}): HostCip30Api {
   return {
     icon: '',
     getUsedAddresses: vi.fn(async () => [BASE_HEX]),
@@ -85,14 +85,14 @@ afterEach(() => {
   host = undefined;
 });
 
-function connect(options: { extension?: HostExtensionWallet | null; language?: string } = {}) {
+function connect(options: { extension?: HostCip30Api | null; language?: string } = {}) {
   const { hostWin, gameWin, toHost } = makeFrames();
   let address: string | null = BASE;
   const extension = options.extension === undefined ? makeExtension() : options.extension;
   const wallet: HostWalletAdapter = {
     isConnected: () => address !== null,
     getChangeAddress: () => address,
-    getCip30Wallet: () => extension,
+    getCip30Api: () => extension,
     isEmbedded: () => extension === null,
     getNetworkId: async () => 0,
     fetchBalance: async () => [{ unit: 'lovelace', quantity: '12500000' }],
@@ -112,7 +112,7 @@ function connect(options: { extension?: HostExtensionWallet | null; language?: s
   host.registerIframe(gameWin as unknown as Window, GAME_ORIGIN);
 
   const transport = new PostMessageTransport({
-    appCenterOrigin: HOST_ORIGIN,
+    hostOrigin: HOST_ORIGIN,
     targetWindow: toHost,
     sourceWindow: gameWin as never,
   });
@@ -163,10 +163,10 @@ describe('game <-> host bridge over postMessage', () => {
     expect(await client.getBalance()).toEqual([{ unit: 'lovelace', quantity: '12500000' }]);
   });
 
-  it('signs with addVkey and submits the merged transaction', async () => {
+  it('signs with mergeWitnesses and submits the merged transaction', async () => {
     const { client, extension } = connect();
     await client.init();
-    const signed = await client.signTx('84a0a0f5f6', { addVkey: true });
+    const signed = await client.signTx('84a0a0f5f6', { mergeWitnesses: true });
     expect(signed).toBe(`84a0a10081825820${'ab'.repeat(32)}5840${'cd'.repeat(64)}f5f6`);
     expect(await client.submitTx(signed)).toBe('txhash');
     expect(extension!.submitTx).toHaveBeenCalledWith(signed);
