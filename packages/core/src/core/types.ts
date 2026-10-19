@@ -141,7 +141,7 @@ export interface PostMessageTransportOptions {
    * when the app can be embedded by more than one host (for example staging and production).
    * Incoming messages are accepted from any listed origin.
    */
-  appCenterOrigin: string | string[];
+  hostOrigin: string | string[];
   /** Window that receives outgoing messages (defaults to window.parent inside an iframe). */
   targetWindow?: PostMessageTarget;
   /** Window that emits incoming message events (defaults to window in a browser). */
@@ -205,7 +205,7 @@ export interface HostInfo {
   /** Display name of the host shell (for example `'HydraOne Host'`). */
   hostName?: string;
   hostVersion?: string;
-  network?: string;
+  networkName?: string;
   /** Wallet the host exposes: its display name and icon (data URL or URL, empty when none). */
   wallet?: { name: string; icon: string };
   theme?: ThemeMode;
@@ -227,14 +227,14 @@ export interface HostAckPayload {
  * Options for WalletBridgeClient.
  */
 export interface WalletBridgeClientOptions {
-  /** Transport adapter implementing ITransport. Optional when `appCenterOrigin` is set. */
+  /** Transport adapter implementing ITransport. Optional when `hostOrigin` is set. */
   transport?: ITransport;
   /**
    * Origin of the Host Shell. When set and no `transport` is given, the client creates a
    * PostMessageTransport for this origin and owns it (destroy() releases it).
    * An explicit `transport` always takes precedence. Accepts several origins.
    */
-  appCenterOrigin?: string | string[];
+  hostOrigin?: string | string[];
   /** Handshake timeout in ms (default: 3000). */
   handshakeTimeoutMs?: number;
   /** PING latency probe timeout in ms (default: 3000). */
@@ -291,7 +291,7 @@ export interface SignTxOptions extends SignOptions {
    * Add the wallet's vkey witnesses to the transaction and return the full signed transaction CBOR,
    * ready for `submitTx`. When `false` (default) the CIP-30 witness set is returned unchanged.
    */
-  addVkey?: boolean;
+  mergeWitnesses?: boolean;
 }
 
 /**
@@ -384,6 +384,11 @@ export interface LanguageChangedPayload {
  * Listener for language changes.
  */
 export type LanguageChangedHandler = (language: string) => void;
+
+/**
+ * Listener for connection state changes of the bridge.
+ */
+export type ConnectionStateChangedHandler = (state: ConnectionState) => void;
 
 /**
  * Screen orientation lock types.

@@ -6,6 +6,78 @@
 
 Tài liệu này liệt kê các breaking change và cách chuyển sang phiên bản mới. Mỗi mục dành cho việc nâng cấp lên phiên bản được nêu tên.
 
+## Từ 0.2.x lên 0.3.0
+
+Bản này đổi tên để mỗi tên nói đúng chức năng của nó. Không có tên cũ nào được giữ lại. Hãy cập nhật code theo các bảng dưới đây.
+
+### Bridge đã kết nối và ví đã kết nối
+
+_Bridge_ là liên kết giữa app của bạn và host. _Ví_ là tài khoản người chơi đã kết nối bên trong host. Trước đây hai khái niệm dùng chung một tên.
+
+| Trước                                                                                    | Sau                                            |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `ERR_NOT_CONNECTED` từ client (`init()` chưa xong, client đã disconnect hoặc bị destroy) | `ERR_BRIDGE_NOT_CONNECTED`                     |
+| `ERR_NOT_CONNECTED` do host gửi (chưa có ví)                                             | `ERR_WALLET_NOT_CONNECTED`                     |
+| sự kiện `DISCONNECTED`                                                                   | `WALLET_DISCONNECTED`                          |
+| `host.handleConnectionChange(connected)`                                                 | `host.handleWalletConnectionChange(connected)` |
+| giá trị `'error'` của `ConnectionState`                                                  | đã xóa (client chưa bao giờ gán)               |
+
+Thay đổi hành vi: khi ví ngắt, `isConnected` và `connectionState` vẫn là `connected` vì bridge vẫn hoạt động. Dùng `isWalletConnected` mới (React và Vue) để biết có ví hay không. Chỗ `catch` mã `ERR_NOT_CONNECTED` giờ phải xét cả hai mã.
+
+Không còn lấy `CONNECTION_STATE_CHANGED` qua `client.on`. Dùng `client.onConnectionStateChanged((state) => ...)`.
+
+### Option
+
+| Trước                                                                                            | Sau                                                                                                    |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `appCenterOrigin` (`PostMessageTransport`, `WalletBridgeClient`, `HydraOneProvider`, plugin Vue) | `hostOrigin`                                                                                           |
+| option `addVkey` của `signTx`                                                                    | `mergeWitnesses`                                                                                       |
+| `isIframeFn`                                                                                     | `isInIframe`                                                                                           |
+| diagnostics `skipIframeCheck`, `customKey`                                                       | `skipSandboxCheck`, `testKey`                                                                          |
+| `queryTimeoutMs` còn đặt timeout cho `setOrientation`, `unlockOrientation` và `triggerHaptic`    | `commandTimeoutMs` mới (mặc định 15.000 ms) cho các lệnh đó; `queryTimeoutMs` chỉ dành cho truy vấn ví |
+
+### Method của client
+
+- `getUtxos(amount?, paginate?, options?)` giờ là `getUtxos(paginate?, options?)`, và `getCollateral(params?, options?)` giờ là `getCollateral(options?)`. Host chưa bao giờ dùng `amount`.
+- `firstAddress` giờ là `firstValidAddress`.
+- `HostInfo.network` giờ là `networkName` (chuỗi như `'preprod'`).
+- Trường handshake `appName` giờ là `hostName`, và `client.hostName` đọc nó. `HostInfo.walletName` đã bị xóa; dùng `HostInfo.wallet.name` (hoặc `client.activeWalletName`).
+
+### React và Vue
+
+- `useHostStorage` giờ là `useStorage` (`UseStorageOptions`, `UseStorageReturn`). `isAvailable` bị xóa vì luôn là `true`.
+- `IStorage.clear()` giờ là `clearSdkData()`, hook cũng vậy (`clear` thành `clearSdkData`). Nó chỉ xóa các key `hydra:sdk:*`.
+- `useWallet` giờ trả thêm `error` và `refreshAddress`, giống composable của Vue.
+- `useWallet`: `disconnect()` đồng bộ (trước trả về `Promise`), và `theme` là `null` cho đến khi host báo giá trị (trước mặc định `'dark'`).
+- `submitTx` nhận `SignOptions` (trước là `QueryOptions`) và `triggerHaptic` nhận preset, thời lượng hoặc pattern, giống client.
+
+### Host
+
+| Trước                                   | Sau                                   |
+| --------------------------------------- | ------------------------------------- |
+| `HostWalletAdapter.fetchAssets()`       | `fetchBalance()`                      |
+| `HostWalletAdapter.getAddress()`        | `getChangeAddress()`                  |
+| `HostWalletAdapter.getExtension()`      | `getCip30Api()`                       |
+| type `HostExtensionWallet`              | `HostCip30Api` (thêm `name` tùy chọn) |
+| `HostOptions.network`                   | `networkName`                         |
+| `registerIframe(target, origin, slug?)` | `registerIframe(target, origin)`      |
+| `HostPaginate`                          | `Paginate` từ `@hydraone-sdk/core`    |
+| `extractOriginFromUrl`                  | `normalizeOrigin`                     |
+
+Truyền tên extension thật để người chơi nhìn thấy: đặt `name` trên object bạn trả về từ `getCip30Api()`, ví dụ `window.cardano.eternl.name`. Nếu không có, host báo `'CIP-30 Wallet'`.
+
+### Lỗi
+
+- `HydraTransportError` giờ mặc định là `ERR_TRANSPORT_FAILED`. `ERR_NOT_IN_IFRAME` chỉ có nghĩa là trang không nằm trong iframe.
+- `hostOrigin` thiếu hoặc không hợp lệ báo `ERR_INVALID_OPTIONS`, và transport đã bị destroy báo `ERR_TRANSPORT_UNAVAILABLE`.
+- `ERROR_CODES` giờ còn có `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_FAILED`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED` và `ERR_RPC_FAILED`.
+
+### Đổi tên khác
+
+`MessageEventSource` giờ là `MessageEventTarget`. `InFlightEntry` giờ là `PendingRequestEntry`, kèm `getPendingCount()` và `getPendingEntry()` trên `PostMessageTransport`. Giá trị của `RequestState` viết thường (`'pending'`, `'fulfilled'`, `'rejected'`, `'timed-out'`, `'cancelled'`, `'transport-failed'`).
+
+Bước đo độ trễ không còn dự phòng bằng `getBalance()`; nó dùng `ping()` hoặc request `PING`.
+
 ## Từ 0.1.x lên 0.2.0
 
 ### Đã xóa module auth
@@ -119,7 +191,7 @@ Sau:
 import { WalletBridgeClient } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
   handshakeTimeoutMs: 5000,
   queryTimeoutMs: 10000,
   debug: true,

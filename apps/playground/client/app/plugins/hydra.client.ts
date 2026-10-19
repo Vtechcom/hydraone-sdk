@@ -6,7 +6,7 @@ export default defineNuxtPlugin(() => {
   const { hostOrigin } = useRuntimeConfig().public;
   setSharedWalletBridgeClient(
     new WalletBridgeClient({
-      transport: new PostMessageTransport({ appCenterOrigin: hostOrigin as string }),
+      transport: new PostMessageTransport({ hostOrigin: hostOrigin as string }),
     }),
   );
 });

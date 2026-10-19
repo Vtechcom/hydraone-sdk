@@ -149,7 +149,7 @@ import {
   enableWallet,
   forgetWallet,
   rememberedWallet,
-  toHostExtension,
+  toHostCip30Api,
   type Cip30Api,
   type InstalledWallet,
 } from './utils/cip30';
@@ -227,8 +227,7 @@ function requireApi(): Cip30Api {
 const wallet: HostWalletAdapter = {
   isConnected: () => connected.value,
   getChangeAddress: () => address.value,
-  getCip30Wallet: () =>
-    api.value ? toHostExtension(api.value, activeWallet.value?.icon ?? '') : null,
+  getCip30Api: () => (api.value ? toHostCip30Api(api.value, activeWallet.value) : null),
   isEmbedded: () => false,
   getNetworkId: async () => (api.value ? api.value.getNetworkId() : null),
   fetchBalance: async () => decodeValue(await requireApi().getBalance()),
@@ -367,7 +366,7 @@ onMounted(async () => {
     allowedOrigins: [clientUrl],
     hostName: 'Playground Host',
     theme: () => theme.value,
-    network: () => (networkId.value === 1 ? 'mainnet' : 'preprod'),
+    networkName: () => (networkId.value === 1 ? 'mainnet' : 'preprod'),
     language: () => language.value,
     // Mirrors every outgoing message (events, HOST_ACK, RPC responses) into the log.
     window: tapHostWindow(window, (message) => push('out', message)),

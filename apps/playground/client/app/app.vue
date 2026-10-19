@@ -6,9 +6,13 @@
         <h1>Playground Client</h1>
       </div>
       <div class="top-actions">
-        <span class="pill" :class="stateTone">
+        <span class="pill" :class="stateTone" title="Bridge to the host">
           <span class="dot" />
-          {{ connectionState }}
+          bridge: {{ connectionState }}
+        </span>
+        <span class="pill" :class="walletTone" title="Wallet connected in the host">
+          <span class="dot" />
+          wallet: {{ isWalletConnected ? 'connected' : 'none' }}
         </span>
         <button v-if="!isConnected" class="btn primary" @click="run('connect', () => connect())">
           Connect
@@ -58,7 +62,7 @@
               :key="a.name"
               class="action"
               :class="{ running: running.has(a.name) }"
-              :disabled="(!isConnected && a.needsConnection) || running.has(a.name)"
+              :disabled="(!isWalletConnected && a.needsWallet) || running.has(a.name)"
               @click="run(a.name, a.fn)"
             >
               {{ a.name }}
@@ -70,11 +74,15 @@
             Transaction
             <span class="spacer" />
             <div class="segmented">
-              <button :class="{ active: addVkey }" :disabled="busy !== null" @click="setMode(true)">
-                addVkey
+              <button
+                :class="{ active: mergeWitnesses }"
+                :disabled="busy !== null"
+                @click="setMode(true)"
+              >
+                mergeWitnesses
               </button>
               <button
-                :class="{ active: !addVkey }"
+                :class="{ active: !mergeWitnesses }"
                 :disabled="busy !== null"
                 @click="setMode(false)"
               >
@@ -87,7 +95,7 @@
             <button
               class="step"
               :class="stepClass(1)"
-              :disabled="!isConnected || busy !== null"
+              :disabled="!isWalletConnected || busy !== null"
               @click="buildStep"
             >
               <span class="num">1</span>{{ busy === 'build' ? 'Building…' : 'Build' }}
@@ -127,7 +135,7 @@
             }}</a>
           </p>
           <p v-else-if="signResult" class="status ok">
-            {{ addVkey ? 'Signed tx' : 'Witness set' }} · {{ signResult.length / 2 }} bytes
+            {{ mergeWitnesses ? 'Signed tx' : 'Witness set' }} · {{ signResult.length / 2 }} bytes
           </p>
           <p v-else-if="buildInfo" class="status">{{ buildInfo }}</p>
         </div>
@@ -167,6 +175,7 @@ const {
   client,
   connectionState,
   isConnected,
+  isWalletConnected,
   address,
   balanceADA,
   networkId,
@@ -178,7 +187,7 @@ const {
   disconnect,
 } = useWalletBridgeClient({ autoConnect: true });
 
-type Action = { name: string; needsConnection: boolean; fn: () => Promise<unknown> };
+type Action = { name: string; needsWallet: boolean; fn: () => Promise<unknown> };
 
 // ---------- Transaction flow: build -> sign -> submit ----------
 type Step = 'build' | 'sign' | 'submit';
@@ -186,8 +195,8 @@ type Step = 'build' | 'sign' | 'submit';
 const unsignedTx = ref('');
 const buildInfo = ref('');
 /** true: signTx returns the full signed tx; false: it returns the CIP-30 witness set. */
-const addVkey = ref(true);
-/** Output of step 2: a signed tx (addVkey) or a witness set. */
+const mergeWitnesses = ref(true);
+/** Output of step 2: a signed tx (mergeWitnesses) or a witness set. */
 const signResult = ref('');
 const txHash = ref('');
 const busy = ref<Step | null>(null);
@@ -222,7 +231,7 @@ function markSpent(input: string) {
 
 /** Mainnet when the wallet says so; networkId follows NETWORK_CHANGED, hostInfo is the handshake value. */
 const isMainnet = computed(() =>
-  networkId.value !== null ? networkId.value === 1 : hostInfo.value?.network === 'mainnet',
+  networkId.value !== null ? networkId.value === 1 : hostInfo.value?.networkName === 'mainnet',
 );
 
 const explorerUrl = computed(() => {
@@ -240,8 +249,8 @@ function stepClass(step: 1 | 2 | 3) {
 }
 
 function setMode(value: boolean) {
-  if (addVkey.value === value) return;
-  addVkey.value = value;
+  if (mergeWitnesses.value === value) return;
+  mergeWitnesses.value = value;
   resetFrom(2);
 }
 
@@ -306,9 +315,9 @@ async function signStep() {
   resetFrom(2);
   // Mode and tx are captured up front; the controls are locked while the wallet popup is open.
   const tx = unsignedTx.value;
-  const withVkey = addVkey.value;
-  const result = await runStep('sign', withVkey ? 'signTx (addVkey)' : 'signTx', () =>
-    withVkey ? client.signTx(tx, { addVkey: true }) : client.signTx(tx),
+  const shouldMerge = mergeWitnesses.value;
+  const result = await runStep('sign', shouldMerge ? 'signTx (mergeWitnesses)' : 'signTx', () =>
+    shouldMerge ? client.signTx(tx, { mergeWitnesses: true }) : client.signTx(tx),
   );
   if (result) signResult.value = result;
 }
@@ -317,10 +326,10 @@ async function submitStep() {
   resetFrom(3);
   const tx = unsignedTx.value;
   const signed = signResult.value;
-  const withVkey = addVkey.value;
+  const shouldMerge = mergeWitnesses.value;
   const hash = await runStep('submit', 'submitTx', () =>
-    // Witness-set mode shows the extra step addVkey does for you.
-    client.submitTx(withVkey ? signed : applyWitnessSet(tx, signed)),
+    // Witness-set mode shows the extra step mergeWitnesses does for you.
+    client.submitTx(shouldMerge ? signed : applyWitnessSet(tx, signed)),
   );
   if (!hash) return;
   txHash.value = hash;
@@ -341,36 +350,37 @@ const stateTone = computed(() => {
   if (isConnected.value) return 'ok';
   return connectionState.value === 'connecting' ? 'warn' : 'off';
 });
+const walletTone = computed(() => (isWalletConnected.value ? 'ok' : 'off'));
 const networkLabel = computed(() => {
   // networkId only updates on NETWORK_CHANGED; the handshake already carries the host's network.
   if (networkId.value !== null) return networkId.value === 1 ? 'mainnet' : 'testnet';
-  return hostInfo.value?.network ?? '—';
+  return hostInfo.value?.networkName ?? '—';
 });
 
 const groups: { title: string; actions: Action[] }[] = [
   {
     title: 'Bridge',
     actions: [
-      { name: 'ping', needsConnection: false, fn: () => client.ping() },
-      { name: 'checkHealth', needsConnection: false, fn: () => client.checkHealth() },
+      { name: 'ping', needsWallet: false, fn: () => client.ping() },
+      { name: 'checkHealth', needsWallet: false, fn: () => client.checkHealth() },
     ],
   },
   {
     title: 'Wallet',
     actions: [
-      { name: 'getNetworkId', needsConnection: true, fn: () => client.getNetworkId() },
-      { name: 'getUsedAddresses', needsConnection: true, fn: () => client.getUsedAddresses() },
+      { name: 'getNetworkId', needsWallet: true, fn: () => client.getNetworkId() },
+      { name: 'getUsedAddresses', needsWallet: true, fn: () => client.getUsedAddresses() },
       {
         name: 'getUsedAddresses (hex)',
-        needsConnection: true,
+        needsWallet: true,
         fn: () => client.getUsedAddresses(undefined, { format: 'hex' }),
       },
-      { name: 'getUnusedAddresses', needsConnection: true, fn: () => client.getUnusedAddresses() },
-      { name: 'getRewardAddresses', needsConnection: true, fn: () => client.getRewardAddresses() },
-      { name: 'getChangeAddress', needsConnection: true, fn: () => client.getChangeAddress() },
-      { name: 'getBalance', needsConnection: true, fn: () => client.getBalance() },
-      { name: 'getUtxos', needsConnection: true, fn: () => client.getUtxos() },
-      { name: 'getCollateral', needsConnection: true, fn: () => client.getCollateral() },
+      { name: 'getUnusedAddresses', needsWallet: true, fn: () => client.getUnusedAddresses() },
+      { name: 'getRewardAddresses', needsWallet: true, fn: () => client.getRewardAddresses() },
+      { name: 'getChangeAddress', needsWallet: true, fn: () => client.getChangeAddress() },
+      { name: 'getBalance', needsWallet: true, fn: () => client.getBalance() },
+      { name: 'getUtxos', needsWallet: true, fn: () => client.getUtxos() },
+      { name: 'getCollateral', needsWallet: true, fn: () => client.getCollateral() },
     ],
   },
   {
@@ -378,10 +388,10 @@ const groups: { title: string; actions: Action[] }[] = [
     actions: [
       {
         name: 'signData',
-        needsConnection: true,
+        needsWallet: true,
         fn: () => client.signData(address.value!, '706c617967726f756e64'),
       },
-      { name: 'triggerHaptic', needsConnection: true, fn: () => client.triggerHaptic() },
+      { name: 'triggerHaptic', needsWallet: true, fn: () => client.triggerHaptic() },
     ],
   },
 ];

@@ -40,5 +40,5 @@ Out of scope: vulnerabilities in wallet extensions, in the HydraOne host applica
 
 ## Notes for integrators
 
-- Always set `appCenterOrigin` to the exact host origin. A wildcard is rejected in production.
+- Always set `hostOrigin` to the exact host origin. A wildcard is rejected in production.
 - Verify CIP-8 signatures from `signData` on your own server. The SDK does not verify signatures.

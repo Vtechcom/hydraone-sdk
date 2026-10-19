@@ -74,13 +74,13 @@ export function createHost(options: HostOptions): Host {
     return resolveValue(options.allowedOrigins).some((p) => matchOriginPattern(p, origin));
   }
 
-  function registerIframe(target: Window, origin: string, slug?: string) {
+  function registerIframe(target: Window, origin: string) {
     if (!target) return;
     if (!isOriginAllowed(origin)) {
       logger.warn('[Host] Origin not allowed:', origin);
       return;
     }
-    registeredIframes.set(target, { window: target, origin, slug, registeredAt: Date.now() });
+    registeredIframes.set(target, { window: target, origin, registeredAt: Date.now() });
   }
 
   function unregisterIframe(target: Window) {
@@ -126,7 +126,7 @@ export function createHost(options: HostOptions): Host {
     const embedded = wallet.isEmbedded();
     const name = embedded
       ? (options.embeddedWalletName ?? 'HydraOne Wallet')
-      : (wallet.getCip30Wallet()?.name ?? 'CIP-30 Wallet');
+      : (wallet.getCip30Api()?.name ?? 'CIP-30 Wallet');
     // A function option is always current; otherwise the last setLanguage wins over the static value.
     const language =
       typeof options.language === 'function'
@@ -135,10 +135,10 @@ export function createHost(options: HostOptions): Host {
     return {
       hostName: options.hostName ?? DEFAULT_HOST_NAME,
       hostVersion: options.hostVersion ?? DEFAULT_HOST_VERSION,
-      network: resolveValue(options.network ?? 'preprod'),
+      networkName: resolveValue(options.networkName ?? 'preprod'),
       theme: resolveValue(options.theme ?? 'dark'),
       ...(language !== undefined ? { language } : {}),
-      wallet: { name, icon: embedded ? '' : (wallet.getCip30Wallet()?.icon ?? '') },
+      wallet: { name, icon: embedded ? '' : (wallet.getCip30Api()?.icon ?? '') },
     };
   }
 
@@ -194,7 +194,7 @@ export function createHost(options: HostOptions): Host {
     const custom = customHandlers.get(type);
     if (custom) return custom({ origin, payload, wallet, host });
 
-    const extension = wallet.getCip30Wallet();
+    const extension = wallet.getCip30Api();
 
     switch (type) {
       case 'PING':

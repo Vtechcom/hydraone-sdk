@@ -1,6 +1,6 @@
 import { CardanoWASM } from '@hydra-sdk/cardano-wasm';
 import type { BalanceAsset, Utxo } from '@hydraone-sdk/core';
-import type { HostExtensionWallet } from '@hydraone-sdk/host';
+import type { HostCip30Api } from '@hydraone-sdk/host';
 
 /** CIP-30 API returned by `window.cardano[name].enable()`. All values are CBOR hex. */
 export interface Cip30Api {
@@ -114,10 +114,14 @@ export function decodeUtxo(cbor: string): Utxo {
   };
 }
 
-/** Wraps a CIP-30 API in the shape `@hydraone-sdk/host` forwards extension requests to. */
-export function toHostExtension(api: Cip30Api, icon: string): HostExtensionWallet {
+/**
+ * Wraps a CIP-30 API in the shape `@hydraone-sdk/host` forwards extension requests to.
+ * `info` is the wallet's `window.cardano` entry, so the host reports its real name and icon.
+ */
+export function toHostCip30Api(api: Cip30Api, info?: { name: string; icon: string }): HostCip30Api {
   return {
-    icon,
+    name: info?.name,
+    icon: info?.icon ?? '',
     getUsedAddresses: () => api.getUsedAddresses(),
     getUnusedAddresses: () => api.getUnusedAddresses(),
     getRewardAddresses: () => api.getRewardAddresses(),

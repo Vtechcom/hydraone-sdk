@@ -18,7 +18,7 @@ describe('HydraOneProvider under server rendering', () => {
     expect(typeof window).toBe('undefined');
 
     const html = renderToString(
-      <HydraOneProvider appCenterOrigin="https://alpha.hydraone.app">
+      <HydraOneProvider hostOrigin="https://alpha.hydraone.app">
         <Probe />
       </HydraOneProvider>,
     );

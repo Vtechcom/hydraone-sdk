@@ -17,6 +17,7 @@ import type {
   SignTxOptions,
   SignTxPayload,
   SubmitTxPayload,
+  ConnectionStateChangedHandler,
   LanguageChangedHandler,
   ThemeChangedHandler,
   ThemeMode,
@@ -75,6 +76,9 @@ interface PendingRequest<T = unknown> {
  * dispatches RPC calls over an ITransport port, applies tiered timeouts
  * and runs CIP-30 wallet state queries.
  */
+/** Internal client event type; not a message from the host, so it is not a BridgeMessageType. */
+const CONNECTION_STATE_EVENT = 'CONNECTION_STATE_CHANGED';
+
 export class WalletBridgeClient {
   public transport?: ITransport;
   public readonly handshakeTimeoutMs: number;
@@ -103,13 +107,13 @@ export class WalletBridgeClient {
   constructor(options: WalletBridgeClientOptions) {
     const transport =
       options?.transport ??
-      (options?.appCenterOrigin
-        ? new PostMessageTransport({ appCenterOrigin: options.appCenterOrigin })
+      (options?.hostOrigin
+        ? new PostMessageTransport({ hostOrigin: options.hostOrigin })
         : undefined);
 
     if (!options || !transport) {
       throw new HydraBridgeError(
-        'WalletBridgeClient requires a transport or an appCenterOrigin',
+        'WalletBridgeClient requires a transport or a hostOrigin',
         ERROR_CODES.ERR_INVALID_OPTIONS,
       );
     }
@@ -140,14 +144,14 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Updates the connection state and emits CONNECTION_STATE_CHANGED.
+   * Updates the connection state and notifies onConnectionStateChanged listeners.
    */
   private setConnectionState(newState: ConnectionState): void {
     if (this._connectionState === newState) {
       return;
     }
     this._connectionState = newState;
-    this.emitHostEvent('CONNECTION_STATE_CHANGED', newState);
+    this.emitHostEvent(CONNECTION_STATE_EVENT, newState);
   }
 
   /**
@@ -720,22 +724,17 @@ export class WalletBridgeClient {
   /**
    * Gets the wallet UTxOs.
    *
-   * @param amount Optional CBOR hex value used to filter by amount.
    * @param paginate Optional pagination { page, limit }.
    * @param options Query options (timeoutMs).
    * @returns Decoded UTxOs, or null when there are none.
    */
-  public async getUtxos(
-    amount?: string,
-    paginate?: Paginate,
-    options?: QueryOptions,
-  ): Promise<Utxo[] | null> {
+  public async getUtxos(paginate?: Paginate, options?: QueryOptions): Promise<Utxo[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
       id: generateId(),
       type: 'GET_UTXOS',
-      payload: { amount, paginate },
+      payload: { paginate },
       timestamp: Date.now(),
       source: 'hydra-client',
     };
@@ -765,22 +764,18 @@ export class WalletBridgeClient {
   }
 
   /**
-   * Gets the UTxOs reserved as collateral.
+   * Gets a UTxO the host can use as collateral (pure ADA, at least 5 ADA).
    *
-   * @param params Collateral request, for example { amount?: string }.
    * @param options Query options (timeoutMs).
    * @returns Decoded collateral UTxOs, or null.
    */
-  public async getCollateral(
-    params?: { amount?: string },
-    options?: QueryOptions,
-  ): Promise<Utxo[] | null> {
+  public async getCollateral(options?: QueryOptions): Promise<Utxo[] | null> {
     this.assertConnected();
     const timeout = options?.timeoutMs ?? this.queryTimeoutMs;
     const message: BridgeMessage = {
       id: generateId(),
       type: 'GET_COLLATERAL',
-      payload: params,
+      payload: {},
       timestamp: Date.now(),
       source: 'hydra-client',
     };
@@ -843,17 +838,17 @@ export class WalletBridgeClient {
   /**
    * Asks the user to sign a Cardano transaction.
    *
-   * By default returns the CIP-30 witness set. With `addVkey: true` the wallet's vkey witnesses are added
+   * By default returns the CIP-30 witness set. With `mergeWitnesses: true` the wallet's vkey witnesses are added
    * to the transaction and the full signed transaction CBOR is returned, ready for {@link submitTx}.
    * The transaction body is never re-serialized, so its hash does not change.
    *
    * @param txCbor Hex-encoded CBOR of the transaction to sign.
    * @param partialSignOrOptions `true` to sign only part of the transaction, or a {@link SignTxOptions} object.
    * @param options Signing options when `partialSignOrOptions` is a boolean.
-   * @returns Hex CBOR of the TransactionWitnessSet, or of the signed transaction when `addVkey` is set.
+   * @returns Hex CBOR of the TransactionWitnessSet, or of the signed transaction when `mergeWitnesses` is set.
    * @throws {HydraUserRejectedError} When the user rejects the signing prompt.
    * @throws {HydraTimeoutError} When the request times out (default 120 s).
-   * @throws {HydraBridgeError} With `addVkey`: ERR_INVALID_PARAMS before signing when `txCbor` is not a
+   * @throws {HydraBridgeError} With `mergeWitnesses`: ERR_INVALID_PARAMS before signing when `txCbor` is not a
    * transaction, or ERR_INVALID_RESPONSE when the wallet's witness set cannot be merged; the witness set is
    * then in `details.witnessSet`.
    */
@@ -874,8 +869,8 @@ export class WalletBridgeClient {
       resolvedOptions = partialSignOrOptions;
     }
     const partialSign = resolvedOptions.partialSign === true;
-    const addVkey = resolvedOptions.addVkey === true;
-    if (addVkey) {
+    const mergeWitnesses = resolvedOptions.mergeWitnesses === true;
+    if (mergeWitnesses) {
       // Fail on a transaction we cannot merge into before the user signs it.
       assertTransaction(txCbor);
     }
@@ -893,7 +888,7 @@ export class WalletBridgeClient {
     };
 
     const witnessSet = await this.sendRequest<string>(message, timeout);
-    if (!addVkey) {
+    if (!mergeWitnesses) {
       return witnessSet;
     }
     try {
@@ -1055,6 +1050,19 @@ export class WalletBridgeClient {
     };
 
     return this.onHostEvent('LANGUAGE_CHANGED', wrapper);
+  }
+
+  /**
+   * Subscribes to connection state changes of the bridge ('disconnected' | 'connecting' | 'connected').
+   *
+   * @param handler Callback receiving the new connection state.
+   * @returns A function that removes the subscription.
+   */
+  public onConnectionStateChanged(handler: ConnectionStateChangedHandler): UnsubscribeFn {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+    return this.onHostEvent<ConnectionState>(CONNECTION_STATE_EVENT, handler);
   }
 
   // ==========================================

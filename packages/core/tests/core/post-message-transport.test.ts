@@ -67,31 +67,31 @@ describe('PostMessageTransport', () => {
   });
 
   describe('Construction & zero-trust origin configuration', () => {
-    it('requires a valid appCenterOrigin', () => {
-      expect(() => new PostMessageTransport({ appCenterOrigin: '' } as any)).toThrow(
+    it('requires a valid hostOrigin', () => {
+      expect(() => new PostMessageTransport({ hostOrigin: '' } as any)).toThrow(
         HydraTransportError,
       );
-      expect(() => new PostMessageTransport({ appCenterOrigin: '   ' } as any)).toThrow(
+      expect(() => new PostMessageTransport({ hostOrigin: '   ' } as any)).toThrow(
         HydraTransportError,
       );
     });
 
     it('allows wildcard origin "*" in development or test', () => {
       const devTransport = new PostMessageTransport({
-        appCenterOrigin: '*',
+        hostOrigin: '*',
         env: 'development',
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
-      expect(devTransport.appCenterOrigin).toBe('*');
+      expect(devTransport.hostOrigin).toBe('*');
 
       const testTransport = new PostMessageTransport({
-        appCenterOrigin: '*',
+        hostOrigin: '*',
         env: 'test',
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
-      expect(testTransport.appCenterOrigin).toBe('*');
+      expect(testTransport.hostOrigin).toBe('*');
     });
 
     it('rejects a wildcard when the environment is not known to be development or test', () => {
@@ -101,7 +101,7 @@ describe('PostMessageTransport', () => {
         expect(
           () =>
             new PostMessageTransport({
-              appCenterOrigin: '*',
+              hostOrigin: '*',
               targetWindow: mockTarget,
               sourceWindow: mockSource,
             }),
@@ -111,7 +111,7 @@ describe('PostMessageTransport', () => {
         expect(
           () =>
             new PostMessageTransport({
-              appCenterOrigin: '*',
+              hostOrigin: '*',
               env: 'development',
               targetWindow: mockTarget,
               sourceWindow: mockSource,
@@ -130,7 +130,7 @@ describe('PostMessageTransport', () => {
       expect(
         () =>
           new PostMessageTransport({
-            appCenterOrigin: '*',
+            hostOrigin: '*',
             env: 'staging',
             targetWindow: mockTarget,
             sourceWindow: mockSource,
@@ -139,12 +139,12 @@ describe('PostMessageTransport', () => {
     });
 
     it.each(['example.com', '/', 'not a url', 'null'])(
-      'throws HydraTransportError for the malformed appCenterOrigin "%s"',
+      'throws HydraTransportError for the malformed hostOrigin "%s"',
       (bad) => {
         expect(
           () =>
             new PostMessageTransport({
-              appCenterOrigin: bad,
+              hostOrigin: bad,
               targetWindow: mockTarget,
               sourceWindow: mockSource,
             }),
@@ -152,13 +152,13 @@ describe('PostMessageTransport', () => {
       },
     );
 
-    it('canonicalises appCenterOrigin to a bare origin', () => {
+    it('canonicalises hostOrigin to a bare origin', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: 'https://Alpha.HydraOne.app:443/some/path/',
+        hostOrigin: 'https://Alpha.HydraOne.app:443/some/path/',
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
-      expect(transport.appCenterOrigin).toBe('https://alpha.hydraone.app');
+      expect(transport.hostOrigin).toBe('https://alpha.hydraone.app');
       expect(transport.allowedOrigins).toEqual(['https://alpha.hydraone.app']);
     });
 
@@ -166,7 +166,7 @@ describe('PostMessageTransport', () => {
       expect(
         () =>
           new PostMessageTransport({
-            appCenterOrigin: '*',
+            hostOrigin: '*',
             env: 'production',
             targetWindow: mockTarget,
             sourceWindow: mockSource,
@@ -175,7 +175,7 @@ describe('PostMessageTransport', () => {
 
       try {
         new PostMessageTransport({
-          appCenterOrigin: '*',
+          hostOrigin: '*',
           env: 'production',
           targetWindow: mockTarget,
           sourceWindow: mockSource,
@@ -190,7 +190,7 @@ describe('PostMessageTransport', () => {
   describe('Origin & source window checks on incoming messages', () => {
     it('silently drops messages from an untrusted origin without notifying handlers', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
         checkIframeSource: false,
@@ -215,7 +215,7 @@ describe('PostMessageTransport', () => {
 
     it('silently drops messages whose source window is not window.parent in an iframe context', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
         checkIframeSource: true,
@@ -240,7 +240,7 @@ describe('PostMessageTransport', () => {
 
     it('accepts valid messages from a trusted origin and the correct parent source', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -266,7 +266,7 @@ describe('PostMessageTransport', () => {
 
     it('safely ignores data that is not a BridgeMessage (null, non-object, missing id/type)', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -296,7 +296,7 @@ describe('PostMessageTransport', () => {
   describe('Sending via send()', () => {
     it('posts via targetWindow.postMessage with the exact targetOrigin', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -321,7 +321,7 @@ describe('PostMessageTransport', () => {
 
     it('generates id, timestamp and source in send() when missing', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -342,7 +342,7 @@ describe('PostMessageTransport', () => {
 
     it('throws HydraTransportError when no target window is found', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         // No targetWindow is passed and the Node environment has no window
       });
 
@@ -355,7 +355,7 @@ describe('PostMessageTransport', () => {
   describe('Correlation ID multiplexing & in-flight map with request()', () => {
     it('sends a request and resolves when a response with the matching requestId arrives', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -393,7 +393,7 @@ describe('PostMessageTransport', () => {
 
     it('multiplexes concurrent requests and matches out-of-order responses correctly', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -458,7 +458,7 @@ describe('PostMessageTransport', () => {
 
     it('rejects with HydraBridgeError on an RPC_ERROR response or an error payload', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -495,7 +495,7 @@ describe('PostMessageTransport', () => {
   describe('Tiered Timeouts & Silent Drop', () => {
     it('rejects with HydraTimeoutError when a request times out and clears the map', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -513,7 +513,7 @@ describe('PostMessageTransport', () => {
 
     it('silently drops a late response that arrives after the timeout fired', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -550,7 +550,7 @@ describe('PostMessageTransport', () => {
   describe('Lifecycle, Unsubscribe & Destroy', () => {
     it('unsubscribes an onMessage listener and is safe to call repeatedly (idempotent)', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -581,7 +581,7 @@ describe('PostMessageTransport', () => {
 
     it('destroy() removes the listener, aborts all in-flight requests and rejects later calls', async () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -611,12 +611,12 @@ describe('PostMessageTransport', () => {
   describe('Edge-case & Review Patches', () => {
     it('normalizes the origin by stripping the trailing slash', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: 'https://alpha.hydraone.app///',
+        hostOrigin: 'https://alpha.hydraone.app///',
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
 
-      expect(transport.appCenterOrigin).toBe('https://alpha.hydraone.app');
+      expect(transport.hostOrigin).toBe('https://alpha.hydraone.app');
 
       const handler = vi.fn();
       transport.onMessage(handler);
@@ -633,7 +633,7 @@ describe('PostMessageTransport', () => {
 
     it('safely handles a message payload that is a primitive or null', () => {
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: mockTarget,
         sourceWindow: mockSource,
       });
@@ -680,7 +680,7 @@ describe('PostMessageTransport', () => {
       };
 
       const transport = new PostMessageTransport({
-        appCenterOrigin: TRUSTED_ORIGIN,
+        hostOrigin: TRUSTED_ORIGIN,
         targetWindow: throwingTarget,
         sourceWindow: mockSource,
       });

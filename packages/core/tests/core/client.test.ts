@@ -74,7 +74,7 @@ describe('WalletBridgeClient', () => {
     it('throws when no transport is provided', () => {
       expect(() => new WalletBridgeClient(null as any)).toThrow(HydraBridgeError);
       expect(() => new WalletBridgeClient({} as any)).toThrow(
-        'requires a transport or an appCenterOrigin',
+        'requires a transport or a hostOrigin',
       );
     });
 
@@ -134,7 +134,7 @@ describe('WalletBridgeClient', () => {
           requestId: readyMsg.id,
           hostInfo: {
             hostVersion: '1.0.0',
-            network: 'preprod',
+            networkName: 'preprod',
             wallet: { name: 'Eternl', icon: '' },
           },
         },
@@ -147,7 +147,7 @@ describe('WalletBridgeClient', () => {
       expect(client.connectionState).toBe('connected');
       expect(client.hostInfo).toEqual({
         hostVersion: '1.0.0',
-        network: 'preprod',
+        networkName: 'preprod',
         wallet: { name: 'Eternl', icon: '' },
       });
     });
@@ -242,14 +242,14 @@ describe('WalletBridgeClient', () => {
         id: 'unsolicited-ack',
         type: 'HOST_ACK',
         payload: {
-          hostInfo: { hostVersion: '2.0.0', network: 'mainnet' },
+          hostInfo: { hostVersion: '2.0.0', networkName: 'mainnet' },
         },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
       expect(client.isConnected).toBe(true);
-      expect(client.hostInfo).toEqual({ hostVersion: '2.0.0', network: 'mainnet' });
+      expect(client.hostInfo).toEqual({ hostVersion: '2.0.0', networkName: 'mainnet' });
     });
   });
 
@@ -324,10 +324,10 @@ describe('WalletBridgeClient', () => {
     });
 
     it('getUtxos() succeeds and returns a list of hex UTxOs', async () => {
-      const promise = client.getUtxos('1000000', { page: 1, limit: 5 });
+      const promise = client.getUtxos({ page: 1, limit: 5 });
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_UTXOS');
-      expect(queryMsg.payload).toEqual({ amount: '1000000', paginate: { page: 1, limit: 5 } });
+      expect(queryMsg.payload).toEqual({ paginate: { page: 1, limit: 5 } });
 
       transport.simulateIncoming({
         id: 'res-2',
@@ -365,7 +365,7 @@ describe('WalletBridgeClient', () => {
     });
 
     it('getCollateral() succeeds', async () => {
-      const promise = client.getCollateral({ amount: '5000000' });
+      const promise = client.getCollateral();
       const queryMsg = transport.sentMessages[1];
       expect(queryMsg.type).toBe('GET_COLLATERAL');
 
@@ -831,7 +831,7 @@ describe('WalletBridgeClient', () => {
       };
 
       const pmTransport = new PostMessageTransport({
-        appCenterOrigin: 'https://alpha.hydraone.app',
+        hostOrigin: 'https://alpha.hydraone.app',
         targetWindow,
         sourceWindow: sourceWindow as any,
         env: 'test',
@@ -904,7 +904,7 @@ describe('WalletBridgeClient', () => {
         type: 'HOST_ACK',
         payload: {
           requestId: readyMsg.id,
-          hostInfo: { wallet: { name: 'Eternl', icon: '' }, network: 'mainnet' },
+          hostInfo: { wallet: { name: 'Eternl', icon: '' }, networkName: 'mainnet' },
         },
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -1013,7 +1013,7 @@ describe('WalletBridgeClient', () => {
         expect(await signPromise).toBe('witness_partial_obj');
       });
 
-      it('returns the full signed transaction when addVkey: true', async () => {
+      it('returns the full signed transaction when mergeWitnesses: true', async () => {
         const vkey = 'ab'.repeat(32);
         const sig = 'cd'.repeat(64);
         // [ body: {}, witnesses: {}, isValid: true, auxData: null ]
@@ -1022,7 +1022,7 @@ describe('WalletBridgeClient', () => {
         const witnessSet = `a10081825820${vkey}5840${sig}`;
         const expectedTx = `84a0a10081825820${vkey}5840${sig}f5f6`;
 
-        const signPromise = client.signTx(unsignedTx, { addVkey: true });
+        const signPromise = client.signTx(unsignedTx, { mergeWitnesses: true });
         const signMsg = transport.sentMessages[1];
         expect(signMsg.payload).toEqual({ cbor: unsignedTx, partialSign: false });
 
@@ -1037,16 +1037,16 @@ describe('WalletBridgeClient', () => {
         expect((await signPromise).toLowerCase()).toBe(expectedTx);
       });
 
-      it('rejects a non-transaction CBOR with addVkey before asking the wallet', async () => {
+      it('rejects a non-transaction CBOR with mergeWitnesses before asking the wallet', async () => {
         const sentBefore = transport.sentMessages.length;
-        await expect(client.signTx('a0', { addVkey: true })).rejects.toMatchObject({
+        await expect(client.signTx('a0', { mergeWitnesses: true })).rejects.toMatchObject({
           code: ERROR_CODES.ERR_INVALID_PARAMS,
         });
         expect(transport.sentMessages.length).toBe(sentBefore);
       });
 
       it('keeps the witness set in the error when it cannot be merged', async () => {
-        const signPromise = client.signTx('84a0a0f5f6', { addVkey: true });
+        const signPromise = client.signTx('84a0a0f5f6', { mergeWitnesses: true });
         const signMsg = transport.sentMessages[1];
 
         transport.simulateIncoming({
@@ -1063,7 +1063,7 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('returns the witness set unchanged when addVkey is not set', async () => {
+      it('returns the witness set unchanged when mergeWitnesses is not set', async () => {
         const witnessSet = `a10081825820${'ab'.repeat(32)}5840${'cd'.repeat(64)}`;
         const signPromise = client.signTx('84a0a0f5f6', { partialSign: false });
         const signMsg = transport.sentMessages[1];
@@ -1392,7 +1392,7 @@ describe('WalletBridgeClient', () => {
         };
 
         const pmTransport = new PostMessageTransport({
-          appCenterOrigin: 'https://alpha.hydraone.app',
+          hostOrigin: 'https://alpha.hydraone.app',
           targetWindow,
           sourceWindow: sourceWindow as any,
           env: 'test',
@@ -1463,7 +1463,7 @@ describe('WalletBridgeClient', () => {
       expect(client.isConnected).toBe(false);
     });
 
-    it('throws ERR_INVALID_OPTIONS when neither a transport nor an appCenterOrigin is given', () => {
+    it('throws ERR_INVALID_OPTIONS when neither a transport nor a hostOrigin is given', () => {
       expect(() => {
         new WalletBridgeClient({} as any);
       }).toThrow(HydraBridgeError);
@@ -2622,7 +2622,7 @@ describe('WalletBridgeClient', () => {
           requestId: readyMsg.id,
           hostInfo: {
             hostVersion: '1.0.0',
-            network: 'mainnet',
+            networkName: 'mainnet',
             wallet: { name: 'Lace', icon: '' },
           },
         },
@@ -2669,7 +2669,7 @@ describe('WalletBridgeClient', () => {
           requestId: readyMsg.id,
           hostInfo: {
             hostVersion: '1.0.0',
-            network: 'mainnet',
+            networkName: 'mainnet',
             wallet: { name: 'Eternl', icon: '' },
           },
         },
@@ -2686,7 +2686,7 @@ describe('WalletBridgeClient', () => {
       const client = new WalletBridgeClient({ transport });
       const states: string[] = [];
 
-      client.on('CONNECTION_STATE_CHANGED', (state) => {
+      client.onConnectionStateChanged((state) => {
         states.push(state);
       });
 

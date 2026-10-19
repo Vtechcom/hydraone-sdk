@@ -21,7 +21,6 @@ import { errorCode, errorMessage, errorName } from '../errors/error-utils';
 /** Optional capabilities a client or transport may expose; probed at runtime. */
 interface PingCapable {
   ping?(options: { timeoutMs: number }): Promise<unknown>;
-  getBalance?(options: { timeoutMs: number }): Promise<unknown>;
   request?: ITransport['request'];
   transport?: Pick<ITransport, 'request'>;
 }
@@ -206,11 +205,7 @@ export async function checkPostMessageLatency(
     if (typeof client.ping === 'function') {
       await client.ping({ timeoutMs });
     }
-    // Strategy 2: the client has getBalance() or an RPC query method
-    else if (typeof client.getBalance === 'function') {
-      await client.getBalance({ timeoutMs });
-    }
-    // Strategy 3: the transport has a request() method
+    // Strategy 2: the transport has a request() method
     else if (client.transport && typeof client.transport.request === 'function') {
       await client.transport.request(
         {
@@ -222,7 +217,7 @@ export async function checkPostMessageLatency(
         timeoutMs,
       );
     }
-    // Strategy 4: call request directly on the transport
+    // Strategy 3: call request directly on the transport
     else if (typeof client.request === 'function') {
       await client.request(
         {

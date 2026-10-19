@@ -9,7 +9,7 @@ import { PostMessageTransport } from '../../src/core/adapters/transport/post-mes
 
 const ORIGIN = 'https://alpha.hydraone.app';
 
-describe('appCenterOrigin in WalletBridgeClient', () => {
+describe('hostOrigin in WalletBridgeClient', () => {
   beforeEach(() => {
     (globalThis as any).window = globalThis;
   });
@@ -19,23 +19,23 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
   });
 
   it('creates a PostMessageTransport for the given origin', () => {
-    const client = new WalletBridgeClient({ appCenterOrigin: ORIGIN });
+    const client = new WalletBridgeClient({ hostOrigin: ORIGIN });
 
     expect(client.transport).toBeInstanceOf(PostMessageTransport);
-    expect((client.transport as PostMessageTransport).appCenterOrigin).toBe(ORIGIN);
+    expect((client.transport as PostMessageTransport).hostOrigin).toBe(ORIGIN);
     client.destroy();
   });
 
-  it('prefers an explicit transport over appCenterOrigin', () => {
-    const transport = new PostMessageTransport({ appCenterOrigin: 'https://other.example' });
-    const client = new WalletBridgeClient({ appCenterOrigin: ORIGIN, transport });
+  it('prefers an explicit transport over hostOrigin', () => {
+    const transport = new PostMessageTransport({ hostOrigin: 'https://other.example' });
+    const client = new WalletBridgeClient({ hostOrigin: ORIGIN, transport });
 
     expect(client.transport).toBe(transport);
     client.destroy();
   });
 
-  it('only needs appCenterOrigin when no transport is given', () => {
-    expect(() => new WalletBridgeClient({ appCenterOrigin: ORIGIN })).not.toThrow();
+  it('only needs hostOrigin when no transport is given', () => {
+    expect(() => new WalletBridgeClient({ hostOrigin: ORIGIN })).not.toThrow();
   });
 
   it('still throws without a transport or an origin', () => {
@@ -43,7 +43,7 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
   });
 
   it('destroys the transport it created', () => {
-    const client = new WalletBridgeClient({ appCenterOrigin: ORIGIN });
+    const client = new WalletBridgeClient({ hostOrigin: ORIGIN });
     const transport = client.transport as PostMessageTransport;
 
     client.destroy();
@@ -51,12 +51,12 @@ describe('appCenterOrigin in WalletBridgeClient', () => {
     expect(transport.isClosed()).toBe(true);
   });
 
-  it('rejects a blank appCenterOrigin through the transport', () => {
-    expect(() => new WalletBridgeClient({ appCenterOrigin: '   ' })).toThrow();
+  it('rejects a blank hostOrigin through the transport', () => {
+    expect(() => new WalletBridgeClient({ hostOrigin: '   ' })).toThrow();
   });
 });
 
-describe('useWalletBridgeClient with appCenterOrigin', () => {
+describe('useWalletBridgeClient with hostOrigin', () => {
   beforeEach(() => {
     (globalThis as any).window = globalThis;
     setSharedWalletBridgeClient(null);
@@ -69,7 +69,7 @@ describe('useWalletBridgeClient with appCenterOrigin', () => {
 
   it('builds the client with a PostMessageTransport', () => {
     const scope = effectScope();
-    const result = scope.run(() => useWalletBridgeClient({ appCenterOrigin: ORIGIN }))!;
+    const result = scope.run(() => useWalletBridgeClient({ hostOrigin: ORIGIN }))!;
 
     expect(result.client.transport).toBeInstanceOf(PostMessageTransport);
     scope.stop();

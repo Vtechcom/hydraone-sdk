@@ -3,7 +3,7 @@ import {
   addressToBech32,
   addressToHex,
   detectAddressFormat,
-  firstAddress,
+  firstValidAddress,
   formatAddress,
   isBaseAddress,
   isValidAddress,
@@ -140,16 +140,16 @@ describe('rewardAddressFromBase', () => {
   });
 });
 
-describe('firstAddress', () => {
+describe('firstValidAddress', () => {
   it('returns the first valid address in bech32, skipping malformed entries', () => {
-    expect(firstAddress(['nope', addressToHex(CIP19.enterpriseMainnet), CIP19.baseMainnet])).toBe(
-      CIP19.enterpriseMainnet,
-    );
+    expect(
+      firstValidAddress(['nope', addressToHex(CIP19.enterpriseMainnet), CIP19.baseMainnet]),
+    ).toBe(CIP19.enterpriseMainnet);
   });
 
   it('returns null for an empty list or a non-array', () => {
-    expect(firstAddress([])).toBeNull();
-    expect(firstAddress(['nope'])).toBeNull();
-    expect(firstAddress('addr1...')).toBeNull();
+    expect(firstValidAddress([])).toBeNull();
+    expect(firstValidAddress(['nope'])).toBeNull();
+    expect(firstValidAddress('addr1...')).toBeNull();
   });
 });

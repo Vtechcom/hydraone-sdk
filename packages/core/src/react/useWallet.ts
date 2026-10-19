@@ -2,7 +2,9 @@ import { useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { HydraOneContext } from './context';
 import type { UseWalletOptions, UseWalletReturn } from './types';
 import { readLovelaceBalance, lovelaceToAdaString } from '../core/wallet/balance';
-import { firstAddress } from '../core/wallet/address';
+import { firstValidAddress } from '../core/wallet/address';
+import { ERROR_CODES } from '../core/errors/errors';
+import { errorCode } from '../core/errors/error-utils';
 import type {
   ConnectionState,
   HostInfo,
@@ -42,7 +44,17 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   const [networkId, setNetworkId] = useState<number | null>(null);
   const [hostInfo, setHostInfo] = useState<HostInfo | null>(() => client.hostInfo ?? null);
   const [language, setLanguage] = useState<string | null>(() => client.language ?? null);
-  const [theme, setTheme] = useState<ThemeMode>(() => client.theme ?? 'dark');
+  const [theme, setTheme] = useState<ThemeMode | null>(() => client.theme ?? null);
+  const [error, setError] = useState<Error | null>(null);
+  // Last error set by refreshBalance, so a later refresh clears that one and never an unrelated error.
+  const balanceErrorRef = useRef<Error | null>(null);
+  const toError = (err: unknown): Error => (err instanceof Error ? err : new Error(String(err)));
+  // Take the ref value before clearing it: the state updater runs later, after the ref is already null.
+  const clearBalanceError = (): void => {
+    const balanceError = balanceErrorRef.current;
+    balanceErrorRef.current = null;
+    setError((current) => (current === balanceError ? null : current));
+  };
 
   // Tracks unmount so state is never updated afterwards
   const isMountedRef = useRef<boolean>(true);
@@ -64,11 +76,11 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         }
         return null;
       }
-      const netId = await client.getNetworkId();
+      const networkId = await client.getNetworkId();
       if (isMountedRef.current && client.isConnected) {
-        setNetworkId(netId);
+        setNetworkId(networkId);
       }
-      return netId;
+      return networkId;
     } catch {
       return null;
     }
@@ -126,12 +138,22 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       if (isMountedRef.current && client.isConnected) {
         setBalanceLovelace(lovelace);
         setBalanceADA(adaStr);
+        // A successful read means any earlier balance failure no longer applies.
+        clearBalanceError();
       }
       return adaStr;
-    } catch {
+    } catch (err) {
       if (isMountedRef.current) {
         setBalanceADA(null);
         setBalanceLovelace(null);
+        // The game can connect before the player connects a wallet in the host: a state, not an error.
+        if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_CONNECTED) {
+          clearBalanceError();
+        } else {
+          const errObj = toError(err);
+          balanceErrorRef.current = errObj;
+          setError(errObj);
+        }
       }
       return '0';
     }
@@ -139,7 +161,14 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
 
   // 4. Connect & Disconnect
   const connect = useCallback(async (): Promise<void> => {
-    await client.init();
+    if (isMountedRef.current) setError(null);
+    try {
+      await client.init();
+    } catch (err) {
+      const errObj = toError(err);
+      if (isMountedRef.current) setError(errObj);
+      throw errObj;
+    }
     if (isMountedRef.current) {
       setConnectionState(client.connectionState);
       setIsConnected(client.isConnected);
@@ -162,8 +191,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     }
   }, [client, autoRefreshBalance, refreshNetwork, refreshAddress, refreshBalance]);
 
-  const disconnect = useCallback(async (): Promise<void> => {
-    await client.disconnect();
+  const disconnect = useCallback((): void => {
+    client.disconnect();
     if (isMountedRef.current) {
       setConnectionState('disconnected');
       setIsConnected(false);
@@ -181,14 +210,26 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       partialSignOrOptions?: boolean | SignTxOptions,
       signOptions?: SignTxOptions,
     ): Promise<string> => {
-      return client.signTx(txCbor, partialSignOrOptions, signOptions);
+      try {
+        return await client.signTx(txCbor, partialSignOrOptions, signOptions);
+      } catch (err) {
+        const errObj = toError(err);
+        if (isMountedRef.current) setError(errObj);
+        throw errObj;
+      }
     },
     [client],
   );
 
   const submitTx = useCallback(
     async (txCbor: string, submitOptions?: SignOptions): Promise<string> => {
-      return client.submitTx(txCbor, submitOptions);
+      try {
+        return await client.submitTx(txCbor, submitOptions);
+      } catch (err) {
+        const errObj = toError(err);
+        if (isMountedRef.current) setError(errObj);
+        throw errObj;
+      }
     },
     [client],
   );
@@ -199,7 +240,13 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       payloadHex: string,
       signOptions?: SignOptions,
     ): Promise<DataSignature> => {
-      return client.signData(address, payloadHex, signOptions);
+      try {
+        return await client.signData(address, payloadHex, signOptions);
+      } catch (err) {
+        const errObj = toError(err);
+        if (isMountedRef.current) setError(errObj);
+        throw errObj;
+      }
     },
     [client],
   );
@@ -261,16 +308,16 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
           setIsConnected(true);
         }
         // Same source as connect; the payload only covers a failed query.
-        loadAddress(firstAddress(addrs)).catch(() => {});
+        loadAddress(firstValidAddress(addrs)).catch(() => {});
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
       }
     };
 
-    const onNetworkChanged = (netId: number) => {
+    const onNetworkChanged = (networkId: number) => {
       if (!isMountedRef.current) return;
-      setNetworkId(netId);
+      setNetworkId(networkId);
     };
 
     // Only the wallet left the host; the bridge stays connected.
@@ -301,7 +348,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     };
 
     cleanups.push(client.on('HOST_ACK', onHostAck));
-    cleanups.push(client.on('CONNECTION_STATE_CHANGED', onConnStateChanged));
+    cleanups.push(client.onConnectionStateChanged(onConnStateChanged));
     cleanups.push(client.on('ACCOUNT_CHANGED', onAccountChanged));
     cleanups.push(client.on('NETWORK_CHANGED', onNetworkChanged));
     cleanups.push(
@@ -361,8 +408,10 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     hostInfo,
     language,
     theme,
+    error,
     connect,
     disconnect,
+    refreshAddress,
     refreshBalance,
     signTx,
     submitTx,

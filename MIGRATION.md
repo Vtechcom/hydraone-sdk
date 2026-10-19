@@ -4,6 +4,78 @@ English | [Tiếng Việt](./MIGRATION.vi.md)
 
 This guide lists breaking changes and how to move to them. Each section is for upgrading to the named version.
 
+## 0.2.x to 0.3.0
+
+This release renames things so each name says what it does. Nothing keeps the old names. Update your code with the tables below.
+
+### Bridge connected vs wallet connected
+
+The _bridge_ is the link between your app and the host. The _wallet_ is the account the player connected inside the host. They used to share one name.
+
+| Before                                                                                        | After                                          |
+| --------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `ERR_NOT_CONNECTED` from the client (`init()` not finished, client disconnected or destroyed) | `ERR_BRIDGE_NOT_CONNECTED`                     |
+| `ERR_NOT_CONNECTED` sent by the host (no wallet connected)                                    | `ERR_WALLET_NOT_CONNECTED`                     |
+| event `DISCONNECTED`                                                                          | `WALLET_DISCONNECTED`                          |
+| `host.handleConnectionChange(connected)`                                                      | `host.handleWalletConnectionChange(connected)` |
+| `ConnectionState` value `'error'`                                                             | removed (the client never set it)              |
+
+Behavior change: when the wallet disconnects, `isConnected` and `connectionState` stay `connected` because the bridge is still up. Use the new `isWalletConnected` (React and Vue) to know if there is a wallet. A `catch` on `ERR_NOT_CONNECTED` must now look at both codes.
+
+`CONNECTION_STATE_CHANGED` is no longer reached with `client.on`. Use `client.onConnectionStateChanged((state) => ...)`.
+
+### Options
+
+| Before                                                                                             | After                                                                                             |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `appCenterOrigin` (`PostMessageTransport`, `WalletBridgeClient`, `HydraOneProvider`, Vue plugin)   | `hostOrigin`                                                                                      |
+| `signTx` option `addVkey`                                                                          | `mergeWitnesses`                                                                                  |
+| `isIframeFn`                                                                                       | `isInIframe`                                                                                      |
+| diagnostics `skipIframeCheck`, `customKey`                                                         | `skipSandboxCheck`, `testKey`                                                                     |
+| `queryTimeoutMs` also set the timeout of `setOrientation`, `unlockOrientation` and `triggerHaptic` | new `commandTimeoutMs` (default 15,000 ms) for those; `queryTimeoutMs` is for wallet queries only |
+
+### Client methods
+
+- `getUtxos(amount?, paginate?, options?)` is now `getUtxos(paginate?, options?)`, and `getCollateral(params?, options?)` is now `getCollateral(options?)`. The host never used `amount`.
+- `firstAddress` is now `firstValidAddress`.
+- `HostInfo.network` is now `networkName` (a string such as `'preprod'`).
+- The handshake field `appName` is now `hostName`, and `client.hostName` reads it. `HostInfo.walletName` is removed; use `HostInfo.wallet.name` (or `client.activeWalletName`).
+
+### React and Vue
+
+- `useHostStorage` is now `useStorage` (`UseStorageOptions`, `UseStorageReturn`). `isAvailable` is removed because it was always `true`.
+- `IStorage.clear()` is now `clearSdkData()`, and so is the hook's `clear`. It only removes `hydra:sdk:*` keys.
+- `useWallet` now returns `error` and `refreshAddress`, like the Vue composable.
+- `useWallet`: `disconnect()` is synchronous (it returned a `Promise`), and `theme` is `null` until the host reports one (it defaulted to `'dark'`).
+- `submitTx` takes `SignOptions` (it was `QueryOptions`) and `triggerHaptic` accepts a preset, a duration or a pattern, as on the client.
+
+### Host
+
+| Before                                  | After                                |
+| --------------------------------------- | ------------------------------------ |
+| `HostWalletAdapter.fetchAssets()`       | `fetchBalance()`                     |
+| `HostWalletAdapter.getAddress()`        | `getChangeAddress()`                 |
+| `HostWalletAdapter.getExtension()`      | `getCip30Api()`                      |
+| type `HostExtensionWallet`              | `HostCip30Api` (new optional `name`) |
+| `HostOptions.network`                   | `networkName`                        |
+| `registerIframe(target, origin, slug?)` | `registerIframe(target, origin)`     |
+| `HostPaginate`                          | `Paginate` from `@hydraone-sdk/core` |
+| `extractOriginFromUrl`                  | `normalizeOrigin`                    |
+
+Pass the real extension name so players see it: set `name` on the object you return from `getCip30Api()`, for example `window.cardano.eternl.name`. Without it the host reports `'CIP-30 Wallet'`.
+
+### Errors
+
+- `HydraTransportError` now defaults to `ERR_TRANSPORT_FAILED`. `ERR_NOT_IN_IFRAME` only means the page is not inside an iframe.
+- A missing or invalid `hostOrigin` reports `ERR_INVALID_OPTIONS`, and a destroyed transport reports `ERR_TRANSPORT_UNAVAILABLE`.
+- `ERROR_CODES` now also holds `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_FAILED`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED` and `ERR_RPC_FAILED`.
+
+### Other renames
+
+`MessageEventSource` is now `MessageEventTarget`. `InFlightEntry` is now `PendingRequestEntry`, with `getPendingCount()` and `getPendingEntry()` on `PostMessageTransport`. `RequestState` values are lowercase (`'pending'`, `'fulfilled'`, `'rejected'`, `'timed-out'`, `'cancelled'`, `'transport-failed'`).
+
+The latency check no longer falls back to `getBalance()`; it uses `ping()` or a `PING` request.
+
 ## 0.1.x to 0.2.0
 
 ### Auth module removed
@@ -117,7 +189,7 @@ After:
 import { WalletBridgeClient } from '@hydraone-sdk/core';
 
 const client = new WalletBridgeClient({
-  appCenterOrigin: 'https://alpha.hydraone.app',
+  hostOrigin: 'https://alpha.hydraone.app',
   handshakeTimeoutMs: 5000,
   queryTimeoutMs: 10000,
   debug: true,
