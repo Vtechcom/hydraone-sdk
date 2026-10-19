@@ -179,7 +179,7 @@ describe('useWallet hook', () => {
     transport = new MockTransport();
     client = new WalletBridgeClient({
       transport,
-      isIframeFn: () => true,
+      isInIframe: () => true,
     });
   });
 

@@ -119,7 +119,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     transport = host;
     client = new WalletBridgeClient({
       transport,
-      isIframeFn: () => true,
+      isInIframe: () => true,
     });
     await client.init();
   });
@@ -355,26 +355,26 @@ describe('Bridge Health Diagnostics Suite', () => {
     });
 
     it('cleans up the temporary test key and leaves nothing behind in localStorage', async () => {
-      const customKey = 'hydra:sdk:diag:test_clean_up';
-      await checkStorageHealth(undefined, { customKey });
-      expect(localStorage.getItem(customKey)).toBeNull();
+      const testKey = 'hydra:sdk:diag:test_clean_up';
+      await checkStorageHealth(undefined, { testKey });
+      expect(localStorage.getItem(testKey)).toBeNull();
     });
 
-    it('restores existing localStorage data when customKey points at a real key', async () => {
-      const customKey = 'hydra:sdk:session:token';
-      localStorage.setItem(customKey, 'real-user-token');
+    it('restores existing localStorage data when testKey points at a real key', async () => {
+      const testKey = 'hydra:sdk:session:token';
+      localStorage.setItem(testKey, 'real-user-token');
       try {
-        const results = await checkStorageHealth(undefined, { customKey });
+        const results = await checkStorageHealth(undefined, { testKey });
         expect(results.find((r) => r.id === 'storage-local')?.status).toBe('PASS');
-        expect(localStorage.getItem(customKey)).toBe('real-user-token');
+        expect(localStorage.getItem(testKey)).toBe('real-user-token');
       } finally {
-        localStorage.removeItem(customKey);
+        localStorage.removeItem(testKey);
       }
     });
 
-    it('restores existing data in a custom storage adapter when customKey points at a real key', async () => {
-      const customKey = 'hydra:sdk:session:token';
-      const store = new Map<string, string>([[customKey, 'real-relay-token']]);
+    it('restores existing data in a custom storage adapter when testKey points at a real key', async () => {
+      const testKey = 'hydra:sdk:session:token';
+      const store = new Map<string, string>([[testKey, 'real-relay-token']]);
       const storage = {
         getItem: async (k: string) => store.get(k) ?? null,
         setItem: async (k: string, v: string) => void store.set(k, v),
@@ -382,13 +382,13 @@ describe('Bridge Health Diagnostics Suite', () => {
         clear: async () => store.clear(),
       };
 
-      const results = await checkStorageHealth(undefined, { customKey, storage: storage as any });
+      const results = await checkStorageHealth(undefined, { testKey, storage: storage as any });
       expect(results.find((r) => r.id === 'storage-relay')?.status).toBe('PASS');
-      expect(store.get(customKey)).toBe('real-relay-token');
+      expect(store.get(testKey)).toBe('real-relay-token');
     });
 
     it('still removes the test key from a custom storage adapter when it did not exist before', async () => {
-      const customKey = 'hydra:sdk:diag:fresh_key';
+      const testKey = 'hydra:sdk:diag:fresh_key';
       const store = new Map<string, string>();
       const storage = {
         getItem: async (k: string) => store.get(k) ?? null,
@@ -397,8 +397,8 @@ describe('Bridge Health Diagnostics Suite', () => {
         clear: async () => store.clear(),
       };
 
-      await checkStorageHealth(undefined, { customKey, storage: storage as any });
-      expect(store.has(customKey)).toBe(false);
+      await checkStorageHealth(undefined, { testKey, storage: storage as any });
+      expect(store.has(testKey)).toBe(false);
     });
   });
 
@@ -436,9 +436,9 @@ describe('Bridge Health Diagnostics Suite', () => {
       expect(report.summary).toContain('failed');
     });
 
-    it('honors the skip flags (skipIframeCheck, skipLatencyCheck, skipStorageCheck)', async () => {
+    it('honors the skip flags (skipSandboxCheck, skipLatencyCheck, skipStorageCheck)', async () => {
       const report = await client.checkHealth({
-        skipIframeCheck: true,
+        skipSandboxCheck: true,
         skipStorageCheck: true,
       });
 
@@ -467,7 +467,7 @@ describe('Bridge Health Diagnostics Suite', () => {
 
     it('reports correctly when all checks are skipped (empty checks)', async () => {
       const report = await client.checkHealth({
-        skipIframeCheck: true,
+        skipSandboxCheck: true,
         skipLatencyCheck: true,
         skipStorageCheck: true,
       });
@@ -479,7 +479,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     it('auto-checks Host Storage Relay through client.transport', async () => {
       // The client from beforeEach has client.transport but no client.storage assigned
       const report = await client.checkHealth({
-        skipIframeCheck: true,
+        skipSandboxCheck: true,
         skipLatencyCheck: true,
       });
 
@@ -503,7 +503,7 @@ describe('Bridge Health Diagnostics Suite', () => {
       };
 
       const report = await checkBridgeHealth(client, {
-        skipIframeCheck: true,
+        skipSandboxCheck: true,
         skipLatencyCheck: true,
         storage: mockStorage,
       });
@@ -518,7 +518,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     it('client.ping() throws ERR_NOT_IN_IFRAME in standalone mode outside an iframe', async () => {
       const standaloneClient = new WalletBridgeClient({
         transport,
-        isIframeFn: () => false,
+        isInIframe: () => false,
       });
 
       await expect(standaloneClient.ping()).rejects.toThrowError(/outside App Center iframe/);
@@ -532,7 +532,7 @@ describe('Bridge Health Diagnostics Suite', () => {
     it('checkPostMessageLatency reports a clear error when the client is not connected (ERR_BRIDGE_NOT_CONNECTED)', async () => {
       const uninitClient = new WalletBridgeClient({
         transport,
-        isIframeFn: () => true,
+        isInIframe: () => true,
       });
 
       const latencyResult = await checkPostMessageLatency(uninitClient);
@@ -541,8 +541,8 @@ describe('Bridge Health Diagnostics Suite', () => {
       expect(latencyResult.hint).toContain('client.init()');
     });
 
-    it('falls back to a random key when options.customKey is an empty string', async () => {
-      const results = await checkStorageHealth(undefined, { customKey: '   ' });
+    it('falls back to a random key when options.testKey is an empty string', async () => {
+      const results = await checkStorageHealth(undefined, { testKey: '   ' });
       expect(results.length).toBeGreaterThan(0);
     });
 
@@ -555,7 +555,7 @@ describe('Bridge Health Diagnostics Suite', () => {
       expect(relayCheck?.message).toContain('fully operational');
 
       const fullReport = await checkBridgeHealth(transport, {
-        skipIframeCheck: true,
+        skipSandboxCheck: true,
       });
       const reportRelayCheck = fullReport.checks.find((r) => r.id === 'storage-relay');
       expect(reportRelayCheck).toBeDefined();

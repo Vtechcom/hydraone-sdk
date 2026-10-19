@@ -22,3 +22,9 @@ Host adapter and parameter names:
 - `HostWalletAdapter`: `fetchAssets` is now `fetchBalance`, `getAddress` is `getChangeAddress`, `getExtension` is `getCip30Wallet`.
 - `HOST_ERROR_CODES` takes its shared codes from the core `ERROR_CODES`; `ERR_UNSUPPORTED_METHOD` stays host-only.
 - React and Vue hooks use the same parameter names as the client (`txCbor`, `address`, `payloadHex`), and `submitTx` takes `SignOptions` everywhere.
+
+Internal and diagnostic names:
+
+- `extractOriginFromUrl` is now `normalizeOrigin`; `MessageEventSource` is `MessageEventTarget` (no clash with the DOM type); `InFlightEntry` is `PendingRequestEntry`, with `getPendingCount` / `getPendingEntry`.
+- `RequestState` values are lowercase (`'pending'`, `'timed-out'`, ...), like `ConnectionState`.
+- Options renamed: `isIframeFn` to `isInIframe`, `skipIframeCheck` to `skipSandboxCheck`, `customKey` to `testKey`.

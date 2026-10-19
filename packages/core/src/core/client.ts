@@ -82,7 +82,7 @@ export class WalletBridgeClient {
   public readonly queryTimeoutMs: number;
   public readonly commandTimeoutMs: number;
   public readonly signingTimeoutMs: number;
-  public readonly isIframeFn?: () => boolean;
+  public readonly isInIframe?: () => boolean;
   public readonly debug: boolean;
   private readonly logger: Logger;
 
@@ -120,7 +120,7 @@ export class WalletBridgeClient {
     this.queryTimeoutMs = options.queryTimeoutMs ?? TIERED_TIMEOUTS.QUERY;
     this.commandTimeoutMs = options.commandTimeoutMs ?? TIERED_TIMEOUTS.COMMAND;
     this.signingTimeoutMs = options.signingTimeoutMs ?? TIERED_TIMEOUTS.SIGNING;
-    this.isIframeFn = options.isIframeFn;
+    this.isInIframe = options.isInIframe;
     this.debug = options.debug ?? false;
     this.logger = options.logger ?? console;
 
@@ -176,8 +176,8 @@ export class WalletBridgeClient {
    * Whether the SDK is running outside an iframe, in a standalone browser tab.
    */
   public isStandaloneBrowser(): boolean {
-    if (this.isIframeFn) {
-      return !this.isIframeFn();
+    if (this.isInIframe) {
+      return !this.isInIframe();
     }
     if (typeof window !== 'undefined') {
       try {
@@ -481,7 +481,7 @@ export class WalletBridgeClient {
           source: 'hydra-client',
         };
 
-        const result = await this.executeRpc<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
+        const result = await this.sendRequest<HostInfo>(handshakeMessage, this.handshakeTimeoutMs);
         // The matching HOST_ACK already marks the client connected, so only disconnect() cancels
         if (this._connectionState === 'disconnected') {
           throw new HydraBridgeError(
@@ -530,7 +530,7 @@ export class WalletBridgeClient {
   /**
    * Sends an RPC request over the transport and waits for the result with a bounded timeout.
    */
-  private async executeRpc<T = unknown>(message: BridgeMessage, timeoutMs: number): Promise<T> {
+  private async sendRequest<T = unknown>(message: BridgeMessage, timeoutMs: number): Promise<T> {
     if (!this.transport) {
       throw new HydraBridgeError(
         'Transport is not initialized',
@@ -701,7 +701,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<unknown>(message, timeout);
+    const result = await this.sendRequest<unknown>(message, timeout);
     if (!Array.isArray(result)) {
       return [];
     }
@@ -740,7 +740,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<Utxo[] | null>(message, timeout);
+    const result = await this.sendRequest<Utxo[] | null>(message, timeout);
     return result ?? null;
   }
 
@@ -761,7 +761,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<BalanceAsset[]>(message, timeout);
+    return await this.sendRequest<BalanceAsset[]>(message, timeout);
   }
 
   /**
@@ -785,7 +785,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<Utxo[] | null>(message, timeout);
+    const result = await this.sendRequest<Utxo[] | null>(message, timeout);
     return result ?? null;
   }
 
@@ -806,7 +806,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<unknown>(message, timeout);
+    const result = await this.sendRequest<unknown>(message, timeout);
     if (!isValidAddress(result)) {
       throw new HydraBridgeError(
         'Host returned an invalid change address',
@@ -833,7 +833,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<number>(message, timeout);
+    return await this.sendRequest<number>(message, timeout);
   }
 
   // ==========================================
@@ -892,7 +892,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const witnessSet = await this.executeRpc<string>(message, timeout);
+    const witnessSet = await this.sendRequest<string>(message, timeout);
     if (!addVkey) {
       return witnessSet;
     }
@@ -933,7 +933,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<string>(message, timeout);
+    return await this.sendRequest<string>(message, timeout);
   }
 
   /**
@@ -970,7 +970,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    return await this.executeRpc<DataSignature>(message, timeout);
+    return await this.sendRequest<DataSignature>(message, timeout);
   }
 
   // ==========================================
@@ -1194,7 +1194,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.executeRpc(message, this.commandTimeoutMs);
+        await this.sendRequest(message, this.commandTimeoutMs);
       }
       return;
     }
@@ -1209,7 +1209,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, this.commandTimeoutMs);
+    await this.sendRequest(message, this.commandTimeoutMs);
   }
 
   /**
@@ -1257,7 +1257,7 @@ export class WalletBridgeClient {
           timestamp: Date.now(),
           source: 'hydra-client',
         };
-        await this.executeRpc(message, this.commandTimeoutMs);
+        await this.sendRequest(message, this.commandTimeoutMs);
       }
       return;
     }
@@ -1276,7 +1276,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    await this.executeRpc(message, this.commandTimeoutMs);
+    await this.sendRequest(message, this.commandTimeoutMs);
   }
 
   // ==========================================
@@ -1308,7 +1308,7 @@ export class WalletBridgeClient {
       source: 'hydra-client',
     };
 
-    const result = await this.executeRpc<{ pong: boolean; timestamp: number }>(message, timeout);
+    const result = await this.sendRequest<{ pong: boolean; timestamp: number }>(message, timeout);
     if (result && typeof result === 'object' && 'pong' in result) {
       return result;
     }

@@ -34,7 +34,7 @@ export interface HydraOneContextValue {
 }
 
 /**
- * Props cho component HydraOneProvider
+ * Props for the HydraOneProvider component
  */
 export interface HydraOneProviderProps {
   /**

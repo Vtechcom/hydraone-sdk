@@ -345,8 +345,8 @@ export async function checkStorageHealth(
 ): Promise<DiagnosticCheckItem[]> {
   const checks: DiagnosticCheckItem[] = [];
   const testKey =
-    options?.customKey && options.customKey.trim().length > 0
-      ? options.customKey.trim()
+    options?.testKey && options.testKey.trim().length > 0
+      ? options.testKey.trim()
       : `hydra:sdk:diag:test_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const testValue = `ok_${Date.now()}`;
 
@@ -360,7 +360,7 @@ export async function checkStorageHealth(
       hint: 'Local storage checks require a browser window environment.',
     });
   } else {
-    // A customKey may name real data, so remember it and put it back afterwards
+    // A testKey may name real data, so remember it and put it back afterwards
     let previousLocal: string | null = null;
     try {
       previousLocal = window.localStorage.getItem(testKey);
@@ -561,7 +561,7 @@ export async function checkBridgeHealth(
   const checks: DiagnosticCheckItem[] = [];
 
   // 1. Iframe sandbox (unless skipped)
-  if (!options?.skipIframeCheck) {
+  if (!options?.skipSandboxCheck) {
     const sandboxCheck = checkIframeSandbox();
     checks.push(sandboxCheck);
   }

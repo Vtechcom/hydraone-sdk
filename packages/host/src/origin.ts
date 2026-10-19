@@ -1,10 +1,10 @@
 /**
  * Extracts the canonical origin from a URL or an origin pattern (full URL, bare origin or wildcard).
  * @example
- * extractOriginFromUrl('http://localhost:3010/game'); // 'http://localhost:3010'
- * extractOriginFromUrl('https://*.hydraone.app/'); // 'https://*.hydraone.app'
+ * normalizeOrigin('http://localhost:3010/game'); // 'http://localhost:3010'
+ * normalizeOrigin('https://*.hydraone.app/'); // 'https://*.hydraone.app'
  */
-export function extractOriginFromUrl(item: string): string {
+export function normalizeOrigin(item: string): string {
   const trimmed = item.trim();
   if (!trimmed) return '';
 
@@ -35,8 +35,8 @@ export function matchOriginPattern(patternOrUrl: string, origin: string): boolea
   const trimmed = patternOrUrl.trim();
   if (!trimmed || !origin) return false;
 
-  const targetOrigin = extractOriginFromUrl(origin);
-  const allowedOrigin = extractOriginFromUrl(trimmed);
+  const targetOrigin = normalizeOrigin(origin);
+  const allowedOrigin = normalizeOrigin(trimmed);
 
   if (!allowedOrigin || !targetOrigin) return false;
   if (allowedOrigin === '*' || allowedOrigin === targetOrigin) return true;

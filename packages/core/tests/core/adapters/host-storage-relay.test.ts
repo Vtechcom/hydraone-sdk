@@ -11,7 +11,7 @@ import {
   type MessageHandler,
   type UnsubscribeFn,
   type PostMessageTarget,
-  type MessageEventSource,
+  type MessageEventTarget,
 } from '../../../src';
 
 // Plain mock transport implementing only send and onMessage (no request)
@@ -51,7 +51,7 @@ class MockTargetWindow implements PostMessageTarget {
 }
 
 // Mock Source Window cho PostMessageTransport
-class MockSourceWindow implements MessageEventSource {
+class MockSourceWindow implements MessageEventTarget {
   public listeners: Record<string, Array<(event: any) => void>> = {};
   public parent: unknown;
 

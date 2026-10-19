@@ -7,7 +7,7 @@ import {
   HydraBridgeError,
   ERROR_CODES,
   type BridgeMessage,
-  type MessageEventSource,
+  type MessageEventTarget,
   type PostMessageTarget,
 } from '../../src';
 
@@ -20,7 +20,7 @@ class MockTargetWindow implements PostMessageTarget {
   }
 }
 
-class MockSourceWindow implements MessageEventSource {
+class MockSourceWindow implements MessageEventTarget {
   public listeners: Record<string, Array<(event: any) => void>> = {};
   public parent: unknown;
 
@@ -365,9 +365,9 @@ describe('PostMessageTransport', () => {
         type: 'GET_BALANCE',
       });
 
-      expect(transport.getInFlightCount()).toBe(1);
-      const inFlight = transport.getInFlightEntry('req-get-balance-1');
-      expect(inFlight?.state).toBe('Pending');
+      expect(transport.getPendingCount()).toBe(1);
+      const inFlight = transport.getPendingEntry('req-get-balance-1');
+      expect(inFlight?.state).toBe('pending');
 
       // Simulate the host responding
       mockSource.dispatch('message', {
@@ -388,7 +388,7 @@ describe('PostMessageTransport', () => {
       const response = await requestPromise;
       expect(response.type).toBe('RPC_RESPONSE');
       expect((response.payload as any).result).toEqual({ lovelace: '50000000' });
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
     });
 
     it('multiplexes concurrent requests and matches out-of-order responses correctly', async () => {
@@ -402,7 +402,7 @@ describe('PostMessageTransport', () => {
       const p2 = transport.request({ id: 'req-2', type: 'GET_UTXOS' });
       const p3 = transport.request({ id: 'req-3', type: 'GET_COLLATERAL' });
 
-      expect(transport.getInFlightCount()).toBe(3);
+      expect(transport.getPendingCount()).toBe(3);
 
       // req-2 responds first
       mockSource.dispatch('message', {
@@ -419,7 +419,7 @@ describe('PostMessageTransport', () => {
 
       const res2 = await p2;
       expect((res2.payload as any).result).toEqual(['utxo_data']);
-      expect(transport.getInFlightCount()).toBe(2);
+      expect(transport.getPendingCount()).toBe(2);
 
       // then req-3
       mockSource.dispatch('message', {
@@ -436,7 +436,7 @@ describe('PostMessageTransport', () => {
 
       const res3 = await p3;
       expect((res3.payload as any).result).toEqual(['collateral_data']);
-      expect(transport.getInFlightCount()).toBe(1);
+      expect(transport.getPendingCount()).toBe(1);
 
       // req-1 responds last
       mockSource.dispatch('message', {
@@ -453,7 +453,7 @@ describe('PostMessageTransport', () => {
 
       const res1 = await p1;
       expect((res1.payload as any).result).toEqual(['addr_1']);
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
     });
 
     it('rejects with HydraBridgeError on an RPC_ERROR response or an error payload', async () => {
@@ -488,7 +488,7 @@ describe('PostMessageTransport', () => {
       });
 
       await expect(requestPromise).rejects.toThrow(HydraBridgeError);
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
     });
   });
 
@@ -502,13 +502,13 @@ describe('PostMessageTransport', () => {
 
       const requestPromise = transport.request({ id: 'req-timeout-1', type: 'PING' }, 3000);
 
-      expect(transport.getInFlightCount()).toBe(1);
+      expect(transport.getPendingCount()).toBe(1);
 
       // Advance time by another 3001ms
       vi.advanceTimersByTime(3001);
 
       await expect(requestPromise).rejects.toThrow(HydraTimeoutError);
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
     });
 
     it('silently drops a late response that arrives after the timeout fired', async () => {
@@ -543,7 +543,7 @@ describe('PostMessageTransport', () => {
       }).not.toThrow();
 
       // No unhandled rejection or error occurs
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
     });
   });
 
@@ -587,13 +587,13 @@ describe('PostMessageTransport', () => {
       });
 
       const p1 = transport.request({ id: 'pending-1', type: 'GET_BALANCE' });
-      expect(transport.getInFlightCount()).toBe(1);
+      expect(transport.getPendingCount()).toBe(1);
 
       // Call destroy
       transport.destroy();
 
       expect(transport.isClosed()).toBe(true);
-      expect(transport.getInFlightCount()).toBe(0);
+      expect(transport.getPendingCount()).toBe(0);
 
       // The pending promise must reject with HydraTransportError
       await expect(p1).rejects.toThrow(HydraTransportError);

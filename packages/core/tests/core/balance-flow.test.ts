@@ -43,7 +43,7 @@ class HostTransport implements ITransport {
 describe('balance flow: client -> host -> lovelace', () => {
   it('a single GET_BALANCE call returns the lovelace', async () => {
     const transport = new HostTransport();
-    const client = new WalletBridgeClient({ transport, isIframeFn: () => true });
+    const client = new WalletBridgeClient({ transport, isInIframe: () => true });
     await client.init();
     expect(await readLovelaceBalance(client)).toBe(1234567890n);
     expect(transport.sent.filter((t) => t.startsWith('GET_BALANCE'))).toEqual(['GET_BALANCE']);

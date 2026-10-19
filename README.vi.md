@@ -76,7 +76,7 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 | `queryTimeoutMs`     | `number`             | `15000`      | Timeout mặc định cho các truy vấn trạng thái ví.                                                                     |
 | `signingTimeoutMs`   | `number`             | `120000`     | Timeout mặc định cho ký và gửi giao dịch, vì các bước này chờ người dùng.                                            |
 | `autoConnect`        | `boolean`            | `false`      | Chạy handshake ngay khi client được khởi tạo.                                                                        |
-| `isIframeFn`         | `() => boolean`      | tự phát hiện | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                                               |
+| `isInIframe`         | `() => boolean`      | tự phát hiện | Hàm phát hiện iframe tùy chỉnh, chủ yếu dùng cho test.                                                               |
 | `debug`              | `boolean`            | `false`      | Ghi cảnh báo qua logger.                                                                                             |
 | `logger`             | `Logger`             | `console`    | Nơi nhận đầu ra debug. Xem [Logging](./apps/docs/content/vi/3.guides/7.logging-debugging.md).                        |
 
@@ -86,7 +86,7 @@ Bên trong iframe của App Center, client giao tiếp với host shell. Ngoài 
 | ------------------- | -------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `appCenterOrigin`   | `string \| string[]` | bắt buộc                                  | Origin chính xác của host shell, hoặc một danh sách origin. Ký tự đại diện `'*'` bị từ chối khi `env` là `production`. |
 | `targetWindow`      | `PostMessageTarget`  | `window.parent`                           | Cửa sổ nhận các tin nhắn gửi đi.                                                                                       |
-| `sourceWindow`      | `MessageEventSource` | `window`                                  | Cửa sổ phát ra các sự kiện tin nhắn đến.                                                                               |
+| `sourceWindow`      | `MessageEventTarget` | `window`                                  | Cửa sổ phát ra các sự kiện tin nhắn đến.                                                                               |
 | `env`               | `string`             | `process.env.NODE_ENV` hoặc `development` | Môi trường chạy dùng cho việc kiểm tra ký tự đại diện.                                                                 |
 | `checkIframeSource` | `boolean`            | `true`                                    | Xác minh `event.source === window.parent` khi ở trong iframe.                                                          |
 | `defaultTimeoutMs`  | `number`             | `15000`                                   | Timeout phản hồi mặc định cho các request.                                                                             |

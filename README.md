@@ -74,7 +74,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 | `queryTimeoutMs`     | `number`             | `15000`            | Default timeout for wallet state queries.                                                               |
 | `signingTimeoutMs`   | `number`             | `120000`           | Default timeout for signing and submitting, which wait for the user.                                    |
 | `autoConnect`        | `boolean`            | `false`            | Run the handshake as soon as the client is constructed.                                                 |
-| `isIframeFn`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
+| `isInIframe`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
 | `debug`              | `boolean`            | `false`            | Emit warnings through the logger.                                                                       |
 | `logger`             | `Logger`             | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging).  |
 
@@ -84,7 +84,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 | ------------------- | -------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `appCenterOrigin`   | `string \| string[]` | required                                | Exact origin of the host shell, or a list of origins. A wildcard `'*'` is rejected when `env` is `production`. |
 | `targetWindow`      | `PostMessageTarget`  | `window.parent`                         | Window that receives outgoing messages.                                                                        |
-| `sourceWindow`      | `MessageEventSource` | `window`                                | Window that emits incoming message events.                                                                     |
+| `sourceWindow`      | `MessageEventTarget` | `window`                                | Window that emits incoming message events.                                                                     |
 | `env`               | `string`             | `process.env.NODE_ENV` or `development` | Runtime environment used for the wildcard check.                                                               |
 | `checkIframeSource` | `boolean`            | `true`                                  | Verify `event.source === window.parent` when inside an iframe.                                                 |
 | `defaultTimeoutMs`  | `number`             | `15000`                                 | Default response timeout for requests.                                                                         |

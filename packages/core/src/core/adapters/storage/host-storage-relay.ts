@@ -97,7 +97,7 @@ export class HostStorageRelayAdapter implements IStorage {
   private readonly transport: ITransport;
   private readonly timeoutMs: number;
   private readonly pendingRequests = new Map<string, PendingStorageRequest<BridgeMessage>>();
-  private readonly inFlightCancels = new Set<(err: Error) => void>();
+  private readonly pendingCancels = new Set<(err: Error) => void>();
   private unsubscribe?: UnsubscribeFn;
   private _isDestroyed = false;
 
@@ -236,10 +236,10 @@ export class HostStorageRelayAdapter implements IStorage {
 
     const destroyError = new HydraStorageError('HostStorageRelayAdapter has been destroyed');
 
-    for (const cancel of this.inFlightCancels) {
+    for (const cancel of this.pendingCancels) {
       cancel(destroyError);
     }
-    this.inFlightCancels.clear();
+    this.pendingCancels.clear();
 
     for (const [id, pending] of this.pendingRequests.entries()) {
       if (pending.timeoutTimer) {
@@ -321,7 +321,7 @@ export class HostStorageRelayAdapter implements IStorage {
     let cancelCallback: ((err: Error) => void) | undefined;
     const cancelPromise = new Promise<never>((_, reject) => {
       cancelCallback = reject;
-      this.inFlightCancels.add(reject);
+      this.pendingCancels.add(reject);
     });
 
     try {
@@ -366,7 +366,7 @@ export class HostStorageRelayAdapter implements IStorage {
       );
     } finally {
       if (cancelCallback) {
-        this.inFlightCancels.delete(cancelCallback);
+        this.pendingCancels.delete(cancelCallback);
       }
     }
   }

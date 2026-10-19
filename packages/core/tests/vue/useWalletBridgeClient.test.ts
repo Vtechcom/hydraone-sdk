@@ -165,7 +165,7 @@ describe('useWalletBridgeClient', () => {
       handshakeTimeoutMs: 1000,
       queryTimeoutMs: 1000,
       signingTimeoutMs: 1000,
-      isIframeFn: () => true,
+      isInIframe: () => true,
     });
   });
 
@@ -521,7 +521,7 @@ describe('useWalletBridgeClient', () => {
 
       const ssrClient = new WalletBridgeClient({
         transport: mockTransport,
-        isIframeFn: () => true,
+        isInIframe: () => true,
       });
 
       const composable = useWalletBridgeClient({

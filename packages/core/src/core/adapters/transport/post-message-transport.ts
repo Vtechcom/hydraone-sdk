@@ -2,8 +2,8 @@ import type { ITransport } from '../../ports/transport';
 import type {
   BridgeMessage,
   BridgeMessageEvent,
-  InFlightEntry,
-  MessageEventSource,
+  PendingRequestEntry,
+  MessageEventTarget,
   MessageHandler,
   PostMessageTarget,
   PostMessageTransportOptions,
@@ -33,12 +33,12 @@ export class PostMessageTransport implements ITransport {
   /** Host origin confirmed by an accepted incoming message, used as the postMessage target. */
   private verifiedOrigin?: string;
   private readonly targetWindow?: PostMessageTarget;
-  private readonly sourceWindow?: MessageEventSource;
+  private readonly sourceWindow?: MessageEventTarget;
   public readonly env: string;
   private readonly checkIframeSource: boolean;
   private readonly defaultTimeoutMs: number;
 
-  private readonly inFlightMap = new Map<string, InFlightEntry>();
+  private readonly pendingRequests = new Map<string, PendingRequestEntry>();
   private readonly handlers = new Set<MessageHandler>();
   private isDestroyed = false;
 
@@ -110,7 +110,7 @@ export class PostMessageTransport implements ITransport {
     this.targetWindow = options.targetWindow;
     this.sourceWindow =
       options.sourceWindow ??
-      (typeof window !== 'undefined' ? (window as unknown as MessageEventSource) : undefined);
+      (typeof window !== 'undefined' ? (window as unknown as MessageEventTarget) : undefined);
     this.env = env;
     this.checkIframeSource = options.checkIframeSource ?? true;
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 15000;
@@ -184,16 +184,16 @@ export class PostMessageTransport implements ITransport {
       correlationId = rpcPayload.requestId;
     }
 
-    if (this.inFlightMap.has(correlationId)) {
-      const entry = this.inFlightMap.get(correlationId)!;
-      if (entry.state === 'Pending') {
+    if (this.pendingRequests.has(correlationId)) {
+      const entry = this.pendingRequests.get(correlationId)!;
+      if (entry.state === 'pending') {
         if (entry.timeoutTimer) {
           clearTimeout(entry.timeoutTimer);
         }
 
         if (message.type === 'RPC_ERROR' || (rpcPayload && rpcPayload.error)) {
-          entry.state = 'Rejected';
-          this.inFlightMap.delete(correlationId);
+          entry.state = 'rejected';
+          this.pendingRequests.delete(correlationId);
           const errInfo = rpcPayload?.error;
           const errCode = errInfo?.code || ERROR_CODES.ERR_RPC_FAILED;
           const errMsg = errInfo?.message || 'RPC request failed from Host Shell';
@@ -208,8 +208,8 @@ export class PostMessageTransport implements ITransport {
           }
           entry.reject(error);
         } else {
-          entry.state = 'Fulfilled';
-          this.inFlightMap.delete(correlationId);
+          entry.state = 'fulfilled';
+          this.pendingRequests.delete(correlationId);
           entry.resolve(message);
         }
       }
@@ -299,10 +299,10 @@ export class PostMessageTransport implements ITransport {
 
       if (timeout > 0 && timeout !== Infinity) {
         timeoutTimer = setTimeout(() => {
-          const entry = this.inFlightMap.get(id);
-          if (entry && entry.state === 'Pending') {
-            entry.state = 'TimedOut';
-            this.inFlightMap.delete(id);
+          const entry = this.pendingRequests.get(id);
+          if (entry && entry.state === 'pending') {
+            entry.state = 'timed-out';
+            this.pendingRequests.delete(id);
             reject(
               new HydraTimeoutError(`RPC request [${id}] timed out (${timeout}ms)`, {
                 requestId: id,
@@ -314,23 +314,23 @@ export class PostMessageTransport implements ITransport {
         }, timeout);
       }
 
-      const entry: InFlightEntry<T> = {
+      const entry: PendingRequestEntry<T> = {
         id,
-        state: 'Pending',
+        state: 'pending',
         resolve,
         reject,
         timeoutTimer,
         createdAt: Date.now(),
       };
 
-      this.inFlightMap.set(id, entry as InFlightEntry<unknown>);
+      this.pendingRequests.set(id, entry as PendingRequestEntry<unknown>);
 
       this.send(fullMessage).catch((err) => {
         if (timeoutTimer) {
           clearTimeout(timeoutTimer);
         }
-        entry.state = 'TransportFailed';
-        this.inFlightMap.delete(id);
+        entry.state = 'transport-failed';
+        this.pendingRequests.delete(id);
         reject(err);
       });
     });
@@ -360,11 +360,11 @@ export class PostMessageTransport implements ITransport {
       this.sourceWindow.removeEventListener('message', this.handleMessageEvent);
     }
 
-    for (const [, entry] of this.inFlightMap) {
+    for (const [, entry] of this.pendingRequests) {
       if (entry.timeoutTimer) {
         clearTimeout(entry.timeoutTimer);
       }
-      entry.state = 'Cancelled';
+      entry.state = 'cancelled';
       entry.reject(
         new HydraTransportError(
           'Transport has been destroyed',
@@ -373,22 +373,22 @@ export class PostMessageTransport implements ITransport {
       );
     }
 
-    this.inFlightMap.clear();
+    this.pendingRequests.clear();
     this.handlers.clear();
   }
 
   /**
    * Returns the number of pending requests in the in-flight map (for testing and diagnostics)
    */
-  public getInFlightCount(): number {
-    return this.inFlightMap.size;
+  public getPendingCount(): number {
+    return this.pendingRequests.size;
   }
 
   /**
    * Returns the in-flight entry for an ID
    */
-  public getInFlightEntry(id: string): InFlightEntry | undefined {
-    return this.inFlightMap.get(id);
+  public getPendingEntry(id: string): PendingRequestEntry | undefined {
+    return this.pendingRequests.get(id);
   }
 
   /**

@@ -1453,7 +1453,7 @@ describe('WalletBridgeClient', () => {
   describe('Running outside an iframe', () => {
     it('throws HydraTransportError (ERR_NOT_IN_IFRAME) on init() because there is no host shell', async () => {
       const transport = new SimpleMockTransport();
-      const client = new WalletBridgeClient({ transport, isIframeFn: () => false });
+      const client = new WalletBridgeClient({ transport, isInIframe: () => false });
 
       expect(client.isStandaloneBrowser()).toBe(true);
       await expect(client.init()).rejects.toThrow(HydraTransportError);
@@ -2268,7 +2268,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2314,7 +2314,7 @@ describe('WalletBridgeClient', () => {
 
         const run = async (debug: boolean) => {
           const logger = { warn: vi.fn(), error: vi.fn() };
-          const c = new WalletBridgeClient({ transport, isIframeFn: () => false, debug, logger });
+          const c = new WalletBridgeClient({ transport, isInIframe: () => false, debug, logger });
           await c.triggerHaptic('light');
           c.destroy();
           return logger;
@@ -2355,7 +2355,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
           debug: true,
         });
         const p = standaloneClient.init();
@@ -2401,7 +2401,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2449,7 +2449,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2497,7 +2497,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
           debug: true,
         });
         const p = standaloneClient.init();
@@ -2547,7 +2547,7 @@ describe('WalletBridgeClient', () => {
         // Client runs standalone outside an iframe and does NOT call init()
         const standaloneClient = new WalletBridgeClient({
           transport: new SimpleMockTransport(),
-          isIframeFn: () => false,
+          isInIframe: () => false,
         });
 
         expect(standaloneClient.isStandaloneBrowser()).toBe(true);

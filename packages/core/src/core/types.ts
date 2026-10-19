@@ -93,12 +93,12 @@ export type UnsubscribeFn = () => void;
  * Lifecycle states of an RPC request.
  */
 export type RequestState =
-  'Pending' | 'Fulfilled' | 'Rejected' | 'TimedOut' | 'Cancelled' | 'TransportFailed';
+  'pending' | 'fulfilled' | 'rejected' | 'timed-out' | 'cancelled' | 'transport-failed';
 
 /**
  * Bookkeeping record for a request that is still in flight.
  */
-export interface InFlightEntry<T = unknown> {
+export interface PendingRequestEntry<T = unknown> {
   id: string;
   state: RequestState;
   resolve: (value: BridgeMessage<T>) => void;
@@ -115,9 +115,6 @@ export interface PostMessageTarget {
 }
 
 /**
- * Minimal window-like object that emits message events.
- */
-/**
  * The subset of MessageEvent the transport reads.
  */
 export interface BridgeMessageEvent {
@@ -126,7 +123,10 @@ export interface BridgeMessageEvent {
   data?: unknown;
 }
 
-export interface MessageEventSource {
+/**
+ * Minimal window-like object that emits message events.
+ */
+export interface MessageEventTarget {
   addEventListener(type: 'message', listener: (event: BridgeMessageEvent) => void): void;
   removeEventListener(type: 'message', listener: (event: BridgeMessageEvent) => void): void;
   parent?: unknown;
@@ -145,7 +145,7 @@ export interface PostMessageTransportOptions {
   /** Window that receives outgoing messages (defaults to window.parent inside an iframe). */
   targetWindow?: PostMessageTarget;
   /** Window that emits incoming message events (defaults to window in a browser). */
-  sourceWindow?: MessageEventSource;
+  sourceWindow?: MessageEventTarget;
   /** Runtime environment ('production' | 'development' | 'test'). A wildcard '*' origin is rejected in production. */
   env?: string;
   /** Verify event.source === window.parent when running in an iframe (default: true). */
@@ -248,7 +248,7 @@ export interface WalletBridgeClientOptions {
   /** Run the handshake on construction (default: false). */
   autoConnect?: boolean;
   /** Custom iframe detection function (for tests). */
-  isIframeFn?: () => boolean;
+  isInIframe?: () => boolean;
   /** Enable warning/debug logging (default: false). */
   debug?: boolean;
   /** Destination for debug output when `debug` is enabled (default: `console`). */
