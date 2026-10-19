@@ -159,7 +159,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(storage.size).toBe(5);
 
       // Call clear()
-      await storage.clear();
+      await storage.clearSdkData();
 
       // SDK keys must be removed
       expect(await storage.getItem('hydra:sdk:session:token')).toBeNull();
@@ -310,7 +310,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(mockStorage.length).toBe(5);
 
       // Call clear() on the adapter
-      await adapter.clear();
+      await adapter.clearSdkData();
 
       // Verify the SDK keys were removed
       expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
@@ -336,7 +336,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       await adapter.setItem('hydra:sdk:session:token', 'ram_token');
       await adapter.setItem('game_save', 'ram_game');
 
-      await adapter.clear();
+      await adapter.clearSdkData();
 
       expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('game_save')).toBe('ram_game');
@@ -457,7 +457,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       mockStorage.setItem('game_gold', '500');
       mockStorage.throwOnRemoveItem = new Error('SecurityError');
 
-      await adapter.clear();
+      await adapter.clearSdkData();
 
       expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();
       expect(await adapter.getItem('game_gold')).toBe('500');
@@ -477,7 +477,7 @@ describe('Storage Module & Sub-Namespace Policy', () => {
       expect(adapter.isUsingFallback).toBe(true);
 
       // Call clear() while in fallback mode
-      await adapter.clear();
+      await adapter.clearSdkData();
 
       // SDK keys in both memory and underlyingStorage must be cleared
       expect(await adapter.getItem('hydra:sdk:session:token')).toBeNull();

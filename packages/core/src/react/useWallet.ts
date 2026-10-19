@@ -212,8 +212,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
 
   const triggerHaptic = useCallback(
-    async (type: HapticFeedbackType): Promise<void> => {
-      return client.triggerHaptic(type);
+    async (typeOrPattern?: HapticFeedbackType | number | number[]): Promise<void> => {
+      return client.triggerHaptic(typeOrPattern);
     },
     [client],
   );

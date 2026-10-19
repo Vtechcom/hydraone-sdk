@@ -210,8 +210,8 @@ export class HostStorageRelayAdapter implements IStorage {
    * Asks the Host Shell to clear only SDK-owned keys (prefix hydra:sdk:*).
    * Game-owned data on the host storage is left untouched.
    */
-  public async clear(): Promise<void> {
-    this.assertNotDestroyed('clear');
+  public async clearSdkData(): Promise<void> {
+    this.assertNotDestroyed('clearSdkData');
 
     const message: BridgeMessage<HostStorageClearPayload> = {
       id: generateId(),

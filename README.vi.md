@@ -175,7 +175,7 @@ export function App() {
 }
 ```
 
-Cũng được export: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. Xem [hướng dẫn React](./apps/docs/content/vi/3.guides/4.react-nextjs.md).
+Cũng được export: `useStorage`, `useHydraOneContext`, `HydraOneContext`. Xem [hướng dẫn React](./apps/docs/content/vi/3.guides/4.react-nextjs.md).
 
 ### Vue và Nuxt
 

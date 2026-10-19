@@ -201,13 +201,13 @@ export interface UseWalletReturn {
   /**
    * Triggers haptic feedback on a mobile device
    */
-  triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
+  triggerHaptic: (typeOrPattern?: HapticFeedbackType | number | number[]) => Promise<void>;
 }
 
 /**
- * Options for the useHostStorage hook
+ * Options for the useStorage hook
  */
-export interface UseHostStorageOptions {
+export interface UseStorageOptions {
   /**
    * Custom IStorage instance
    */
@@ -215,18 +215,13 @@ export interface UseHostStorageOptions {
 }
 
 /**
- * Value returned by the useHostStorage hook
+ * Value returned by the useStorage hook
  */
-export interface UseHostStorageReturn {
+export interface UseStorageReturn {
   /**
    * IStorage instance in use
    */
   storage: IStorage;
-
-  /**
-   * true when storage is available
-   */
-  isAvailable: boolean;
 
   /**
    * Reads the stored string value for a key
@@ -246,5 +241,5 @@ export interface UseHostStorageReturn {
   /**
    * Removes every key in the SDK namespace
    */
-  clear: () => Promise<void>;
+  clearSdkData: () => Promise<void>;
 }

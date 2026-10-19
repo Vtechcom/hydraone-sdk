@@ -173,7 +173,7 @@ export function App() {
 }
 ```
 
-Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](https://developers.hydraone.app/guides/react-nextjs).
+Also exported: `useStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](https://developers.hydraone.app/guides/react-nextjs).
 
 ### Vue and Nuxt
 

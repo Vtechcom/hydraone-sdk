@@ -1,6 +1,5 @@
 import type { BalanceAsset, ThemeMode, Utxo } from '@hydraone-sdk/core';
 
-export type HostPaginate = { page: number; limit: number };
 export type HostRequestPayload = Record<string, unknown>;
 
 /** Subset of a CIP-30 wallet API the host forwards to when an extension wallet is active. */

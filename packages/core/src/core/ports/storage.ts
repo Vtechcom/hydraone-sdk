@@ -27,5 +27,5 @@ export interface IStorage {
    * Removes only SDK-owned keys (the `hydra:sdk:*` prefix) and never touches
    * data that belongs to the game.
    */
-  clear(): Promise<void>;
+  clearSdkData(): Promise<void>;
 }

@@ -192,11 +192,11 @@ export class SafeLocalStorageAdapter implements IStorage {
   }
 
   /**
-   * Selective clear: removes only SDK-owned keys (prefix `hydra:sdk:*`).
+   * Selective clearSdkData: removes only SDK-owned keys (prefix `hydra:sdk:*`).
    * Never removes game-owned keys.
    * Clears both underlying and fallback storage.
    */
-  async clear(): Promise<void> {
+  async clearSdkData(): Promise<void> {
     if (this.storage) {
       try {
         // Scan keys and remove only those matching the `hydra:sdk:*` prefix
@@ -226,6 +226,6 @@ export class SafeLocalStorageAdapter implements IStorage {
     }
 
     // Always clear the fallback store too
-    await this.fallbackStorage.clear();
+    await this.fallbackStorage.clearSdkData();
   }
 }

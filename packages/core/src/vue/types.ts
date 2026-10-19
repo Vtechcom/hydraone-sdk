@@ -153,5 +153,5 @@ export interface UseWalletBridgeClientReturn {
   /**
    * Triggers haptic feedback through the Host Shell
    */
-  triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
+  triggerHaptic: (typeOrPattern?: HapticFeedbackType | number | number[]) => Promise<void>;
 }

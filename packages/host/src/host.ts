@@ -12,13 +12,12 @@ import { matchOriginPattern } from './origin';
 import type {
   Host,
   HostOptions,
-  HostPaginate,
   HostRequestHandler,
   HostRequestPayload,
   RegisteredIframe,
 } from './types';
 import { rewardAddressFromBase } from '@hydraone-sdk/core';
-import type { BridgeMessage, HostInfo } from '@hydraone-sdk/core';
+import type { BridgeMessage, HostInfo, Paginate } from '@hydraone-sdk/core';
 
 const DEFAULT_HOST_NAME = 'HydraOne Host';
 const DEFAULT_HOST_VERSION = '1.0.0';
@@ -33,14 +32,14 @@ function requireString(value: unknown, field: string, allowEmpty = false): strin
   return value;
 }
 
-function paginateList<T>(items: T[], paginate?: HostPaginate): T[] {
+function paginateList<T>(items: T[], paginate?: Paginate): T[] {
   if (!paginate || typeof paginate.limit !== 'number' || paginate.limit <= 0) return items;
   const page = typeof paginate.page === 'number' && paginate.page > 0 ? paginate.page : 0;
   return items.slice(page * paginate.limit, (page + 1) * paginate.limit);
 }
 
-function readPaginate(payload: HostRequestPayload): HostPaginate | undefined {
-  const raw = payload.paginate as HostPaginate | undefined;
+function readPaginate(payload: HostRequestPayload): Paginate | undefined {
+  const raw = payload.paginate as Paginate | undefined;
   return raw && typeof raw === 'object' ? raw : undefined;
 }
 

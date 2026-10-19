@@ -341,8 +341,10 @@ export function useWalletBridgeClient(
     return client.setOrientation(orientation);
   };
 
-  const triggerHaptic = async (type: HapticFeedbackType): Promise<void> => {
-    return client.triggerHaptic(type);
+  const triggerHaptic = async (
+    typeOrPattern?: HapticFeedbackType | number | number[],
+  ): Promise<void> => {
+    return client.triggerHaptic(typeOrPattern);
   };
 
   // 8. Auto-connect on mount (only inside component setup, on the client)

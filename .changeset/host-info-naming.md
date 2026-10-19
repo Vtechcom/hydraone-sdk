@@ -28,3 +28,10 @@ Internal and diagnostic names:
 - `extractOriginFromUrl` is now `normalizeOrigin`; `MessageEventSource` is `MessageEventTarget` (no clash with the DOM type); `InFlightEntry` is `PendingRequestEntry`, with `getPendingCount` / `getPendingEntry`.
 - `RequestState` values are lowercase (`'pending'`, `'timed-out'`, ...), like `ConnectionState`.
 - Options renamed: `isIframeFn` to `isInIframe`, `skipIframeCheck` to `skipSandboxCheck`, `customKey` to `testKey`.
+
+Hooks and storage:
+
+- `useHostStorage` is now `useStorage` (it also uses local storage), with `UseStorageOptions` / `UseStorageReturn`. The always-true `isAvailable` flag is removed.
+- `IStorage.clear()` is now `clearSdkData()`, since it only removes `hydra:sdk:*` keys. The hook returns `clearSdkData` too.
+- `triggerHaptic` in `useWallet` and `useWalletBridgeClient` accepts the same `typeOrPattern` as the client (a preset, a duration or a pattern).
+- The host reuses the core `Paginate` type; `HostPaginate` is removed.

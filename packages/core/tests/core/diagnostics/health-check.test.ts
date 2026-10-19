@@ -499,7 +499,7 @@ describe('Bridge Health Diagnostics Suite', () => {
         removeItem: vi.fn().mockImplementation(async () => {
           storedVal = null;
         }),
-        clear: vi.fn().mockResolvedValue(undefined),
+        clearSdkData: vi.fn().mockResolvedValue(undefined),
       };
 
       const report = await checkBridgeHealth(client, {
