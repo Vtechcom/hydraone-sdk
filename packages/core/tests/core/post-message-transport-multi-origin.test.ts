@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PostMessageTransport, type MessageEventSource, type PostMessageTarget } from '../../src';
+import { PostMessageTransport, type MessageEventTarget, type PostMessageTarget } from '../../src';
 
 const PROD = 'https://alpha.hydraone.app';
 const STAGING = 'https://staging.hydraone.app';
@@ -11,7 +11,7 @@ class MockTargetWindow implements PostMessageTarget {
   }
 }
 
-class MockSourceWindow implements MessageEventSource {
+class MockSourceWindow implements MessageEventTarget {
   public parent: unknown;
   constructor(parent?: unknown) {
     this.parent = parent ?? this;

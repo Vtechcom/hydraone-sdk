@@ -9,7 +9,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -188,19 +187,19 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
 
   const submitTx = useCallback(
-    async (txCbor: string, queryOptions?: QueryOptions): Promise<string> => {
-      return client.submitTx(txCbor, queryOptions);
+    async (txCbor: string, submitOptions?: SignOptions): Promise<string> => {
+      return client.submitTx(txCbor, submitOptions);
     },
     [client],
   );
 
   const signData = useCallback(
     async (
-      targetAddress: string,
+      address: string,
       payloadHex: string,
       signOptions?: SignOptions,
     ): Promise<DataSignature> => {
-      return client.signData(targetAddress, payloadHex, signOptions);
+      return client.signData(address, payloadHex, signOptions);
     },
     [client],
   );
@@ -213,8 +212,8 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
   );
 
   const triggerHaptic = useCallback(
-    async (type: HapticFeedbackType): Promise<void> => {
-      return client.triggerHaptic(type);
+    async (typeOrPattern?: HapticFeedbackType | number | number[]): Promise<void> => {
+      return client.triggerHaptic(typeOrPattern);
     },
     [client],
   );
@@ -245,7 +244,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (autoRefreshBalance) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === 'disconnected' || state === 'error') {
+      } else if (state === 'disconnected') {
         clearAddress();
         setBalanceADA(null);
         setBalanceLovelace(null);
@@ -256,7 +255,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     const onAccountChanged = (addrs: string[]) => {
       if (!isMountedRef.current) return;
       if (Array.isArray(addrs)) {
-        // DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
+        // WALLET_DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
         if (client.isConnected) {
           setConnectionState('connected');
           setIsConnected(true);
@@ -274,10 +273,9 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
       setNetworkId(netId);
     };
 
-    const onDisconnected = () => {
+    // Only the wallet left the host; the bridge stays connected.
+    const onWalletDisconnected = () => {
       if (!isMountedRef.current) return;
-      setConnectionState('disconnected');
-      setIsConnected(false);
       clearAddress();
       setBalanceADA(null);
       setBalanceLovelace(null);
@@ -316,7 +314,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
         if (isMountedRef.current) setTheme(newTheme);
       }),
     );
-    cleanups.push(client.on('DISCONNECTED', onDisconnected));
+    cleanups.push(client.on('WALLET_DISCONNECTED', onWalletDisconnected));
 
     // Sync current state if the client was already connected
     if (client.isConnected) {
@@ -355,6 +353,7 @@ export function useWallet(options?: UseWalletOptions): UseWalletReturn {
     client,
     connectionState,
     isConnected,
+    isWalletConnected: address !== null,
     address,
     balanceADA,
     balanceLovelace,

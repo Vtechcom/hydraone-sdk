@@ -84,6 +84,7 @@ describe('WalletBridgeClient', () => {
 
       expect(client.handshakeTimeoutMs).toBe(TIERED_TIMEOUTS.HANDSHAKE); // 3000ms
       expect(client.queryTimeoutMs).toBe(TIERED_TIMEOUTS.QUERY); // 15000ms
+      expect(client.commandTimeoutMs).toBe(TIERED_TIMEOUTS.COMMAND); // 15000ms
       expect(client.isConnected).toBe(false);
       expect(client.connectionState).toBe('disconnected');
     });
@@ -98,6 +99,18 @@ describe('WalletBridgeClient', () => {
 
       expect(client.handshakeTimeoutMs).toBe(5000);
       expect(client.queryTimeoutMs).toBe(20000);
+    });
+
+    it('keeps the device command timeout separate from the query timeout', () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({
+        transport,
+        queryTimeoutMs: 20000,
+        commandTimeoutMs: 4000,
+      });
+
+      expect(client.queryTimeoutMs).toBe(20000);
+      expect(client.commandTimeoutMs).toBe(4000);
     });
   });
 
@@ -122,7 +135,7 @@ describe('WalletBridgeClient', () => {
           hostInfo: {
             hostVersion: '1.0.0',
             network: 'preprod',
-            walletName: 'Eternl',
+            wallet: { name: 'Eternl', icon: '' },
           },
         },
         timestamp: Date.now(),
@@ -135,7 +148,7 @@ describe('WalletBridgeClient', () => {
       expect(client.hostInfo).toEqual({
         hostVersion: '1.0.0',
         network: 'preprod',
-        walletName: 'Eternl',
+        wallet: { name: 'Eternl', icon: '' },
       });
     });
 
@@ -260,17 +273,17 @@ describe('WalletBridgeClient', () => {
       await p;
     });
 
-    it('rejects queries made before connecting with ERR_NOT_CONNECTED', async () => {
+    it('rejects queries made before connecting with ERR_BRIDGE_NOT_CONNECTED', async () => {
       const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
       await expect(disconnectedClient.getChangeAddress()).rejects.toThrow(
         'Client is not connected',
       );
       await expect(disconnectedClient.getChangeAddress()).rejects.toMatchObject({
-        code: ERROR_CODES.ERR_NOT_CONNECTED,
+        code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
       });
       await expect(disconnectedClient.getBalance()).rejects.toMatchObject({
-        code: ERROR_CODES.ERR_NOT_CONNECTED,
+        code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
       });
     });
 
@@ -769,7 +782,7 @@ describe('WalletBridgeClient', () => {
 
         const pInit = client.init();
         const settled = expect(pInit).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
         client.disconnect();
 
@@ -841,7 +854,7 @@ describe('WalletBridgeClient', () => {
           type: 'HOST_ACK',
           payload: {
             requestId: sentEnvelope.id,
-            hostInfo: { walletName: 'Lace' },
+            hostInfo: { wallet: { name: 'Lace', icon: '' } },
           },
           timestamp: Date.now(),
           source: 'hydra-host',
@@ -850,7 +863,7 @@ describe('WalletBridgeClient', () => {
 
       await initPromise;
       expect(client.isConnected).toBe(true);
-      expect(client.hostInfo).toEqual({ walletName: 'Lace' });
+      expect(client.hostInfo).toEqual({ wallet: { name: 'Lace', icon: '' } });
 
       // Call getChangeAddress through PostMessageTransport
       const addrPromise = client.getChangeAddress();
@@ -891,7 +904,7 @@ describe('WalletBridgeClient', () => {
         type: 'HOST_ACK',
         payload: {
           requestId: readyMsg.id,
-          hostInfo: { walletName: 'Eternl', network: 'mainnet' },
+          hostInfo: { wallet: { name: 'Eternl', icon: '' }, network: 'mainnet' },
         },
         timestamp: Date.now(),
         source: 'hydra-host',
@@ -1350,21 +1363,21 @@ describe('WalletBridgeClient', () => {
       });
     });
 
-    describe('Not-connected state (ERR_NOT_CONNECTED)', () => {
-      it('throws ERR_NOT_CONNECTED when signTx, submitTx and signData are called before init', async () => {
+    describe('Not-connected state (ERR_BRIDGE_NOT_CONNECTED)', () => {
+      it('throws ERR_BRIDGE_NOT_CONNECTED when signTx, submitTx and signData are called before init', async () => {
         const uninitClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(uninitClient.signTx('1234')).rejects.toThrow(HydraBridgeError);
         await expect(uninitClient.signTx('1234')).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
 
         await expect(uninitClient.submitTx('1234')).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
 
         await expect(uninitClient.signData('addr', '1234')).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
       });
     });
@@ -1395,7 +1408,10 @@ describe('WalletBridgeClient', () => {
           data: {
             id: 'ack-msg',
             type: 'HOST_ACK',
-            payload: { requestId: handshakeEnvelope.id, hostInfo: { walletName: 'Eternl' } },
+            payload: {
+              requestId: handshakeEnvelope.id,
+              hostInfo: { wallet: { name: 'Eternl', icon: '' } },
+            },
             timestamp: Date.now(),
             source: 'hydra-host',
           },
@@ -1437,7 +1453,7 @@ describe('WalletBridgeClient', () => {
   describe('Running outside an iframe', () => {
     it('throws HydraTransportError (ERR_NOT_IN_IFRAME) on init() because there is no host shell', async () => {
       const transport = new SimpleMockTransport();
-      const client = new WalletBridgeClient({ transport, isIframeFn: () => false });
+      const client = new WalletBridgeClient({ transport, isInIframe: () => false });
 
       expect(client.isStandaloneBrowser()).toBe(true);
       await expect(client.init()).rejects.toThrow(HydraTransportError);
@@ -2035,14 +2051,14 @@ describe('WalletBridgeClient', () => {
         expect(lastMessage.payload).toEqual({ orientation: 'any' });
       });
 
-      it('throws ERR_NOT_CONNECTED when setOrientation is called before the client is connected', async () => {
+      it('throws ERR_BRIDGE_NOT_CONNECTED when setOrientation is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.setOrientation('landscape')).rejects.toThrow(
           HydraBridgeError,
         );
         await expect(disconnectedClient.setOrientation('landscape')).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
 
         disconnectedClient.destroy();
@@ -2085,12 +2101,12 @@ describe('WalletBridgeClient', () => {
         expect(vi.getTimerCount()).toBe(0);
       });
 
-      it('throws ERR_NOT_CONNECTED when unlockOrientation is called before the client is connected', async () => {
+      it('throws ERR_BRIDGE_NOT_CONNECTED when unlockOrientation is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.unlockOrientation()).rejects.toThrow(HydraBridgeError);
         await expect(disconnectedClient.unlockOrientation()).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
 
         disconnectedClient.destroy();
@@ -2184,12 +2200,12 @@ describe('WalletBridgeClient', () => {
         });
       });
 
-      it('throws ERR_NOT_CONNECTED when triggerHaptic is called before the client is connected', async () => {
+      it('throws ERR_BRIDGE_NOT_CONNECTED when triggerHaptic is called before the client is connected', async () => {
         const disconnectedClient = new WalletBridgeClient({ transport: new SimpleMockTransport() });
 
         await expect(disconnectedClient.triggerHaptic('medium')).rejects.toThrow(HydraBridgeError);
         await expect(disconnectedClient.triggerHaptic('medium')).rejects.toMatchObject({
-          code: ERROR_CODES.ERR_NOT_CONNECTED,
+          code: ERROR_CODES.ERR_BRIDGE_NOT_CONNECTED,
         });
 
         disconnectedClient.destroy();
@@ -2252,7 +2268,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2298,7 +2314,7 @@ describe('WalletBridgeClient', () => {
 
         const run = async (debug: boolean) => {
           const logger = { warn: vi.fn(), error: vi.fn() };
-          const c = new WalletBridgeClient({ transport, isIframeFn: () => false, debug, logger });
+          const c = new WalletBridgeClient({ transport, isInIframe: () => false, debug, logger });
           await c.triggerHaptic('light');
           c.destroy();
           return logger;
@@ -2339,7 +2355,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
           debug: true,
         });
         const p = standaloneClient.init();
@@ -2385,7 +2401,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2433,7 +2449,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
         });
         const p = standaloneClient.init();
         transport.simulateIncoming({
@@ -2481,7 +2497,7 @@ describe('WalletBridgeClient', () => {
         let isIframe = true;
         const standaloneClient = new WalletBridgeClient({
           transport,
-          isIframeFn: () => isIframe,
+          isInIframe: () => isIframe,
           debug: true,
         });
         const p = standaloneClient.init();
@@ -2531,7 +2547,7 @@ describe('WalletBridgeClient', () => {
         // Client runs standalone outside an iframe and does NOT call init()
         const standaloneClient = new WalletBridgeClient({
           transport: new SimpleMockTransport(),
-          isIframeFn: () => false,
+          isInIframe: () => false,
         });
 
         expect(standaloneClient.isStandaloneBrowser()).toBe(true);
@@ -2604,20 +2620,43 @@ describe('WalletBridgeClient', () => {
         type: 'HOST_ACK',
         payload: {
           requestId: readyMsg.id,
-          hostInfo: { hostVersion: '1.0.0', network: 'mainnet', walletName: 'Lace' },
+          hostInfo: {
+            hostVersion: '1.0.0',
+            network: 'mainnet',
+            wallet: { name: 'Lace', icon: '' },
+          },
         },
         timestamp: Date.now(),
         source: 'hydra-host',
       });
 
-      // On disconnect(), the pending handshake request is rejected with ERR_NOT_CONNECTED
+      // On disconnect(), the pending handshake request is rejected with ERR_BRIDGE_NOT_CONNECTED
       await expect(initPromise).rejects.toThrow('Client has been disconnected');
       // State must remain disconnected and not be overwritten with connected
       expect(client.connectionState).toBe('disconnected');
       expect(client.isConnected).toBe(false);
     });
 
-    it('activeWalletName falls back to hostInfo.walletName when running inside an iframe', async () => {
+    it('hostName reads hostInfo.hostName from the handshake', async () => {
+      const transport = new SimpleMockTransport();
+      const client = new WalletBridgeClient({ transport });
+      expect(client.hostName).toBeUndefined();
+
+      const initPromise = client.init();
+      const readyMsg = transport.sentMessages[0];
+      transport.simulateIncoming({
+        id: 'ack-1',
+        type: 'HOST_ACK',
+        payload: { requestId: readyMsg.id, hostInfo: { hostName: 'HydraOne Host' } },
+        timestamp: Date.now(),
+        source: 'hydra-host',
+      });
+      await initPromise;
+
+      expect(client.hostName).toBe('HydraOne Host');
+    });
+
+    it('activeWalletName falls back to hostInfo.wallet.name when running inside an iframe', async () => {
       const transport = new SimpleMockTransport();
       const client = new WalletBridgeClient({ transport });
 
@@ -2628,7 +2667,11 @@ describe('WalletBridgeClient', () => {
         type: 'HOST_ACK',
         payload: {
           requestId: readyMsg.id,
-          hostInfo: { hostVersion: '1.0.0', network: 'mainnet', walletName: 'Eternl' },
+          hostInfo: {
+            hostVersion: '1.0.0',
+            network: 'mainnet',
+            wallet: { name: 'Eternl', icon: '' },
+          },
         },
         timestamp: Date.now(),
         source: 'hydra-host',

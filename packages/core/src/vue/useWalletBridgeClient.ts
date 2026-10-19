@@ -1,5 +1,6 @@
 import {
   ref,
+  computed,
   inject,
   hasInjectionContext,
   onScopeDispose,
@@ -14,7 +15,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -81,6 +81,7 @@ export function useWalletBridgeClient(
   const connectionState = ref<ConnectionState>(client.connectionState);
   const isConnected = ref<boolean>(client.isConnected);
   const address = ref<string | null>(null);
+  const isWalletConnected = computed(() => address.value !== null);
   const balanceADA = ref<string | null>(null);
   const balanceLovelace = ref<bigint | null>(null);
   const networkId = ref<number | null>(null);
@@ -144,7 +145,7 @@ export function useWalletBridgeClient(
       balanceADA.value = null;
       balanceLovelace.value = null;
       // The game can connect before the player connects a wallet in the host: that is a state, not an error.
-      if (errorCode(err) === ERROR_CODES.ERR_NOT_CONNECTED) {
+      if (errorCode(err) === ERROR_CODES.ERR_WALLET_NOT_CONNECTED) {
         clearBalanceError();
       } else {
         error.value = balanceError = err instanceof Error ? err : new Error(String(err));
@@ -167,7 +168,7 @@ export function useWalletBridgeClient(
         if (options?.autoRefreshBalance !== false) {
           refreshBalance().catch(() => {});
         }
-      } else if (state === 'disconnected' || state === 'error') {
+      } else if (state === 'disconnected') {
         clearAddress();
         balanceADA.value = null;
         balanceLovelace.value = null;
@@ -176,7 +177,7 @@ export function useWalletBridgeClient(
 
     const onAccountChanged = (addrs: string[]) => {
       if (Array.isArray(addrs)) {
-        // DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
+        // WALLET_DISCONNECTED only reflects the host wallet; the bridge stays up, so a new account reconnects.
         if (client.isConnected) {
           connectionState.value = 'connected';
           isConnected.value = true;
@@ -193,9 +194,8 @@ export function useWalletBridgeClient(
       networkId.value = netId;
     };
 
-    const onDisconnected = () => {
-      connectionState.value = 'disconnected';
-      isConnected.value = false;
+    // Only the wallet left the host; the bridge stays connected.
+    const onWalletDisconnected = () => {
       clearAddress();
       balanceADA.value = null;
       balanceLovelace.value = null;
@@ -232,7 +232,7 @@ export function useWalletBridgeClient(
         theme.value = newTheme;
       }),
     );
-    cleanups.push(client.on('DISCONNECTED', onDisconnected));
+    cleanups.push(client.on('WALLET_DISCONNECTED', onWalletDisconnected));
 
     // Sync current state if the client was already connected
     if (client.isConnected) {
@@ -300,12 +300,12 @@ export function useWalletBridgeClient(
   };
 
   const signTx = async (
-    tx: string,
+    txCbor: string,
     partialSignOrOptions?: boolean | SignTxOptions,
     signOptions?: SignTxOptions,
   ): Promise<string> => {
     try {
-      return await client.signTx(tx, partialSignOrOptions, signOptions);
+      return await client.signTx(txCbor, partialSignOrOptions, signOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
@@ -313,9 +313,9 @@ export function useWalletBridgeClient(
     }
   };
 
-  const submitTx = async (tx: string, queryOptions?: QueryOptions): Promise<string> => {
+  const submitTx = async (txCbor: string, submitOptions?: SignOptions): Promise<string> => {
     try {
-      return await client.submitTx(tx, queryOptions);
+      return await client.submitTx(txCbor, submitOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
@@ -324,12 +324,12 @@ export function useWalletBridgeClient(
   };
 
   const signData = async (
-    addr: string,
-    payload: string,
+    address: string,
+    payloadHex: string,
     signOptions?: SignOptions,
   ): Promise<DataSignature> => {
     try {
-      return await client.signData(addr, payload, signOptions);
+      return await client.signData(address, payloadHex, signOptions);
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       error.value = errObj;
@@ -341,8 +341,10 @@ export function useWalletBridgeClient(
     return client.setOrientation(orientation);
   };
 
-  const triggerHaptic = async (type: HapticFeedbackType): Promise<void> => {
-    return client.triggerHaptic(type);
+  const triggerHaptic = async (
+    typeOrPattern?: HapticFeedbackType | number | number[],
+  ): Promise<void> => {
+    return client.triggerHaptic(typeOrPattern);
   };
 
   // 8. Auto-connect on mount (only inside component setup, on the client)
@@ -361,6 +363,7 @@ export function useWalletBridgeClient(
     client,
     connectionState,
     isConnected,
+    isWalletConnected,
     address,
     balanceADA,
     balanceLovelace,

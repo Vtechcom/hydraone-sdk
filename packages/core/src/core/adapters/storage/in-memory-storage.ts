@@ -44,10 +44,10 @@ export class InMemoryStorageAdapter implements IStorage {
   }
 
   /**
-   * Selective clear: removes only keys with the `hydra:sdk:*` prefix.
+   * Selective clearSdkData: removes only keys with the `hydra:sdk:*` prefix.
    * Game-owned keys without the SDK prefix are preserved.
    */
-  async clear(): Promise<void> {
+  async clearSdkData(): Promise<void> {
     for (const key of Array.from(this.store.keys())) {
       if (isSdkStorageKey(key)) {
         this.store.delete(key);

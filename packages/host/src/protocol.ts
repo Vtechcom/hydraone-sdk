@@ -1,14 +1,15 @@
+import { ERROR_CODES } from '@hydraone-sdk/core';
 import type { BridgeMessage, Utxo } from '@hydraone-sdk/core';
 
-/** Error codes a host answers with in `RPC_ERROR`. */
+/** Error codes a host answers with in `RPC_ERROR`. Shared codes come from the core `ERROR_CODES`. */
 export const HOST_ERROR_CODES = {
-  ERR_USER_REJECTED: 'ERR_USER_REJECTED',
-  ERR_NOT_CONNECTED: 'ERR_NOT_CONNECTED',
-  ERR_INVALID_PARAMS: 'ERR_INVALID_PARAMS',
-  ERR_STORAGE_UNAVAILABLE: 'ERR_STORAGE_UNAVAILABLE',
-  /** The host does not implement this request type; the SDK may fall back to an older request. */
+  ERR_USER_REJECTED: ERROR_CODES.ERR_USER_REJECTED,
+  ERR_WALLET_NOT_CONNECTED: ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
+  ERR_INVALID_PARAMS: ERROR_CODES.ERR_INVALID_PARAMS,
+  ERR_STORAGE_UNAVAILABLE: ERROR_CODES.ERR_STORAGE_UNAVAILABLE,
+  ERR_RPC_FAILED: ERROR_CODES.ERR_RPC_FAILED,
+  /** The host does not implement this request type; the SDK may fall back to an older request. Host-only. */
   ERR_UNSUPPORTED_METHOD: 'ERR_UNSUPPORTED_METHOD',
-  ERR_RPC_FAILED: 'ERR_RPC_FAILED',
 } as const;
 
 /** Error a request handler throws to answer with a specific `RPC_ERROR` code. */

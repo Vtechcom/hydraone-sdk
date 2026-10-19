@@ -74,7 +74,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 | `queryTimeoutMs`     | `number`             | `15000`            | Default timeout for wallet state queries.                                                               |
 | `signingTimeoutMs`   | `number`             | `120000`           | Default timeout for signing and submitting, which wait for the user.                                    |
 | `autoConnect`        | `boolean`            | `false`            | Run the handshake as soon as the client is constructed.                                                 |
-| `isIframeFn`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
+| `isInIframe`         | `() => boolean`      | built-in detection | Custom iframe detection, mainly for tests.                                                              |
 | `debug`              | `boolean`            | `false`            | Emit warnings through the logger.                                                                       |
 | `logger`             | `Logger`             | `console`          | Destination for debug output. See [Logging](https://developers.hydraone.app/guides/logging-debugging).  |
 
@@ -84,7 +84,7 @@ Inside the App Center iframe the client talks to the host shell. Outside an ifra
 | ------------------- | -------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `appCenterOrigin`   | `string \| string[]` | required                                | Exact origin of the host shell, or a list of origins. A wildcard `'*'` is rejected when `env` is `production`. |
 | `targetWindow`      | `PostMessageTarget`  | `window.parent`                         | Window that receives outgoing messages.                                                                        |
-| `sourceWindow`      | `MessageEventSource` | `window`                                | Window that emits incoming message events.                                                                     |
+| `sourceWindow`      | `MessageEventTarget` | `window`                                | Window that emits incoming message events.                                                                     |
 | `env`               | `string`             | `process.env.NODE_ENV` or `development` | Runtime environment used for the wildcard check.                                                               |
 | `checkIframeSource` | `boolean`            | `true`                                  | Verify `event.source === window.parent` when inside an iframe.                                                 |
 | `defaultTimeoutMs`  | `number`             | `15000`                                 | Default response timeout for requests.                                                                         |
@@ -173,7 +173,7 @@ export function App() {
 }
 ```
 
-Also exported: `useHostStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](https://developers.hydraone.app/guides/react-nextjs).
+Also exported: `useStorage`, `useHydraOneContext`, `HydraOneContext`. See the [React guide](https://developers.hydraone.app/guides/react-nextjs).
 
 ### Vue and Nuxt
 
@@ -230,18 +230,20 @@ export function embedGames(wallet: HostWalletAdapter) {
 
 Every error thrown by the SDK is a `HydraBridgeError` with a stable `code`:
 
-| Code                      | Class                    | Meaning                                                                         |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
-| `ERR_TIMEOUT`             | `HydraTimeoutError`      | A request or the handshake exceeded its timeout.                                |
-| `ERR_USER_REJECTED`       | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
-| `ERR_NOT_IN_IFRAME`       | `HydraTransportError`    | No host shell found, or the page is not inside an iframe.                       |
-| `ERR_UNTRUSTED_ORIGIN`    | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
-| `ERR_STORAGE_UNAVAILABLE` | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
-| `ERR_NOT_CONNECTED`       | `HydraBridgeError`       | The client is not connected, was destroyed, or no wallet address is available.  |
-| `ERR_INVALID_PARAMS`      | `HydraBridgeError`       | An argument failed validation.                                                  |
-| `ERR_INVALID_RESPONSE`    | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
+| Code                       | Class                    | Meaning                                                                         |
+| -------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `ERR_TIMEOUT`              | `HydraTimeoutError`      | A request or the handshake exceeded its timeout.                                |
+| `ERR_USER_REJECTED`        | `HydraUserRejectedError` | The user rejected a wallet prompt.                                              |
+| `ERR_NOT_IN_IFRAME`        | `HydraTransportError`    | The page is not inside an iframe, so there is no host shell.                    |
+| `ERR_TRANSPORT_FAILED`     | `HydraTransportError`    | Default transport failure when no more specific code applies.                   |
+| `ERR_UNTRUSTED_ORIGIN`     | `HydraSecurityError`     | A message failed the origin check, or a wildcard origin was used in production. |
+| `ERR_STORAGE_UNAVAILABLE`  | `HydraStorageError`      | Storage is blocked or the host relay is unreachable.                            |
+| `ERR_BRIDGE_NOT_CONNECTED` | `HydraBridgeError`       | `init()` has not completed, or the client was disconnected or destroyed.        |
+| `ERR_WALLET_NOT_CONNECTED` | `HydraBridgeError`       | Sent by the host: no wallet is connected in the host.                           |
+| `ERR_INVALID_PARAMS`       | `HydraBridgeError`       | An argument failed validation.                                                  |
+| `ERR_INVALID_RESPONSE`     | `HydraBridgeError`       | The host answered with a value of the wrong shape.                              |
 
-Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED`, `ERR_UNSUPPORTED_METHOD`. Details are in [Error handling](https://developers.hydraone.app/reference/errors).
+Additional codes: `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED`, `ERR_RPC_FAILED` (all in `ERROR_CODES`), and `ERR_UNSUPPORTED_METHOD` (sent by hosts). Details are in [Error handling](https://developers.hydraone.app/reference/errors).
 
 ## Logging and debugging
 

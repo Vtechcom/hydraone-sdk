@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { HydraOneProvider } from '../../src/react/context';
-import { useHostStorage } from '../../src/react/useHostStorage';
+import { useStorage } from '../../src/react/useStorage';
 import { InMemoryStorageAdapter } from '../../src/core/adapters/storage';
 
-describe('useHostStorage hook', () => {
+describe('useStorage hook', () => {
   let storage: InMemoryStorageAdapter;
 
   beforeEach(() => {
@@ -20,9 +20,7 @@ describe('useHostStorage hook', () => {
   );
 
   it('works inside HydraOneProvider', async () => {
-    const { result } = renderHook(() => useHostStorage(), { wrapper });
-
-    expect(result.current.isAvailable).toBe(true);
+    const { result } = renderHook(() => useStorage(), { wrapper });
 
     await act(async () => {
       await result.current.setItem('hydra:sdk:session:color', 'blue');
@@ -40,7 +38,7 @@ describe('useHostStorage hook', () => {
   });
 
   it('clears everything with clear()', async () => {
-    const { result } = renderHook(() => useHostStorage(), { wrapper });
+    const { result } = renderHook(() => useStorage(), { wrapper });
 
     await act(async () => {
       await result.current.setItem('hydra:sdk:k1', 'v1');
@@ -51,7 +49,7 @@ describe('useHostStorage hook', () => {
     expect(await result.current.getItem('hydra:sdk:k2')).toBe('v2');
 
     await act(async () => {
-      await result.current.clear();
+      await result.current.clearSdkData();
     });
 
     expect(await result.current.getItem('hydra:sdk:k1')).toBeNull();
@@ -60,7 +58,7 @@ describe('useHostStorage hook', () => {
 
   it('works outside a provider when a storage option is passed', async () => {
     const customStorage = new InMemoryStorageAdapter();
-    const { result } = renderHook(() => useHostStorage({ storage: customStorage }));
+    const { result } = renderHook(() => useStorage({ storage: customStorage }));
 
     expect(result.current.storage).toBe(customStorage);
     await act(async () => {
@@ -71,9 +69,8 @@ describe('useHostStorage hook', () => {
   });
 
   it('falls back safely outside a provider when no storage is passed', async () => {
-    const { result } = renderHook(() => useHostStorage());
+    const { result } = renderHook(() => useStorage());
 
-    expect(result.current.isAvailable).toBe(true);
     await act(async () => {
       await result.current.setItem('hydra:sdk:standalone', 'ok');
     });

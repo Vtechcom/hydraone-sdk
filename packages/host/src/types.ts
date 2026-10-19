@@ -1,10 +1,11 @@
 import type { BalanceAsset, ThemeMode, Utxo } from '@hydraone-sdk/core';
 
-export type HostPaginate = { page: number; limit: number };
 export type HostRequestPayload = Record<string, unknown>;
 
 /** Subset of a CIP-30 wallet API the host forwards to when an extension wallet is active. */
 export interface HostExtensionWallet {
+  /** Display name of the wallet (for example 'Eternl'); shown to embedded apps as the wallet name. */
+  name?: string;
   icon?: string;
   getUsedAddresses(): Promise<string[]>;
   getUnusedAddresses(): Promise<string[]>;
@@ -23,12 +24,12 @@ export interface HostExtensionWallet {
 export interface HostWalletAdapter {
   isConnected(): boolean;
   /** Bech32 address of the connected wallet, or null. */
-  getAddress(): string | null;
+  getChangeAddress(): string | null;
   /** The active CIP-30 extension, or null for embedded / no wallet. */
-  getExtension(): HostExtensionWallet | null;
+  getCip30Wallet(): HostExtensionWallet | null;
   isEmbedded(): boolean;
   getNetworkId(): Promise<number | null>;
-  fetchAssets(): Promise<BalanceAsset[]>;
+  fetchBalance(): Promise<BalanceAsset[]>;
   fetchUtxos(): Promise<Utxo[]>;
   submitTx(cbor: string): Promise<string | null | undefined>;
   /** Signing for wallets that are not a CIP-30 extension (embedded wallet). */
@@ -84,12 +85,12 @@ export interface Host {
   unregisterIframe(target: Window): void;
   /** Pushes a host event (`ACCOUNT_CHANGED`, `THEME_CHANGED`, `LANGUAGE_CHANGED`, ...) to every embedded app. */
   notify(type: string, payload?: unknown): void;
-  /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/DISCONNECTED events. */
+  /** Call when the wallet address changes; sends the matching NETWORK/ACCOUNT/WALLET_DISCONNECTED events. */
   handleAddressChange(
     newAddress: string | null | undefined,
     oldAddress: string | null | undefined,
   ): Promise<void>;
-  handleConnectionChange(connected: boolean): void;
+  handleWalletConnectionChange(connected: boolean): void;
   /** Notifies every embedded app that the UI language changed (BCP-47 tag such as `'en'` or `'vi'`). */
   setLanguage(language: string): void;
   /** Registers or overrides a request handler at runtime; `null` removes it. */

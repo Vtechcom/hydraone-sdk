@@ -19,11 +19,11 @@ const WALLET_ADDRESS = addressToBech32(BASE_1);
 function makeWallet(overrides: Partial<HostWalletAdapter> = {}): HostWalletAdapter {
   return {
     isConnected: () => true,
-    getAddress: () => WALLET_ADDRESS,
-    getExtension: () => null,
+    getChangeAddress: () => WALLET_ADDRESS,
+    getCip30Wallet: () => null,
     isEmbedded: () => true,
     getNetworkId: async () => 0,
-    fetchAssets: async () => [{ unit: 'lovelace', quantity: '10000000' }],
+    fetchBalance: async () => [{ unit: 'lovelace', quantity: '10000000' }],
     fetchUtxos: async () => [],
     submitTx: async () => 'hash',
     signTx: async () => 'witness',
@@ -124,10 +124,10 @@ describe('createHost', () => {
     ]);
   });
 
-  it('returns ERR_NOT_CONNECTED when disconnected', async () => {
+  it('returns ERR_WALLET_NOT_CONNECTED when disconnected', async () => {
     const { send, app } = setup(makeWallet({ isConnected: () => false }));
     await send('GET_CHANGE_ADDRESS');
-    expect(app.postMessage.mock.calls[0]![0].payload.error.code).toBe('ERR_NOT_CONNECTED');
+    expect(app.postMessage.mock.calls[0]![0].payload.error.code).toBe('ERR_WALLET_NOT_CONNECTED');
   });
 
   it('lets the app override a handler', async () => {
@@ -151,14 +151,14 @@ describe('createHost client compatibility', () => {
     expect(app.postMessage.mock.calls[0]![0].payload.result).toBeNull();
   });
 
-  it('sends DISCONNECTED once when address and connection both change', async () => {
+  it('sends WALLET_DISCONNECTED once when address and connection both change', async () => {
     const { host, app, send } = setup();
     await send('PING');
     app.postMessage.mockClear();
     await host.handleAddressChange(null, 'addr_test1q');
-    host.handleConnectionChange(false);
+    host.handleWalletConnectionChange(false);
     const types = app.postMessage.mock.calls.map((c) => c[0].type);
-    expect(types).toEqual(['DISCONNECTED']);
+    expect(types).toEqual(['WALLET_DISCONNECTED']);
   });
 
   it('reports hostInfo with the fields the client reads', async () => {
@@ -166,9 +166,10 @@ describe('createHost client compatibility', () => {
     await send('CLIENT_READY');
     const info = app.postMessage.mock.calls[0]![0].payload.hostInfo;
     expect(info).toMatchObject({
+      hostName: 'HydraOne Host',
       network: 'preprod',
       theme: 'dark',
-      walletName: 'HydraOne Wallet',
+      wallet: { name: 'HydraOne Wallet', icon: '' },
     });
   });
 });
@@ -255,7 +256,7 @@ describe('createHost extension wallet and submit', () => {
       submitTx: vi.fn(async () => 'ext-hash'),
       signData: vi.fn(async () => ({})),
     };
-    const { send, app } = setup(makeWallet({ getExtension: () => extension as never }));
+    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension as never }));
     await send('GET_CHANGE_ADDRESS');
     await send('SUBMIT_TX', { cbor: 'aa' });
     expect(app.postMessage.mock.calls[0]![0].payload.result).toBe('addr_change');
@@ -305,14 +306,14 @@ describe('createHost host storage', () => {
 });
 
 describe('createHost events', () => {
-  it('re-arms DISCONNECTED after a reconnect', () => {
+  it('re-arms WALLET_DISCONNECTED after a reconnect', () => {
     const { host, app } = setup();
     host.registerIframe(app as unknown as Window, 'https://g.hydraone.app');
-    host.handleConnectionChange(false);
-    host.handleConnectionChange(true);
-    host.handleConnectionChange(false);
+    host.handleWalletConnectionChange(false);
+    host.handleWalletConnectionChange(true);
+    host.handleWalletConnectionChange(false);
     const types = app.postMessage.mock.calls.map((c) => c[0].type);
-    expect(types.filter((t) => t === 'DISCONNECTED')).toHaveLength(2);
+    expect(types.filter((t) => t === 'WALLET_DISCONNECTED')).toHaveLength(2);
   });
 
   it('still sends ACCOUNT_CHANGED when getNetworkId rejects', async () => {
@@ -351,13 +352,13 @@ describe('createHost CIP-30 address lists', () => {
   });
 
   it('forwards GET_USED_ADDRESSES to the extension with pagination', async () => {
-    const { send, app } = setup(makeWallet({ getExtension: () => extension() as never }));
+    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension() as never }));
     await send('GET_USED_ADDRESSES', { paginate: { page: 1, limit: 2 } });
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);
   });
 
   it('forwards GET_UNUSED_ADDRESSES and GET_REWARD_ADDRESSES to the extension', async () => {
-    const { send, app } = setup(makeWallet({ getExtension: () => extension() as never }));
+    const { send, app } = setup(makeWallet({ getCip30Wallet: () => extension() as never }));
     await send('GET_UNUSED_ADDRESSES');
     await send('GET_REWARD_ADDRESSES');
     expect(app.postMessage.mock.calls[0]![0].payload.result).toEqual([BASE_3]);

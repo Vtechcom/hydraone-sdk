@@ -1,11 +1,10 @@
-import type { Ref } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
 import type {
   ConnectionState,
   HostInfo,
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -46,14 +45,19 @@ export interface UseWalletBridgeClientReturn {
   client: WalletBridgeClient;
 
   /**
-   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected')
    */
   connectionState: Ref<ConnectionState>;
 
   /**
-   * true once the client has connected to the host
+   * true once the bridge handshake with the host has completed
    */
   isConnected: Ref<boolean>;
+
+  /**
+   * true while the host reports a connected wallet (a change address is known)
+   */
+  isWalletConnected: ComputedRef<boolean>;
 
   /**
    * Change address of the wallet (bech32), or null when not connected
@@ -118,7 +122,7 @@ export interface UseWalletBridgeClientReturn {
   refreshBalance: () => Promise<string>;
 
   /**
-   * Refreshes the wallet address (getAddress)
+   * Refreshes the wallet address (getChangeAddress)
    */
   refreshAddress: () => Promise<string | null>;
 
@@ -126,7 +130,7 @@ export interface UseWalletBridgeClientReturn {
    * Asks the wallet to sign a transaction (signTx)
    */
   signTx: (
-    tx: string,
+    txCbor: string,
     partialSignOrOptions?: boolean | SignTxOptions,
     options?: SignTxOptions,
   ) => Promise<string>;
@@ -134,12 +138,12 @@ export interface UseWalletBridgeClientReturn {
   /**
    * Asks the host or wallet to submit a transaction to the Cardano network
    */
-  submitTx: (tx: string, options?: QueryOptions) => Promise<string>;
+  submitTx: (txCbor: string, options?: SignOptions) => Promise<string>;
 
   /**
    * Signs data following CIP-8
    */
-  signData: (addr: string, payload: string, options?: SignOptions) => Promise<DataSignature>;
+  signData: (address: string, payloadHex: string, options?: SignOptions) => Promise<DataSignature>;
 
   /**
    * Asks the Host Shell to lock the screen orientation
@@ -149,5 +153,5 @@ export interface UseWalletBridgeClientReturn {
   /**
    * Triggers haptic feedback through the Host Shell
    */
-  triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
+  triggerHaptic: (typeOrPattern?: HapticFeedbackType | number | number[]) => Promise<void>;
 }

@@ -5,7 +5,6 @@ import type {
   ThemeMode,
   SignOptions,
   SignTxOptions,
-  QueryOptions,
   DataSignature,
   OrientationLockType,
   HapticFeedbackType,
@@ -35,7 +34,7 @@ export interface HydraOneContextValue {
 }
 
 /**
- * Props cho component HydraOneProvider
+ * Props for the HydraOneProvider component
  */
 export interface HydraOneProviderProps {
   /**
@@ -111,14 +110,19 @@ export interface UseWalletReturn {
   client: WalletBridgeClient;
 
   /**
-   * Current connection state of the client ('disconnected' | 'connecting' | 'connected' | 'error')
+   * Current connection state of the client ('disconnected' | 'connecting' | 'connected')
    */
   connectionState: ConnectionState;
 
   /**
-   * true once the client has connected to the host
+   * true once the bridge handshake with the host has completed
    */
   isConnected: boolean;
+
+  /**
+   * true while the host reports a connected wallet (a change address is known)
+   */
+  isWalletConnected: boolean;
 
   /**
    * Change address of the wallet (bech32), or null when not connected
@@ -182,7 +186,7 @@ export interface UseWalletReturn {
   /**
    * Submits a signed transaction to the Cardano network through the wallet
    */
-  submitTx: (txCbor: string, options?: QueryOptions) => Promise<string>;
+  submitTx: (txCbor: string, options?: SignOptions) => Promise<string>;
 
   /**
    * Signs an authentication message following CIP-8
@@ -197,13 +201,13 @@ export interface UseWalletReturn {
   /**
    * Triggers haptic feedback on a mobile device
    */
-  triggerHaptic: (type: HapticFeedbackType) => Promise<void>;
+  triggerHaptic: (typeOrPattern?: HapticFeedbackType | number | number[]) => Promise<void>;
 }
 
 /**
- * Options for the useHostStorage hook
+ * Options for the useStorage hook
  */
-export interface UseHostStorageOptions {
+export interface UseStorageOptions {
   /**
    * Custom IStorage instance
    */
@@ -211,18 +215,13 @@ export interface UseHostStorageOptions {
 }
 
 /**
- * Value returned by the useHostStorage hook
+ * Value returned by the useStorage hook
  */
-export interface UseHostStorageReturn {
+export interface UseStorageReturn {
   /**
    * IStorage instance in use
    */
   storage: IStorage;
-
-  /**
-   * true when storage is available
-   */
-  isAvailable: boolean;
 
   /**
    * Reads the stored string value for a key
@@ -242,5 +241,5 @@ export interface UseHostStorageReturn {
   /**
    * Removes every key in the SDK namespace
    */
-  clear: () => Promise<void>;
+  clearSdkData: () => Promise<void>;
 }

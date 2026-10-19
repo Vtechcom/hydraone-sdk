@@ -91,11 +91,11 @@ function connect(options: { extension?: HostExtensionWallet | null; language?: s
   const extension = options.extension === undefined ? makeExtension() : options.extension;
   const wallet: HostWalletAdapter = {
     isConnected: () => address !== null,
-    getAddress: () => address,
-    getExtension: () => extension,
+    getChangeAddress: () => address,
+    getCip30Wallet: () => extension,
     isEmbedded: () => extension === null,
     getNetworkId: async () => 0,
-    fetchAssets: async () => [{ unit: 'lovelace', quantity: '12500000' }],
+    fetchBalance: async () => [{ unit: 'lovelace', quantity: '12500000' }],
     fetchUtxos: async () => [],
     submitTx: async () => 'embedded-hash',
     signTx: async () => `a10081825820${'ab'.repeat(32)}5840${'cd'.repeat(64)}`,
@@ -116,7 +116,7 @@ function connect(options: { extension?: HostExtensionWallet | null; language?: s
     targetWindow: toHost,
     sourceWindow: gameWin as never,
   });
-  client = new WalletBridgeClient({ transport, isIframeFn: () => true });
+  client = new WalletBridgeClient({ transport, isInIframe: () => true });
   return {
     client,
     host,
@@ -200,18 +200,18 @@ describe('game <-> host bridge over postMessage', () => {
       timestamp: Date.now(),
       source: 'hydra-client',
     } as unknown as BridgeMessage;
-    await expect(client['executeRpc'](msg, 1000)).rejects.toMatchObject({
+    await expect(client['sendRequest'](msg, 1000)).rejects.toMatchObject({
       code: 'ERR_UNSUPPORTED_METHOD',
     });
   });
 
-  it('surfaces ERR_NOT_CONNECTED when the host wallet disconnects, then recovers on a new account', async () => {
+  it('surfaces ERR_WALLET_NOT_CONNECTED when the host wallet disconnects, then recovers on a new account', async () => {
     const { client, setAddress } = connect();
     await client.init();
     await setAddress(null);
     await tick();
     await expect(client.getChangeAddress()).rejects.toMatchObject({
-      code: ERROR_CODES.ERR_NOT_CONNECTED,
+      code: ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
     });
 
     const accounts: unknown[] = [];

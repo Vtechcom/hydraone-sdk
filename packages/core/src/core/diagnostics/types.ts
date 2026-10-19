@@ -133,7 +133,7 @@ export interface StorageCheckOptions {
   /**
    * Name of the temporary test key (default: random, prefixed hydra:sdk:diag:test_*)
    */
-  customKey?: string;
+  testKey?: string;
 
   /**
    * Custom storage adapter to check (default: LocalStorage and HostStorageRelay via the client)
@@ -148,7 +148,7 @@ export interface CheckHealthOptions extends LatencyCheckOptions, StorageCheckOpt
   /**
    * Skip the iframe sandbox check
    */
-  skipIframeCheck?: boolean;
+  skipSandboxCheck?: boolean;
 
   /**
    * Skip the postMessage latency check

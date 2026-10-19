@@ -226,12 +226,12 @@ function requireApi(): Cip30Api {
 
 const wallet: HostWalletAdapter = {
   isConnected: () => connected.value,
-  getAddress: () => address.value,
-  getExtension: () =>
+  getChangeAddress: () => address.value,
+  getCip30Wallet: () =>
     api.value ? toHostExtension(api.value, activeWallet.value?.icon ?? '') : null,
   isEmbedded: () => false,
   getNetworkId: async () => (api.value ? api.value.getNetworkId() : null),
-  fetchAssets: async () => decodeValue(await requireApi().getBalance()),
+  fetchBalance: async () => decodeValue(await requireApi().getBalance()),
   fetchUtxos: async () => ((await requireApi().getUtxos()) ?? []).map(decodeUtxo),
   // Only used for non-extension wallets; with an extension the host calls it directly.
   submitTx: (cbor) => requireApi().submitTx(cbor),
@@ -274,7 +274,7 @@ async function connectWallet(key: string) {
     api.value = cip30;
     networkId.value = nextNetwork;
     address.value = nextAddress;
-    host?.handleConnectionChange(true);
+    host?.handleWalletConnectionChange(true);
     await host?.handleAddressChange(nextAddress, previous);
     await refreshBalance(cip30).catch(() => undefined);
     startPolling();
@@ -283,7 +283,7 @@ async function connectWallet(key: string) {
       (err as { info?: string; message?: string }).info ?? (err as Error).message ?? String(err);
     forgetWallet();
     resetWallet();
-    if (previous) host?.handleConnectionChange(false);
+    if (previous) host?.handleWalletConnectionChange(false);
   } finally {
     connecting.value = null;
   }
@@ -292,7 +292,7 @@ async function connectWallet(key: string) {
 function disconnectWallet() {
   forgetWallet();
   resetWallet();
-  host?.handleConnectionChange(false);
+  host?.handleWalletConnectionChange(false);
 }
 
 async function poll(cip30: Cip30Api) {

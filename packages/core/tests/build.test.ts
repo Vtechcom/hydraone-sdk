@@ -48,7 +48,7 @@ describe('Build Output Verification', () => {
     const reactEsmContent = fs.readFileSync(reactEsm, 'utf-8');
     expect(reactEsmContent).toContain('HydraOneProvider');
     expect(reactEsmContent).toContain('useWallet');
-    expect(reactEsmContent).toContain('useHostStorage');
+    expect(reactEsmContent).toContain('useStorage');
     expect(reactEsmContent).toContain('lovelaceFromAssets');
     // react must stay an external peer dependency and not be bundled into dist/react/index.js
     expect(reactEsmContent).toMatch(/from ["']react["']/);

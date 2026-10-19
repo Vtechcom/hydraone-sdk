@@ -45,7 +45,7 @@ class MockStorage implements IStorage {
     this.map.delete(key);
   }
 
-  async clear(): Promise<void> {
+  async clearSdkData(): Promise<void> {
     this.map.clear();
   }
 }
@@ -150,7 +150,7 @@ describe('Abstract Ports Verification', () => {
       await storage.setItem('key1', 'value1');
       await storage.setItem('key2', 'value2');
 
-      await storage.clear();
+      await storage.clearSdkData();
 
       expect(await storage.getItem('key1')).toBeNull();
       expect(await storage.getItem('key2')).toBeNull();

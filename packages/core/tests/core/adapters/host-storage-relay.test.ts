@@ -11,7 +11,7 @@ import {
   type MessageHandler,
   type UnsubscribeFn,
   type PostMessageTarget,
-  type MessageEventSource,
+  type MessageEventTarget,
 } from '../../../src';
 
 // Plain mock transport implementing only send and onMessage (no request)
@@ -51,7 +51,7 @@ class MockTargetWindow implements PostMessageTarget {
 }
 
 // Mock Source Window cho PostMessageTransport
-class MockSourceWindow implements MessageEventSource {
+class MockSourceWindow implements MessageEventTarget {
   public listeners: Record<string, Array<(event: any) => void>> = {};
   public parent: unknown;
 
@@ -267,7 +267,7 @@ describe('HostStorageRelayAdapter', () => {
       const transport = new MockGenericTransport();
       const adapter = new HostStorageRelayAdapter(transport, { timeoutMs: 1000 });
 
-      const clearPromise = adapter.clear();
+      const clearPromise = adapter.clearSdkData();
 
       expect(transport.sentMessages.length).toBe(1);
       const sent = transport.sentMessages[0];
@@ -366,7 +366,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(adapter.removeItem('hydra:sdk:session:token')).rejects.toThrow(
         HydraStorageError,
       );
-      await expect(adapter.clear()).rejects.toThrow(HydraStorageError);
+      await expect(adapter.clearSdkData()).rejects.toThrow(HydraStorageError);
     });
 
     it('aborts all in-flight requests on destroy()', async () => {
@@ -510,7 +510,7 @@ describe('HostStorageRelayAdapter', () => {
       await expect(removePromise).resolves.toBeUndefined();
 
       // 2. clear
-      const clearPromise = adapter.clear();
+      const clearPromise = adapter.clearSdkData();
       expect(targetWindow.sentMessages.length).toBe(2);
       const clearSent = targetWindow.sentMessages[1].message as BridgeMessage;
       expect(clearSent.type).toBe('HOST_STORAGE_CLEAR');

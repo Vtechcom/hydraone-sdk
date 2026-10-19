@@ -179,7 +179,7 @@ describe('useWallet hook', () => {
     transport = new MockTransport();
     client = new WalletBridgeClient({
       transport,
-      isIframeFn: () => true,
+      isInIframe: () => true,
     });
   });
 
@@ -337,7 +337,7 @@ describe('useWallet hook', () => {
     expect(result.current.address).toBeNull();
   });
 
-  it('marks the wallet connected again when ACCOUNT_CHANGED follows DISCONNECTED', async () => {
+  it('marks the wallet connected again when ACCOUNT_CHANGED follows WALLET_DISCONNECTED', async () => {
     const { result } = renderHook(() => useWallet(), { wrapper });
 
     await act(async () => {
@@ -346,12 +346,15 @@ describe('useWallet hook', () => {
     await act(async () => {
       transport.simulateMessage({
         id: 'evt_disc',
-        type: 'DISCONNECTED',
+        type: 'WALLET_DISCONNECTED',
         timestamp: Date.now(),
         source: 'hydra-host',
       });
     });
-    expect(result.current.isConnected).toBe(false);
+    // Only the wallet left; the bridge itself stays connected.
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.connectionState).toBe('connected');
+    expect(result.current.isWalletConnected).toBe(false);
     expect(result.current.address).toBeNull();
 
     transport.changeAddress = NEW_ADDRESS;
@@ -367,6 +370,7 @@ describe('useWallet hook', () => {
     expect(result.current.isConnected).toBe(true);
     expect(result.current.connectionState).toBe('connected');
     expect(result.current.address).toBe(NEW_ADDRESS);
+    expect(result.current.isWalletConnected).toBe(true);
   });
 
   it('reads the language from the handshake', async () => {

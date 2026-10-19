@@ -12,13 +12,12 @@ import { matchOriginPattern } from './origin';
 import type {
   Host,
   HostOptions,
-  HostPaginate,
   HostRequestHandler,
   HostRequestPayload,
   RegisteredIframe,
 } from './types';
 import { rewardAddressFromBase } from '@hydraone-sdk/core';
-import type { BridgeMessage, HostInfo } from '@hydraone-sdk/core';
+import type { BridgeMessage, HostInfo, Paginate } from '@hydraone-sdk/core';
 
 const DEFAULT_HOST_NAME = 'HydraOne Host';
 const DEFAULT_HOST_VERSION = '1.0.0';
@@ -33,14 +32,14 @@ function requireString(value: unknown, field: string, allowEmpty = false): strin
   return value;
 }
 
-function paginateList<T>(items: T[], paginate?: HostPaginate): T[] {
+function paginateList<T>(items: T[], paginate?: Paginate): T[] {
   if (!paginate || typeof paginate.limit !== 'number' || paginate.limit <= 0) return items;
   const page = typeof paginate.page === 'number' && paginate.page > 0 ? paginate.page : 0;
   return items.slice(page * paginate.limit, (page + 1) * paginate.limit);
 }
 
-function readPaginate(payload: HostRequestPayload): HostPaginate | undefined {
-  const raw = payload.paginate as HostPaginate | undefined;
+function readPaginate(payload: HostRequestPayload): Paginate | undefined {
+  const raw = payload.paginate as Paginate | undefined;
   return raw && typeof raw === 'object' ? raw : undefined;
 }
 
@@ -109,14 +108,14 @@ export function createHost(options: HostOptions): Host {
   function notifyDisconnected() {
     if (disconnectNotified) return;
     disconnectNotified = true;
-    notify('DISCONNECTED');
+    notify('WALLET_DISCONNECTED');
   }
 
   function requireWallet(): string {
-    const address = wallet.getAddress();
+    const address = wallet.getChangeAddress();
     if (!wallet.isConnected() || !address) {
       throw new HostRpcError(
-        HOST_ERROR_CODES.ERR_NOT_CONNECTED,
+        HOST_ERROR_CODES.ERR_WALLET_NOT_CONNECTED,
         'Wallet is not connected in the host',
       );
     }
@@ -125,20 +124,21 @@ export function createHost(options: HostOptions): Host {
 
   function hostInfo(): HostInfo {
     const embedded = wallet.isEmbedded();
-    const name = embedded ? (options.embeddedWalletName ?? 'HydraOne Wallet') : 'CIP-30 Wallet';
+    const name = embedded
+      ? (options.embeddedWalletName ?? 'HydraOne Wallet')
+      : (wallet.getCip30Wallet()?.name ?? 'CIP-30 Wallet');
     // A function option is always current; otherwise the last setLanguage wins over the static value.
     const language =
       typeof options.language === 'function'
         ? options.language()
         : (currentLanguage ?? options.language);
     return {
-      appName: options.hostName ?? DEFAULT_HOST_NAME,
+      hostName: options.hostName ?? DEFAULT_HOST_NAME,
       hostVersion: options.hostVersion ?? DEFAULT_HOST_VERSION,
       network: resolveValue(options.network ?? 'preprod'),
       theme: resolveValue(options.theme ?? 'dark'),
       ...(language !== undefined ? { language } : {}),
-      walletName: name,
-      wallet: { name, icon: embedded ? '' : (wallet.getExtension()?.icon ?? '') },
+      wallet: { name, icon: embedded ? '' : (wallet.getCip30Wallet()?.icon ?? '') },
     };
   }
 
@@ -194,7 +194,7 @@ export function createHost(options: HostOptions): Host {
     const custom = customHandlers.get(type);
     if (custom) return custom({ origin, payload, wallet, host });
 
-    const extension = wallet.getExtension();
+    const extension = wallet.getCip30Wallet();
 
     switch (type) {
       case 'PING':
@@ -230,7 +230,7 @@ export function createHost(options: HostOptions): Host {
       }
       case 'GET_BALANCE': {
         requireWallet();
-        const assets = await wallet.fetchAssets();
+        const assets = await wallet.fetchBalance();
         return assets.map(({ unit, quantity }) => ({ unit, quantity }));
       }
       case 'GET_UTXOS': {
@@ -395,7 +395,7 @@ export function createHost(options: HostOptions): Host {
         notifyDisconnected();
       }
     },
-    handleConnectionChange(connected) {
+    handleWalletConnectionChange(connected) {
       if (connected) disconnectNotified = false;
       else notifyDisconnected();
     },
