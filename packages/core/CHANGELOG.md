@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- 5fae4b9: Address queries return bech32 by default. `getUsedAddresses`, `getUnusedAddresses`, the new `getRewardAddresses` and `getChangeAddress` accept `{ format: 'bech32' | 'hex' }`; pass `{ format: 'hex' }` to keep the raw CIP-30 hex of 0.1.0. `signData` accepts either format. Unreadable entries in an address list (Byron, malformed) are skipped with a warning; an unreadable change address rejects with the new `ERR_INVALID_RESPONSE` code. New helpers: `isValidAddress`, `isBaseAddress`, `addressToBech32`, `addressToHex`, `formatAddress`, `detectAddressFormat`, `rewardAddressFromBase`, `firstAddress`.
+
+  `signTx` accepts `{ partialSign, addVkey }`. With `addVkey: true` it merges the wallet's witnesses into the transaction and returns the signed CBOR, ready for `submitTx`; `applyWitnessSet` does the same standalone. A transaction that cannot be merged into is rejected before the wallet prompt, and a witness set that cannot be merged rejects with `ERR_INVALID_RESPONSE` carrying it in `details.witnessSet`, so the signature is not lost.
+
+  **Breaking:** `address` in `useWallet` (React) and `useWalletBridgeClient` (Vue) is now the wallet's change address instead of the first used address, and `usedAddresses` is removed; call `client.getUsedAddresses()` when you need the list.
+
+  **Breaking:** the audio mute sync is replaced by a UI language sync. `isAudioMuted`, `onAudioMutedChanged`, `AudioMutedHandler`, `AudioMutedPayload`, `HostInfo.audioMuted` and `AUDIO_MUTED_CHANGED` are gone; use `language`, `onLanguageChanged`, `HostInfo.language` and `LANGUAGE_CHANGED` (BCP-47 tag).
+
+  **Breaking:** `requestDepositModal`, `getPlayerProfile`, `DepositModalOptions`, `DepositModalPayload`, `PlayerProfile` and the `REQUEST_DEPOSIT_MODAL` / `GET_PLAYER_PROFILE` message types are removed, along with the matching hook actions. Build these flows in your host app.
+
+- 48dbd19: Remove the built-in auth module. `GameAuthManager` (alias `AuthManager`), `parseJwt`, `isJwtExpired`, `stringToHex`, `hexToString`, `HydraAuthError` and the `ERR_AUTH_EXPIRED` code are gone, along with the auth types (`AuthState`, `AuthSession`, `SignInParams`, `AuthManagerOptions`, `IAuthSignerClient`, ...) and the `AUTH_STATE_CHANGED` message type. React drops `useHydraAuth` and the `authManager` prop/context field of `HydraOneProvider`. Vue drops `useGameAuth`, `getSharedGameAuthManager`, `setSharedGameAuthManager`, `HYDRA_AUTH_KEY` and the `storage` option of `createHydraOne`. CIP-8 `signData` on the client is unchanged; build sign-in on top of it in your app. See MIGRATION.md.
+
+  The `auth` storage namespace is removed as well: `STORAGE_AUTH_PREFIX`, `isAuthStorageKey` and `buildStorageKey('auth', …)` are gone, and `StorageSubNamespace` is now just `'session'`.
+
+- edd9ecd: **Breaking:** the `create-hydraone-game` CLI and its Next.js and Nuxt templates are removed. The package no longer has a `bin` entry or a `dist/cli` build, and `templates/` is no longer published. Scaffold with your framework's own tool and add `@hydraone-sdk/core`. See MIGRATION.md.
+- 832785a: **Breaking:** the `vue` peer dependency is now `>=3.5.0`. The `createHydraOne` plugin releases its client through `app.onUnmount`, which older Vue versions lack, so the client leaked there.
+
+  Address queries no longer log skipped invalid entries unless `debug` is on, and the warning now carries only the skipped entries instead of the full list from the host.
+
+### Patch Changes
+
+- 5fae4b9: Core: `useWalletBridgeClient` (Vue) and `useWallet` (React) mark the wallet connected again when `ACCOUNT_CHANGED` arrives after `DISCONNECTED`, instead of staying disconnected until `connect()` is called.
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
