@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- ce4b4ea: Separate "bridge connected" from "wallet connected".
+
+  The bridge is the link between the embedded app and the host. The wallet is the account the player connected inside the host. They used to share one name, so a wallet disconnect looked like a lost bridge.
+
+  - `ERR_NOT_CONNECTED` is split in two. `ERR_BRIDGE_NOT_CONNECTED` is raised by the client when the handshake has not finished, was cancelled, or the client was disconnected or destroyed. `ERR_WALLET_NOT_CONNECTED` is sent by the host when no wallet is connected.
+  - The `DISCONNECTED` event is now `WALLET_DISCONNECTED`, and `host.handleConnectionChange()` is now `host.handleWalletConnectionChange()`.
+  - `useWallet` and `useWalletBridgeClient` expose `isWalletConnected`. A wallet disconnect no longer resets `isConnected` or `connectionState`, because the bridge stays up. A new `ACCOUNT_CHANGED` restores the wallet state.
+  - `ConnectionState` no longer includes `'error'`, which the client never set.
+  - `client.onConnectionStateChanged(handler)` subscribes to bridge state changes (type `ConnectionStateChangedHandler`). `CONNECTION_STATE_CHANGED` is an internal client event and no longer goes through `client.on` / `onHostEvent`.
+
+- ce4b4ea: Align client option, parameter and method names with what they do.
+
+  - `signTx` option `addVkey` is now `mergeWitnesses`: it merges the wallet's witnesses into the transaction.
+  - `getUtxos(amount?, paginate?, options?)` is now `getUtxos(paginate?, options?)`, and `getCollateral(params?, options?)` is now `getCollateral(options?)`. The host never read `amount`, so it had no effect.
+  - `firstAddress` is now `firstValidAddress`, because it skips invalid entries.
+  - Device commands (`setOrientation`, `unlockOrientation`, `triggerHaptic`) use their own `commandTimeoutMs` option (default 15,000 ms) instead of `queryTimeoutMs`, which stays for wallet state queries.
+  - `isIframeFn` is now `isInIframe`.
+  - `MessageEventSource` is now `MessageEventTarget`, so it no longer clashes with the DOM type.
+  - `InFlightEntry` is now `PendingRequestEntry`, with `getPendingCount()` and `getPendingEntry()` on `PostMessageTransport`. `RequestState` values are lowercase: `'pending'`, `'fulfilled'`, `'rejected'`, `'timed-out'`, `'cancelled'`, `'transport-failed'`.
+
+- ce4b4ea: Complete `ERROR_CODES` and make diagnostics measure what they claim.
+
+  - `ERROR_CODES` now also holds `ERR_INVALID_OPTIONS`, `ERR_TRANSPORT_FAILED`, `ERR_TRANSPORT_UNAVAILABLE`, `ERR_POSTMESSAGE_FAILED` and `ERR_RPC_FAILED`. The client, transport and diagnostics use these constants instead of string literals.
+  - `HydraTransportError` defaults to `ERR_TRANSPORT_FAILED` instead of `ERR_NOT_IN_IFRAME`, which now only means "not inside an iframe". An invalid or missing `hostOrigin` reports `ERR_INVALID_OPTIONS`, and a destroyed transport reports `ERR_TRANSPORT_UNAVAILABLE`.
+  - Diagnostics options: `skipIframeCheck` is now `skipSandboxCheck` and `customKey` is now `testKey`.
+  - The postMessage latency check no longer falls back to `getBalance()`. That call fails with a wallet error when no wallet is connected, so it did not measure the channel. It uses `ping()` or a `PING` request.
+
+- ce4b4ea: Make the handshake `HostInfo` match its meaning.
+
+  - The handshake field `appName` is now `hostName`, matching `HostOptions.hostName`. `client.hostName` reads it.
+  - `HostInfo.network` is now `networkName` (a string such as `'preprod'`), and `HostOptions.network` is now `networkName`. `networkId` stays the number from `getNetworkId()` and `NETWORK_CHANGED`.
+  - `HostInfo.wallet` (`{ name, icon }`) is declared, and the duplicate `walletName` is removed. `client.activeWalletName` reads `wallet.name`.
+  - `HostExtensionWallet` is now `HostCip30Api`, because it is the object returned by a wallet's CIP-30 `enable()`, not the wallet entry in `window.cardano`. It accepts an optional `name`, so an extension wallet reports its real name instead of `'CIP-30 Wallet'`.
+
+- ce4b4ea: Rename the `appCenterOrigin` option to `hostOrigin`.
+
+  It names the origin of the host that embeds the app, and matches `allowedOrigins` on the host side. It applies to `PostMessageTransport`, `WalletBridgeClient`, `HydraOneProvider`, the Vue plugin and `useWalletBridgeClient`. "App Center" remains the product name, not an option name.
+
+- ce4b4ea: Bring the React and Vue hooks in line with each other and with the client.
+
+  - `useWallet` now returns `error` and `refreshAddress`, like `useWalletBridgeClient`. `error` holds the last failure from `connect`, `signTx`, `submitTx`, `signData` or the balance read. A balance read that fails with `ERR_WALLET_NOT_CONNECTED` is a state, not an error, and is not recorded.
+  - `useWallet`: `disconnect()` is synchronous, like the client and the Vue composable, and `theme` is `null` until the host reports one instead of defaulting to `'dark'`.
+  - Both hooks use the client's parameter names: `txCbor`, `address`, `payloadHex`. `submitTx` takes `SignOptions` (it was `QueryOptions`), and `triggerHaptic` accepts the same `typeOrPattern` as the client.
+  - `useHostStorage` is now `useStorage`, with `UseStorageOptions` and `UseStorageReturn`, because it also falls back to local storage. The always-true `isAvailable` flag is removed.
+  - `IStorage.clear()` is now `clearSdkData()`, because it only removes `hydra:sdk:*` keys. The hook returns `clearSdkData` too.
+
 ## 0.2.0
 
 ### Minor Changes
